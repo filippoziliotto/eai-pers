@@ -9,8 +9,21 @@ def get_args():
     """
     parser = argparse.ArgumentParser(description="Training script for coordinate regression")
     
+    # Data path Parameters
+    parser.add_argument("--data_dir", type=str, default="data", help="Path to the data directory")
+    parser.add_argument("--data_split", type=str, default="val", choices=["train", "val"], help="Data split to use")
+    
     # Seed for reproducibility
     parser.add_argument("--seed", type=int, default=2025, help="Random seed for reproducibility")
+    
+    # Augmentations Parameters
+    parser.add_argument("--use_aug", action="store_true", help="Use augmentations for training")
+    parser.add_argument("--aug_prob", type=float, default=0.5, help="Probability of applying augmentations")
+    parser.add_argument("--use_horizontalflip", action="store_true", help="Use horizontal flip")
+    parser.add_argument("--use_verticalflip", action="store_true", help="Use vertical flip")
+    parser.add_argument("--use_randomcrop", action="store_true", help="Use rotation")
+    parser.add_argument("--use_desc_aug", action="store_true", help="Use description augmentation")
+    
 
     # Model and Training Parameters
     parser.add_argument("--batch_size", type=int, default=1, help="Batch size for training")

@@ -1,7 +1,8 @@
 import os
 import json
+from typing import List, Dict
 
-def load_all_episodes(base_dir: str, split:str) -> list[dict]:
+def load_all_episodes(base_dir: str) -> List[Dict]:
     """
     Reads all 'episodes.json' files from subdirectories in base_dir and merges them into a single list.
 
@@ -12,7 +13,9 @@ def load_all_episodes(base_dir: str, split:str) -> list[dict]:
         list[dict]: A combined list of all episodes from all subfolders.
     """
     all_episodes = []
-    base_dir = os.path.join(base_dir, split)
+    
+    # TODO: modify this+
+    base_dir = os.path.join(base_dir, "val")
 
     # Traverse through each subdirectory
     for root, _, files in os.walk(base_dir):
@@ -22,10 +25,9 @@ def load_all_episodes(base_dir: str, split:str) -> list[dict]:
                 episodes = json.load(f)
                 all_episodes.extend(episodes)  # Append all episodes to the list
 
-    print(f"Total episodes collected: {len(all_episodes)}")
     return all_episodes
 
-def load_all_maps(maps_base_dir: str) -> list[dict]:
+def load_all_maps(maps_base_dir: str) -> List[Dict]:
     """
     Reads 'pos_vars.json' and 'feature_map.npz' from each subfolder in maps_base_dir 
     and extracts scene, robot data, and feature map path.
@@ -78,12 +80,11 @@ def load_all_maps(maps_base_dir: str) -> list[dict]:
                 # Append to list
                 all_maps.append(map_data)
 
-    print(f"Total maps collected: {len(all_maps)}")
     return all_maps
 
 def filter_episodes_by_maps(
-    all_episodes: list[dict], all_maps: list[dict]
-) -> list[dict]:
+    all_episodes: List[Dict], all_maps: List[Dict]
+) -> List[Dict]:
     """
     Filters all_episodes to retain only episodes with matching scene_id and floor_id in all_maps.
     Adds robot_xyz, robot_xy, robot_heading, and feature_map_path to the episode dictionary.
@@ -120,11 +121,11 @@ def filter_episodes_by_maps(
             # Add the updated episode to the filtered list
             filtered_episodes.append(ep)
 
-    print(f"Filtered and updated episodes count: {len(filtered_episodes)}")
+    print(f"Total Episode count: {len(filtered_episodes)}")
     return filtered_episodes
 
 
-def load_episodes(base_path:str, split:str) -> list[dict]:
+def load_episodes(base_path:str, split:str) -> List[Dict]:
     """
     Load episodes from the episodes directory and filter them based on available maps.
 
@@ -141,6 +142,10 @@ def load_episodes(base_path:str, split:str) -> list[dict]:
     all_episodes = load_all_episodes(episodes_dir)
     all_maps = load_all_maps(maps_dir)
     filtered_episodes = filter_episodes_by_maps(all_episodes, all_maps)
+    
+    assert len(all_episodes) > 0, "No episodes found!"
+    assert len(all_maps) > 0, "No maps found!"
+    assert len(filtered_episodes) > 0, "No episodes with matching maps found"
 
     return filtered_episodes
 

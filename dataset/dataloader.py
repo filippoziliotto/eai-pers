@@ -3,16 +3,19 @@ import torch
 import numpy as np
 from torch.utils.data import Dataset, DataLoader
 import os
-from PIL import Image
-import torchvision.transforms as transforms
+
+# Add base path to PYTHONPATH
+import sys
+base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.append(base_path)
     
 # Local imports
-from datasets.load_maps import load_episodes
-from datasets.utils import xyz_to_map
+from dataset.load_maps import load_episodes
+from dataset.utils import xyz_to_map
 
 # Local Map imports
-from datasets.maps.base_map import BaseMap
-from datasets.transform import MapTransform
+from dataset.maps.base_map import BaseMap
+from dataset.transform import MapTransform
 
 
 class RetMapsDataset(Dataset):
@@ -38,6 +41,7 @@ class RetMapsDataset(Dataset):
         
         # Get episode Description
         description = episode["description"]
+        query = episode["query"]
         
         # Uncompress the feature map (.npz)
         feature_map = np.load(episode["feature_map_path"])
@@ -50,7 +54,13 @@ class RetMapsDataset(Dataset):
         if self.transform:
             description, feature_map, xy_target = self.transform(feature_map, xy_target, episode["description"])
             
-        return description, feature_map, xy_target
+        # Return as a dictionary
+        return {
+            "description": description,
+            "target": xy_target,
+            "query": query,
+            "feature_map": feature_map
+        }
 
 def get_dataloader(data_dir, data_split="val", batch_size=32, shuffle=True, num_workers=4, **kwargs):
     """
@@ -73,3 +83,19 @@ def get_dataloader(data_dir, data_split="val", batch_size=32, shuffle=True, num_
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
     
     return dataloader
+
+
+if __name__ == "__main__":
+    # Test the dataloader
+    dataloader = get_dataloader("data", data_split="val", batch_size=2, shuffle=True, num_workers=4)
+    
+    for i, episode in enumerate(dataloader):
+        print(f"Batch {i}")
+        print(f"Query: {episode['query']}")
+        print(f"Description: {episode['description']}")
+        print(f"Feature Map: {episode['feature_map'].shape}")
+        print(f"XY Target: {episode['target']}")
+        print()
+        
+        if i == 0:
+            break

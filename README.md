@@ -1,3 +1,3 @@
-### Retrievable Maps
+### Personalized Maps
 
 Blablabla

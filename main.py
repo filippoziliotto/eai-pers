@@ -9,14 +9,19 @@ from trainer.test import validate
 from utils.utils import get_optimizer, get_scheduler, set_seed
 
 # Importing argument parsing function
-from args import get_args  # Import get_args from args.py
+from args import get_args
 
 # Importing custom models
-from models.encoder import Blip2Encoder
-from models.model import RetrievalMapModel  
+from model.encoder import Blip2Encoder
+from model.model import RetrievalMapModel  
 
-def main(args):
+# Dataloader
+from dataset.dataloader import get_dataloader
+
+def main():
     
+    # Get args and set seed
+    args = get_args()
     set_seed(args.seed)
     
     # Get Freezed text encoder and initialize
@@ -24,7 +29,14 @@ def main(args):
     encoder.inilialize()
 
     # Dataset and DataLoader
-    # TODO:
+    kwargs = vars(args)
+    data_loader = get_dataloader(
+        data_dir=args.data_dir,
+        data_split=args.data_split,
+        batch_size=args.batch_size,
+        shuffle=True,     
+        **kwargs
+    )
 
     # Model
     model = RetrievalMapModel(

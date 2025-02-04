@@ -1,3 +1,4 @@
+# Old packages
 filelock==3.17.0
 fsspec==2024.12.0
 Jinja2==3.1.5
@@ -12,4 +13,20 @@ sympy==1.13.3
 torch==2.2.2
 torchaudio==2.2.2
 torchvision==0.17.2
+typing_extensions==4.12.2
+
+
+# EAI - PERS Packages
+filelock==3.16.1
+fsspec==2025.2.0
+Jinja2==3.1.5
+MarkupSafe==2.1.5
+mpmath==1.3.0
+networkx==3.1
+numpy==1.24.4
+pillow==10.4.0
+sympy==1.13.3
+torch==2.4.1
+torchaudio==2.4.1
+torchvision==0.19.1
 typing_extensions==4.12.2
