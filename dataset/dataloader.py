@@ -23,7 +23,7 @@ class RetMapsDataset(Dataset):
     Dataset class for retrieving maps and their corresponding descriptions.
     Load everything in memory to train/eval
     """
-    base_map = None
+    map = BaseMap(size=500, pixels_per_meter=10)
     
     def __init__(self, data_dir="data", data_split="val", transform=None):
         self.episodes = load_episodes(data_dir, data_split)
@@ -48,16 +48,16 @@ class RetMapsDataset(Dataset):
         feature_map = torch.tensor(feature_map["arr_0"])
 
         # This is the y label
-        xy_target = xyz_to_map(episode["object_pos"], episode["robot_xyz"], episode["robot_xy"], episode["robot_heading"])
-        
+        target = xyz_to_map(episode, self.map)
+
         # Transform the data, used only for convert to tensor or augmentations
         if self.transform:
-            description, feature_map, xy_target = self.transform(feature_map, xy_target, episode["description"])
+            description, feature_map, target = self.transform(feature_map, target, episode["description"])
             
         # Return as a dictionary
         return {
             "description": description,
-            "target": xy_target,
+            "target": target,
             "query": query,
             "feature_map": feature_map
         }

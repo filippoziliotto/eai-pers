@@ -1,7 +1,6 @@
 # Copyright (c) 2023 Boston Dynamics AI Institute LLC. All rights reserved.
 
 from typing import Any, List
-
 import numpy as np
 
 class BaseMap:
@@ -9,7 +8,7 @@ class BaseMap:
     _last_camera_yaw: float = 0.0
     _map_dtype: np.dtype = np.dtype(np.float32)
 
-    def __init__(self, size: int = 1000, pixels_per_meter: int = 20, *args: Any, **kwargs: Any):
+    def __init__(self, size: int = 500, pixels_per_meter: int = 10, *args: Any, **kwargs: Any):
         """
         Args:
             size: The size of the map in pixels.

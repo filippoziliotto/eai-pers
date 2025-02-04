@@ -3,7 +3,7 @@ import numpy as np
 
 # Importing training and validation functions
 from trainer.train import train
-from trainer.test import validate
+from trainer.validate import validate
 
 # Importing utility functions
 from utils.utils import get_optimizer, get_scheduler, set_seed
