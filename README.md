@@ -2,8 +2,8 @@
 
 Personalized user navigation through retrievable memory maps.
 
-##### Library structure
 
+##### Library structure
 > **Note:** The following is the structure of the library:\
 ├── args.py \
 ├── data/ \

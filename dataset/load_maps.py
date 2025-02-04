@@ -120,6 +120,7 @@ def filter_episodes_by_maps(
 
             # Add the updated episode to the filtered list
             filtered_episodes.append(ep)
+            filtered_episodes[-1]["episode_id"] = len(filtered_episodes)-1
 
     print(f"Total Episode count: {len(filtered_episodes)}")
     return filtered_episodes
