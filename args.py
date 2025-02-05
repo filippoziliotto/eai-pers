@@ -17,14 +17,13 @@ def get_args():
     parser.add_argument("--seed", type=int, default=2025, help="Random seed for reproducibility")
     
     # Augmentations Parameters
-    parser.add_argument("--use_aug", action="store_true", help="Use augmentations for training")
+    parser.add_argument("--use_aug", action="store_true", default=False, help="Use augmentations for training")
     parser.add_argument("--aug_prob", type=float, default=0.5, help="Probability of applying augmentations")
     parser.add_argument("--use_horizontalflip", action="store_true", help="Use horizontal flip")
     parser.add_argument("--use_verticalflip", action="store_true", help="Use vertical flip")
     parser.add_argument("--use_randomcrop", action="store_true", help="Use rotation")
     parser.add_argument("--use_desc_aug", action="store_true", help="Use description augmentation")
     
-
     # Model and Training Parameters
     parser.add_argument("--batch_size", type=int, default=1, help="Batch size for training")
     parser.add_argument("--lr", type=float, default=0.001, help="Learning rate for the optimizer")
@@ -37,7 +36,7 @@ def get_args():
     parser.add_argument("--num_heads", type=int, default=8, help="Number of attention heads")
     
     # Encoder parameters
-    parser.add_argument("--freeze_encoder", action="store_true", help="Freeze the encoder parameters")
+    parser.add_argument("--freeze_encoder", action="store_true", default=True, help="Freeze the encoder parameters")
     
     # Map parameters
     parser.add_argument("--map_size", type=int, default=500, help="Size of the map (e.g., 500x500)")
@@ -54,5 +53,9 @@ def get_args():
 
     # Device
     parser.add_argument("--device", type=str, default="cpu", choices=["cpu", "cuda"], help="Device to train on")
+    
+    # Wandb
+    parser.add_argument("--use_wandb", action="store_true", default=False, help="Use wandb for logging")
+    parser.add_argument("--run_name", type=str, default="EAI-Pers", help="Run name for wandb")
 
     return parser.parse_args()

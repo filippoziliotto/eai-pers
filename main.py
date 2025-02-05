@@ -1,12 +1,14 @@
 # Importing necessary libraries
 import numpy as np
+import wandb
 
 # Importing training and validation functions
-from trainer.train import train
+from trainer.train import train_and_validate
 from trainer.validate import validate
 
 # Importing utility functions
 from utils.utils import get_optimizer, get_scheduler, set_seed
+from dataset.utils import split_dataloader
 
 # Importing argument parsing function
 from args import get_args
@@ -24,6 +26,10 @@ def main():
     args = get_args()
     set_seed(args.seed)
     
+    # Initialize W&B
+    if args.use_wandb:
+        wandb.init(project="EAI-Pers", entity=args.entity, name=args.run_name)
+        
     # Get Freezed text encoder and initialize
     encoder = Blip2Encoder(device=args.device, freeze_encoder=args.freeze_encoder)
     encoder.inilialize()
@@ -37,6 +43,9 @@ def main():
         shuffle=True,     
         **kwargs
     )
+    
+    # Get the entire dataset from the data_loader
+    train_loader, val_loader = split_dataloader(data_loader, split_ratio=0.8, batch_size=args.batch_size, **kwargs)
 
     # Model
     model = RetrievalMapModel(
@@ -44,7 +53,7 @@ def main():
         num_heads=args.num_heads,
         encoder=encoder,
         cosine_method=args.cosine_method,
-        pixels_per_meter=args.pixels_per_meter
+        pixels_per_meter=args.pixels_per_meter,
     )
 
     # Optimizer
@@ -65,23 +74,32 @@ def main():
     )
 
     if args.mode in ['train']:    
-        # Train the model
-        train(
+        # Train the model and validate
+        train_and_validate(
             model=model,
-            data_loader=data_loader,
+            train_loader=train_loader,
+            val_loader=val_loader,
             optimizer=optimizer,
             scheduler=scheduler,
             num_epochs=args.num_epochs,
             loss_choice=args.loss_choice,
-            device=args.device
+            device=args.device,
+            use_wandb=args.use_wandb
+            **kwargs
         )
     elif args.mode in ['eval']:
         # Evaluate the model
         validate(
             model=model,
-            data_loader=data_loader,
-            device=args.device
+            data_loader=val_loader,
+            device=args.device,
+            loss_choice=args.loss_choice,
+            use_wandb=args.use_wandb,
         )
+        
+    # Finish run
+    wandb.finish()
+    print("Run completed.")
 
 if __name__ == "__main__":
     # Parse arguments

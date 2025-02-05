@@ -4,64 +4,125 @@ import wandb  # Import W&B
 
 # Other imports
 from utils.losses import compute_loss
+from utils.metrics import compute_accuracy
+from trainer.validate import validate
 
-# Define the training function
-def train(model, data_loader, optimizer, scheduler, num_epochs, loss_choice='L2', device='cpu'):
+def train_one_epoch(
+    model, 
+    data_loader, 
+    optimizer, 
+    loss_choice='L2',
+    device='cpu',
+    use_wandb=False
+    ):
     """
-    Trains a model with the provided parameters.
+    Trains the model for one epoch and logs the training loss to W&B.
 
     Args:
         model: The PyTorch model to train.
         data_loader: DataLoader providing (ground_truth_coords, input_data) batches.
         optimizer: Optimizer for updating model weights.
+        loss_choice: Loss function choice ('L1' or 'L2').
+        device: Device to run the training on ('cpu' or 'cuda').
+
+    Returns:
+        epoch_avg_loss: Average training loss for the epoch.
+    """
+    model.train()
+    epoch_loss = 0.0
+    
+    for batch_idx, data in enumerate(data_loader):
+        description = data['description'].to(device)
+        gt_target = data['target'].to(device)
+        query = data['query'].to(device)
+        feature_map = data['feature_map'].to(device)
+
+        # Forward pass: Get predictions
+        pred_target = model(description=description, map_tensor=feature_map, query=query)
+
+        # Compute loss
+        loss = compute_loss(gt_target, pred_target, loss_choice)
+        
+        # Compute accuracy
+        accuracy = compute_accuracy(gt_target, pred_target)
+
+        # Backward pass and optimization
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        # Accumulate loss
+        epoch_loss += loss.item()
+
+    # Calculate average loss for the epoch
+    epoch_avg_loss = epoch_loss / len(data_loader)
+    
+    
+    # Log training loss to W&B
+    if use_wandb:
+        wandb.log({"Train Loss": epoch_avg_loss})
+    
+    return epoch_avg_loss
+
+def train_and_validate(
+    model, 
+    train_loader, 
+    val_loader, 
+    optimizer, 
+    scheduler=None, 
+    num_epochs=10, 
+    loss_choice='L2',
+    device='cpu', 
+    use_wandb=False, 
+    **kwargs
+    ):
+    """
+    Full training loop that trains and validates the model for multiple epochs.
+
+    Args:
+        model: The PyTorch model to train.
+        train_loader: DataLoader for training data.
+        val_loader: DataLoader for validation data.
+        optimizer: Optimizer for updating model weights.
+        scheduler: Learning rate scheduler (optional).
         num_epochs: Number of epochs to train the model.
         loss_choice: Loss function choice ('L1' or 'L2').
         device: Device to run the training on ('cpu' or 'cuda').
     """
-    
-    # If model not in device yet
+
+    # Move model to device if not already on it
     if device == 'cuda' and not next(model.parameters()).is_cuda:
         model.to(device)
-    model.train()
+    
+    print("Starting training...")
 
-    for epoch in range(num_epochs):
-        epoch_loss = 0.0
-        for batch_idx, (ground_truth_coords, input_data) in enumerate(data_loader):
-            ground_truth_coords = ground_truth_coords.to(device)
-            input_data = input_data.to(device)
+    for epoch in range(1, num_epochs + 1):
+        # Train for one epoch
+        train_loss = train_one_epoch(model, train_loader, optimizer, loss_choice, device, use_wandb)
+        
+        # Validate after each epoch
+        val_loss = validate(model, val_loader, loss_choice, device, use_wandb)
+        
+        # Log epoch metrics to W&B
+        if use_wandb:
+            wandb.log({"Epoch": epoch, "Train Loss": train_loss, "Validation Loss": val_loss})
 
-            # Forward pass: Get predictions
-            predicted_coords = model(input_data)
-
-            # Compute loss
-            loss = compute_loss(ground_truth_coords, predicted_coords, loss_choice)
-
-            # Backward pass and optimization
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-
-            # Accumulate loss for the epoch
-            epoch_loss += loss.item()
-
-        # Log epoch loss to W&B
-        epoch_avg_loss = epoch_loss / len(data_loader)
-        print(f"Epoch {epoch + 1}/{num_epochs}, Loss: {epoch_avg_loss}")
+        # Scheduler step (if provided)
+        if scheduler:
+            scheduler.step()
+        
+        # Print epoch summary
+        print(f"Epoch {epoch}/{num_epochs} - Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}")
 
     print("Training complete.")
+    
 
-# Example usage (you'll need to adapt this with your dataset and model)
+# Example usage (replace with actual dataset, model, optimizer, and scheduler)
 if __name__ == '__main__':
-
-    batch_size, num_epochs = 2, 10
-    optimizer = torch.optim.Adam
-
-    # Dataset and DataLoader
-    dataset = ExampleDataset()
-    data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
-
-    # Model and optimizer
-    model = ExampleModel()
-
-    # Train the model
-    train(model, data_loader, optimizer, num_epochs, loss_choice='L2', device='cpu')
+    model = ...  # Define your model
+    train_loader = DataLoader(...)  # Define your training DataLoader
+    val_loader = DataLoader(...)  # Define your validation DataLoader
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.1)
+    
+    train_and_validate(model, train_loader, val_loader, optimizer, scheduler, num_epochs=20, loss_choice='L2', device='cuda')
