@@ -74,5 +74,5 @@ def compute_accuracy(gt_points, pred_points, thresholds=[5, 10, 20]):
     # Compute success rate at different thresholds
     success_rates = success_rate(gt_points, pred_points, thresholds)
     
-    # TODO: return all metrics, for now we return only the sr
+    # TODO: return all metrics, for now we return only the success rates for each threshold
     return success_rates

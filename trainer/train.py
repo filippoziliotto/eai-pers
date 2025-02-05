@@ -13,7 +13,6 @@ def train_one_epoch(
     optimizer, 
     loss_choice='L2',
     device='cpu',
-    use_wandb=False
     ):
     """
     Trains the model for one epoch and logs the training loss to W&B.
@@ -27,9 +26,11 @@ def train_one_epoch(
 
     Returns:
         epoch_avg_loss: Average training loss for the epoch.
+        epoch_avg_acc: Average training accuracy for each threshold for the epoch.
     """
     model.train()
     epoch_loss = 0.0
+    train_acc = []
     
     for batch_idx, data in enumerate(data_loader):
         description = data['description'].to(device)
@@ -44,7 +45,7 @@ def train_one_epoch(
         loss = compute_loss(gt_target, pred_target, loss_choice)
         
         # Compute accuracy
-        accuracy = compute_accuracy(gt_target, pred_target)
+        train_acc.append(compute_accuracy(gt_target, pred_target))
 
         # Backward pass and optimization
         optimizer.zero_grad()
@@ -57,12 +58,10 @@ def train_one_epoch(
     # Calculate average loss for the epoch
     epoch_avg_loss = epoch_loss / len(data_loader)
     
+    # Calculate average accuracy for the epoch for each th key
+    train_avg_acc = {key: sum(d[key] for d in train_acc) / len(train_acc) for key in train_acc[0]}
     
-    # Log training loss to W&B
-    if use_wandb:
-        wandb.log({"Train Loss": epoch_avg_loss})
-    
-    return epoch_avg_loss
+    return epoch_avg_loss, train_avg_acc
 
 def train_and_validate(
     model, 
@@ -96,23 +95,37 @@ def train_and_validate(
     
     print("Starting training...")
 
+    def log_epoch_metrics(epoch, train_loss, train_acc, val_loss, val_acc):
+        metrics = {
+            "Epoch": epoch,
+            "Train Loss": train_loss,
+            "Val Loss": val_loss,
+        }
+        metrics.update({f"Train Acc [{k}]": v for k, v in train_acc.items()})
+        metrics.update({f"Val Acc [{k}]": v for k, v in val_acc.items()})
+        wandb.log(metrics)
+
     for epoch in range(1, num_epochs + 1):
         # Train for one epoch
-        train_loss = train_one_epoch(model, train_loader, optimizer, loss_choice, device, use_wandb)
-        
+        train_loss, train_acc = train_one_epoch(model, train_loader, optimizer, loss_choice, device, use_wandb)
+
         # Validate after each epoch
-        val_loss = validate(model, val_loader, loss_choice, device, use_wandb)
-        
-        # Log epoch metrics to W&B
+        val_loss, val_acc = validate(model, val_loader, loss_choice, device, use_wandb)
+
+        # Log metrics to W&B if enabled
         if use_wandb:
-            wandb.log({"Epoch": epoch, "Train Loss": train_loss, "Validation Loss": val_loss})
+            log_epoch_metrics(epoch, train_loss, train_acc, val_loss, val_acc)
 
         # Scheduler step (if provided)
         if scheduler:
             scheduler.step()
-        
+
         # Print epoch summary
         print(f"Epoch {epoch}/{num_epochs} - Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}")
+        # Print accuracy summary for each th key
+        for key in train_acc:
+            print(f"Train Acc [{key}]: {train_acc[key]:.4f}, Val Acc [{key}]: {val_acc[key]:.4f}")
+        print('-' * 20)
 
     print("Training complete.")
     

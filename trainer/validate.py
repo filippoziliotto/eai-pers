@@ -6,7 +6,21 @@ import wandb  # Import W&B
 from utils.losses import compute_loss
 from utils.metrics import compute_accuracy
 
-def validate(model, data_loader, loss_choice='L2', device='cpu', use_wandb=False):
+def log_epoch_metrics(val_loss, val_acc):
+    metrics = {
+        "Val Loss": val_loss,
+    }
+    metrics.update({f"Val Acc [{k}]": v for k, v in val_acc.items()})
+    wandb.log(metrics)
+
+def validate(
+    model, 
+    data_loader, 
+    loss_choice='L2', 
+    device='cpu',
+    **kwargs
+    ):
+    
     """
     Validates the model on the given data_loader and logs the validation loss to W&B.
 
@@ -18,6 +32,7 @@ def validate(model, data_loader, loss_choice='L2', device='cpu', use_wandb=False
 
     Returns:
         val_avg_loss: Average validation loss.
+        val_avg_acc: Average validation accuracy for each threshold.
     """
     model.eval()
     val_loss = 0.0
@@ -43,10 +58,10 @@ def validate(model, data_loader, loss_choice='L2', device='cpu', use_wandb=False
     # Calculate average validation loss
     val_avg_loss = val_loss / len(data_loader)
     
-    # TODO:
-    accuracy['accuracy'] = sum(accuracy) / len(accuracy)
-    accuracy['mse'] = val_avg_loss
-    accuracy['sr'] = success_rate(gt_points, pred_points, thresholds)    
-
+    # accuracy = [ {'5': 0.8, '10': 0.9, '20': 1.0}, {'5': 0.8, '10': 0.9, '20': 1.0}, ...]
+    val_avg_acc = {key: sum(d[key] for d in accuracy) / len(accuracy) for key in accuracy[0]}
     
-    return val_avg_loss
+    if kwargs.get('mode') in ['eval']:
+        log_epoch_metrics(val_avg_loss, val_avg_acc)
+
+    return val_avg_loss, val_avg_acc

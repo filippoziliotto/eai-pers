@@ -125,7 +125,6 @@ def filter_episodes_by_maps(
     print(f"Total Episode count: {len(filtered_episodes)}")
     return filtered_episodes
 
-
 def load_episodes(base_path:str, split:str) -> List[Dict]:
     """
     Load episodes from the episodes directory and filter them based on available maps.

@@ -20,12 +20,15 @@ from model.model import RetrievalMapModel
 # Dataloader
 from dataset.dataloader import get_dataloader
 
-def main():
+def main(args):
     
     # Get args and set seed
-    args = get_args()
     set_seed(args.seed)
     
+    # Print all the args
+    for arg, value in vars(args).items():
+        print(f"{arg}: {value}")
+        
     # Initialize W&B
     if args.use_wandb:
         wandb.init(project="EAI-Pers", entity=args.entity, name=args.run_name)
@@ -44,10 +47,10 @@ def main():
         **kwargs
     )
     
-    # Get the entire dataset from the data_loader
+    # Get the different splits from the data_loader
     train_loader, val_loader = split_dataloader(data_loader, split_ratio=0.8, batch_size=args.batch_size, **kwargs)
 
-    # Model
+    # Model Initialization
     model = RetrievalMapModel(
         embed_dim=args.embed_dim,
         num_heads=args.num_heads,
@@ -56,7 +59,7 @@ def main():
         pixels_per_meter=args.pixels_per_meter,
     )
 
-    # Optimizer
+    # Optimizer Initialization
     optimizer = get_optimizer(
         optimizer_name=args.optimizer,
         model=model,
@@ -64,7 +67,7 @@ def main():
         weight_decay=args.weight_decay
     )
 
-    # Scheduler
+    # Scheduler Initialization
     scheduler = get_scheduler(
         scheduler_name=args.scheduler,
         optimizer=optimizer,
@@ -72,9 +75,10 @@ def main():
         step_size=args.step_size,
         gamma=args.gamma
     )
-
+    
+    
+    # Train and/or validate the model
     if args.mode in ['train']:    
-        # Train the model and validate
         train_and_validate(
             model=model,
             train_loader=train_loader,
@@ -88,17 +92,18 @@ def main():
             **kwargs
         )
     elif args.mode in ['eval']:
-        # Evaluate the model
         validate(
             model=model,
             data_loader=val_loader,
             device=args.device,
             loss_choice=args.loss_choice,
             use_wandb=args.use_wandb,
+            **kwargs
         )
         
     # Finish run
-    wandb.finish()
+    if args.use_wandb:
+        wandb.finish()
     print("Run completed.")
 
 if __name__ == "__main__":

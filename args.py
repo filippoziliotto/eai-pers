@@ -13,6 +13,9 @@ def get_args():
     parser.add_argument("--data_dir", type=str, default="data", help="Path to the data directory")
     parser.add_argument("--data_split", type=str, default="val", choices=["train", "val"], help="Data split to use")
     
+    # Mode Parameters
+    parser.add_argument("--mode", type=str, default="train", choices=["train", "eval"], help="Mode to run the script")
+    
     # Seed for reproducibility
     parser.add_argument("--seed", type=int, default=2025, help="Random seed for reproducibility")
     
