@@ -77,10 +77,13 @@ def get_dataloader(data_dir, data_split="val", batch_size=32, shuffle=True, num_
     Returns:
         DataLoader: PyTorch DataLoader instance.
     """
+    print("Initializing DataLoader...")
+    
     transform = MapTransform(**kwargs)  # Pass all extra arguments to MapTransform
     
     dataset = RetMapsDataset(data_dir, data_split, transform=transform)
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
+    print("DataLoader initialized.")
     
     return dataloader
 

@@ -20,14 +20,19 @@ from model.model import RetrievalMapModel
 # Dataloader
 from dataset.dataloader import get_dataloader
 
+# Useful to check if the functions run individually
+DEBUG = False
+
 def main(args):
     
     # Get args and set seed
     set_seed(args.seed)
     
     # Print all the args
+    print("Starting run...")
     for arg, value in vars(args).items():
         print(f"{arg}: {value}")
+    print('-' * 20)
         
     # Initialize W&B
     if args.use_wandb:
@@ -75,7 +80,6 @@ def main(args):
         step_size=args.step_size,
         gamma=args.gamma
     )
-    
     
     # Train and/or validate the model
     if args.mode in ['train']:    

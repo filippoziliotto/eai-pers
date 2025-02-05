@@ -80,9 +80,9 @@ def set_seed(seed: int) -> None:
     torch.cuda.manual_seed_all(seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
-    print(' -----------------------------------')
-    print(f"| Set Seed 20{seed} for Reproducibility |")
-    print(' -----------------------------------')
+    print(' ----------------')
+    print(f"| Set Seed {seed} |")
+    print(' ----------------')
     return
 
 """
@@ -115,6 +115,7 @@ def get_optimizer(optimizer_name, model, lr, weight_decay=0.0):
     else:
         raise ValueError(f"Unsupported optimizer name: {optimizer_name}")
 
+    print(f"Optimizer loaded: {optimizer_name}")
     return optimizer
 
 def get_scheduler(scheduler_name, optimizer, num_epochs=None, step_size=None, gamma=0.1, patience=10):
@@ -156,4 +157,6 @@ def get_scheduler(scheduler_name, optimizer, num_epochs=None, step_size=None, ga
     else:
         raise ValueError(f"Unsupported scheduler name: {scheduler_name}")
 
+
+    print(f"Scheduler loaded: {scheduler_name}")
     return scheduler

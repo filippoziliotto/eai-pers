@@ -24,8 +24,10 @@ class RetrievalMapModel(nn.Module):
             pixels_per_meter (int): The number of pixels per meter.
         """
         super(RetrievalMapModel, self).__init__()
+        print("Initializing Model...")
         self.first_stage = MapAttentionModel(embed_dim, num_heads, encoder)
         self.second_stage = SimilarityMapModel(encoder, cosine_method, pixels_per_meter)
+        print("Model initialized.")
 
     def forward(self, description, map_tensor, query):
         """
