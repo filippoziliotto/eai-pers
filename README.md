@@ -2,6 +2,15 @@
 
 Personalized user navigation through retrievable memory maps.
 
+![Example Image](images/example.gif)
+
+#### Getting started
+> **Note:** Run the following commands in the terminal:
+
+```sh
+chmod +x scripts/train.sh
+chmod +x scripts/test.sh
+```
 
 ##### Library structure
 > **Note:** The following is the structure of the library:\
@@ -35,8 +44,3 @@ Personalized user navigation through retrievable memory maps.
 │ ├── losses.py \
 │ ├── similarity.py \
 │ └── utils.py \
-
-#### Getting started
-> **Note:** chmod +x scripts/train.sh:\
-
-> **Note:** chmod +x scripts/test.sh:\

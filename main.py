@@ -21,11 +21,10 @@ from dataset.dataloader import get_dataloader
 DEBUG = True
 
 # Importing custom models
-if not DEBUG:
-    try:
-        from models.encoder import Blip2Encoder
-    except ImportError:
-        print("Blip2Encoder not imported correctly, check your lavis-dependencies.")
+try:
+    from models.encoder import Blip2Encoder
+except ImportError:
+    print("Blip2Encoder not imported correctly, check your lavis-dependencies.")
 from models.model import RetrievalMapModel  
 
 
