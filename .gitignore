@@ -98,7 +98,6 @@ data
 # Custom outputs
 /logs/
 /slurm/
-/images/
 
 # Ignoring md files
 TODO.md
