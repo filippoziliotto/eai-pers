@@ -1,6 +1,9 @@
+
+# Local imports
 import torch
 from torch.utils.data import DataLoader
-import wandb  # Import W&B
+import wandb
+from tqdm import tqdm
 
 # Other imports
 from utils.losses import compute_loss
@@ -32,7 +35,7 @@ def train_one_epoch(
     epoch_loss = 0.0
     train_acc = []
     
-    for batch_idx, data in enumerate(data_loader):
+    for batch_idx, data in tqdm(enumerate(data_loader), total=len(data_loader), desc="Batches"):
         description = data['description']
         gt_target = data['target'].to(device)
         query = data['query']
@@ -104,7 +107,7 @@ def train_and_validate(
         metrics.update({f"Val Acc [{k}]": v for k, v in val_acc.items()})
         wandb.log(metrics)
 
-    for epoch in range(1, num_epochs + 1):
+    for epoch in tqdm(range(1, num_epochs + 1), desc="Epochs"):
         # Train for one epoch
         train_loss, train_acc = train_one_epoch(model, train_loader, optimizer, loss_choice, device)
 

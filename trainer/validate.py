@@ -1,6 +1,7 @@
 import torch
 from torch.utils.data import DataLoader
-import wandb  # Import W&B
+import wandb 
+from tqdm import tqdm
 
 # Other imports
 from utils.losses import compute_loss
@@ -39,7 +40,7 @@ def validate(
     accuracy = []
     
     with torch.no_grad():
-        for batch_idx, data in enumerate(data_loader):
+        for batch_idx, data in tqdm(enumerate(data_loader), total=len(data_loader), desc="Batches"):
             
             # Get data and move to device
             description = data['description']
