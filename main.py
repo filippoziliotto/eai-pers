@@ -8,7 +8,7 @@ from trainer.validate import validate
 
 # Importing utility functions
 from utils.utils import get_optimizer, set_seed, args_logger
-from dataset.utils import split_dataloader
+from dataset.utils import split_dataloader, custom_collate
 
 # Importing argument parsing function
 from args import get_args
@@ -18,13 +18,13 @@ from dataset.dataloader import get_dataloader
 
 
 # Useful to check if the functions run individually
-DEBUG = True
+DEBUG = False
 
 # Importing custom models
 try:
     from models.encoder import Blip2Encoder
 except ImportError:
-    print("Blip2Encoder not imported correctly, check your lavis-dependencies.")
+    print("Blip2Encoder cannot be imported, check your salesforce-lavis dependencies!!!")
 from models.model import RetrievalMapModel  
 
 
@@ -55,6 +55,7 @@ def main(args):
         data_split=args.data_split,
         batch_size=args.batch_size,
         shuffle=False,     
+        collate_fn=custom_collate,
         kwargs=kwargs
     )
     
@@ -68,6 +69,7 @@ def main(args):
         encoder=encoder,
         cosine_method=args.cosine_method,
         pixels_per_meter=args.pixels_per_meter,
+        device=args.device
     )
     print("N° of Model parameters: ", sum(p.numel() for p in model.parameters() if p.requires_grad))
 
@@ -95,7 +97,6 @@ def main(args):
             loss_choice=args.loss_choice,
             device=args.device,
             use_wandb=args.use_wandb
-            **kwargs
         )
     elif args.mode in ['eval']:
         validate(

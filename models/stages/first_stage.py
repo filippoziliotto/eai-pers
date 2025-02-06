@@ -30,14 +30,19 @@ class MapAttentionModel(nn.Module):
         Encodes a given description into embeddings.
 
         Args:
-            description (str): The description to encode.
+            description (str): The description to encode. (b, k)
 
         Returns:
             torch.Tensor: The concatenated embeddings of the descriptions.
         """
+            
         descriptions = self.extractor.separate(description)
-        encoded_descriptions = [self.encoder.get_embeddings(desc, type='text') for desc in descriptions]
-        attached_embs = torch.cat(encoded_descriptions, dim=0)
+        encoded_descriptions = [self.encoder.get_embeddings(text=desc, modality='text') for desc in descriptions]
+
+        # Extract the 'text' tensors from each dictionary and concatenate them
+        text_tensors = [desc['text'].unsqueeze(0) for desc in encoded_descriptions]
+        # Attach embeddings as a batch (b, k, E), where k is batched to the longest element
+        attached_embs = torch.cat(text_tensors, dim=0)
         return attached_embs
 
     def map_shaping(self, map_tensor):
@@ -64,11 +69,11 @@ class MapAttentionModel(nn.Module):
             torch.Tensor: The output of the multi-head attention mechanism.
         """
         
-        # Get description embeddings (k, E)
+        # Get description embeddings (b, k, E)
         desc_embeds = self.encode_descriptions(description)
         
-        # Get reshaped map tensor (h*w, E)
+        # Get reshaped map tensor (b, h*w, E)
         reshaped_map = self.map_shaping(map_tensor)
         
-        output = self.mh_attention(reshaped_map, desc_embeds)
-        return output.reshape(map_tensor.shape[0], map_tensor.shape[1], -1)
+        output = self.mh_attention(reshaped_map, desc_embeds, desc_embeds)
+        return output.view(*map_tensor.shape[:3], -1)

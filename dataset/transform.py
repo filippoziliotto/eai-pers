@@ -22,7 +22,7 @@ class MapTransform:
         Apply transformations to the input data.
         """
         if not self.use_aug:
-            return description, feature_map, xy_coords
+            return feature_map, xy_coords, description
                 
         # Apply horizontal flip
         if self.use_horizontal_flip and torch.rand(1) > self.prob:
@@ -45,4 +45,4 @@ class MapTransform:
         if self.use_desc_aug and torch.rand(1) > self.prob:
             pass 
         
-        return description, feature_map, xy_coords
+        return feature_map, xy_coords, description

@@ -56,6 +56,7 @@ def get_args():
     parser.add_argument("--patience", type=int, default=10, help="Patience value for ReduceOnPlateau scheduler")
 
     # Device
+    parser.add_argument("--num_workers", type=int, default=4, help="Number of workers for data loading")
     parser.add_argument("--device", type=str, default="cpu", choices=["cpu", "cuda", "mps"], help="Device to train on")
     
     # Wandb

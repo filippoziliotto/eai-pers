@@ -30,36 +30,36 @@ class MultiHeadAttention(nn.Module):
         Multi-head attention forward pass.
 
         Args:
-            Q_input: Tensor of shape (n_q, E) - Query input (e.g., map).
-            K_input: Tensor of shape (k, E) - Key input (e.g., list of embeddings).
-            V_input: Tensor of shape (k, E) - Value input (same shape as Key input).
+            Q_input: Tensor of shape (b, n_q, E) - Query input (e.g., map).
+            K_input: Tensor of shape (b, k, E) - Key input (e.g., list of embeddings).
+            V_input: Tensor of shape (b, k, E) - Value input (same shape as Key input).
 
         Returns:
-            output: Tensor of shape (n_q, E)
+            output: Tensor of shape (b, n_q, E)
         """
-        n_q, embed_dim = Q_input.size()
-        k, _ = K_input.size()
+        b, n_q, embed_dim = Q_input.size()
+        b, k, _ = K_input.size()
         assert embed_dim == self.embed_dim, "Embedding dimension mismatch"
 
         # Linear projections
-        Q = self.q_proj(Q_input)  # (n_q, E)
-        K = self.k_proj(K_input)  # (k, E)
-        V = self.v_proj(V_input)  # (k, E)
+        Q = self.q_proj(Q_input)  # (b, n_q, E)
+        K = self.k_proj(K_input)  # (b, k, E)
+        V = self.v_proj(V_input)  # (b, k, E)
 
         # Reshape for multi-head attention
-        Q = Q.view(n_q, self.num_heads, self.head_dim).permute(1, 0, 2)  # (num_heads, n_q, head_dim)
-        K = K.view(k, self.num_heads, self.head_dim).permute(1, 0, 2)    # (num_heads, k, head_dim)
-        V = V.view(k, self.num_heads, self.head_dim).permute(1, 0, 2)    # (num_heads, k, head_dim)
+        Q = Q.view(b, n_q, self.num_heads, self.head_dim).permute(0, 2, 1, 3)  # (b, num_heads, n_q, head_dim)
+        K = K.view(b, k, self.num_heads, self.head_dim).permute(0, 2, 1, 3)    # (b, num_heads, k, head_dim)
+        V = V.view(b, k, self.num_heads, self.head_dim).permute(0, 2, 1, 3)    # (b, num_heads, k, head_dim)
 
         # Scaled dot-product attention
-        attn_scores = torch.matmul(Q, K.transpose(-2, -1)) / (self.head_dim ** 0.5)  # (num_heads, n_q, k)
-        attn_weights = F.softmax(attn_scores, dim=-1)  # (num_heads, n_q, k)
-        attn_output = torch.matmul(attn_weights, V)    # (num_heads, n_q, head_dim)
+        attn_scores = torch.matmul(Q, K.transpose(-2, -1)) / (self.head_dim ** 0.5)  # (b, num_heads, n_q, k)
+        attn_weights = F.softmax(attn_scores, dim=-1)  # (b, num_heads, n_q, k)
+        attn_output = torch.matmul(attn_weights, V)    # (b, num_heads, n_q, head_dim)
 
         # Concatenate heads and project output
-        attn_output = attn_output.permute(1, 0, 2).contiguous()  # (n_q, num_heads, head_dim)
-        attn_output = attn_output.view(n_q, self.embed_dim)      # (n_q, E)
-        attn_output = self.out_proj(attn_output)                # (n_q, E)
+        attn_output = attn_output.permute(0, 2, 1, 3).contiguous()  # (b, n_q, num_heads, head_dim)
+        attn_output = attn_output.view(b, n_q, self.embed_dim)      # (b, n_q, E)
+        attn_output = self.out_proj(attn_output)                    # (b, n_q, E)
 
         return attn_output
 

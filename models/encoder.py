@@ -2,7 +2,7 @@
 import torch
 import numpy as np
 from PIL import Image
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple, Union, List
 
 import sys
 import os
@@ -66,28 +66,33 @@ class Blip2Encoder:
             cosine = self.encoder({"image": img, "text_input": txt}, match_head="itc").item()
         return cosine
     
-    def preprocess_inputs(self, image: np.ndarray, text: str) -> Tuple[torch.Tensor, torch.Tensor]:
-        """
-        Preprocess the input image and text.
+    def preprocess_inputs(self, image: np.ndarray, text: Union[str, List[str]]) -> Tuple[torch.Tensor, Union[torch.Tensor, List[torch.Tensor]]]:
+            """
+            Preprocess the input image and text.
 
-        Args:
-            image (numpy.ndarray): The input image as a numpy array.
-            text (str): The input text.
+            Args:
+                image (numpy.ndarray): The input image as a numpy array.
+                text (Union[str, List[str]]): The input text or list of texts.
 
-        Returns:
-            Tuple[torch.Tensor, torch.Tensor]: The preprocessed image and text.
-        """
-        if isinstance(image, torch.Tensor):
-            image = Image.fromarray(image.cpu().numpy())
-        elif isinstance(image, np.ndarray):
-            image = Image.fromarray(image)
-        elif isinstance(image, PIL.Image.Image):
-            pass
+            Returns:
+                Tuple[torch.Tensor, Union[torch.Tensor, List[torch.Tensor]]]: The preprocessed image and text.
+            """
+            if isinstance(image, torch.Tensor):
+                image = Image.fromarray(image.cpu().numpy())
+            elif isinstance(image, np.ndarray):
+                image = Image.fromarray(image)
+            elif isinstance(image, Image.Image):
+                pass
+            
+            img, txt = None, [None]
 
-        img = self.vis_processors(image).unsqueeze(0).to(self.device)
-        txt = self.text_processors(text)
+            if image is not None:
+                img = self.vis_processors['eval'](image).unsqueeze(0).to(self.device)
+                
+            # Handling batched data text input
+            txt = [self.text_processors['eval'](t) for t in text]
 
-        return img, txt
+            return img, txt
     
     def get_embeddings(
         self,
@@ -110,7 +115,9 @@ class Blip2Encoder:
         """
         image_embedding, text_embedding, multimodal_embedding = None, None, None
         img, txt = self.preprocess_inputs(image, text)
-        sample = {"image": img, "text_input": [txt]}
+        
+        # Handle batched data text inputs
+        sample = {"image": img, "text_input": txt}
 
         if modality in ["image"]:
             assert image is not None
@@ -119,7 +126,8 @@ class Blip2Encoder:
         elif modality in ["text"]:
             assert text is not None
             with torch.inference_mode():
-                text_embedding = self.encoder.extract_features(sample, mode="text").text_embeds[:,0,:]
+                text_embeddings = [self.encoder.extract_features({"image": img, "text_input": t}, mode="text").text_embeds[:,0,:] for t in txt]
+                text_embedding = torch.stack(text_embeddings).squeeze(1)
         elif modality in ['both']:
             assert image is not None and text is not None
             with torch.inference_mode():

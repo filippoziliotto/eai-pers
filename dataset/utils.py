@@ -5,10 +5,15 @@ from torch.utils.data import random_split, DataLoader
 
 # External imports
 import numpy as np
+import torch
 
 # Geometry utilities imports
 from utils.geometry_utils import quaternion_from_coeff, quaternion_rotate_vector
 
+   
+"""
+MAP UTILITIES
+"""
 
 def map_to_xyz(episode: Dict, map: BaseMap) -> List[float]:
     """
@@ -18,7 +23,7 @@ def map_to_xyz(episode: Dict, map: BaseMap) -> List[float]:
         List[float]: The [x, y, z] coordinates in the global frame.
     """
     pos_origin = episode['robot_xyz']
-    rotation_world_start = quaternion_from_coeff(episode['robot_heading'])
+    rotation_world_start = quaternion_from_coeff(episode['robot_rot'])
 
     # Convert pixel position to local map coordinates and flip y-axis
     local_coords = map._px_to_xy(pos_origin.reshape(1, 2))[0]
@@ -37,14 +42,14 @@ def xyz_to_map(episode: Dict, map: BaseMap) -> List[float]:
         List[float]: The [x, y] coordinates in the map frame.
     """
     # Get rotation from robot heading
-    rotation_world_start = quaternion_from_coeff(episode['robot_heading'])
+    rotation_world_start = quaternion_from_coeff(episode['robot_rot'])
 
     # Ensure robot_xyz is a NumPy array
     robot_xyz = episode['robot_xyz'] if isinstance(episode['robot_xyz'], np.ndarray) else np.array(episode['robot_xyz'])
 
     # Rotate target position into the robot's frame of reference
     target_pos = quaternion_rotate_vector(
-        rotation_world_start.inverse(), episode['xyz_target'] - robot_xyz
+        rotation_world_start.inverse(), episode['object_pos'] - robot_xyz
     )
 
     # Convert rotated position to map coordinates (ignoring z and flipping axes)
@@ -53,6 +58,37 @@ def xyz_to_map(episode: Dict, map: BaseMap) -> List[float]:
     # Convert to pixel coordinates on the map
     return map._xy_to_px(target_map.reshape(1, 2))[0]
 
+"""
+BATCHING UTILITIES
+"""
+def custom_collate(batch):
+    """
+    Custom collate function to process a batch of data.
+    
+    Args:
+        batch (list of dict): A list where each element is a dictionary containing
+                              'description', 'query', 'target', and 'feature_map'.
+    
+    Returns:
+        dict: A dictionary with keys 'description', 'query', 'target', and 'feature_map'.
+              The values are the corresponding stacked tensors or lists from the batch.
+    """
+    # Extract descriptions and queries from the batch
+    descriptions = [item["description"] for item in batch]
+    queries = [item["query"] for item in batch]
+    
+    # Stack the tensors for targets and feature maps
+    targets = torch.stack([item["target"] for item in batch])
+    feature_maps = torch.stack([item["feature_map"] for item in batch])
+    
+    # Return the collated batch as a dictionary
+    return {
+        "description": descriptions,
+        "query": queries,
+        "target": targets,
+        "feature_map": feature_maps,
+    }
+    
 def split_dataloader(data_loader: DataLoader, split_ratio: float, batch_size: int) -> Tuple[DataLoader, DataLoader]:
     """
     Splits a DataLoader into training and validation DataLoaders based on the given split ratio.

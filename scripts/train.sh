@@ -7,7 +7,8 @@ python main.py \
     --data_split "val" \
     --mode "train" \
     --seed 2025 \
-    --batch_size 1 \
+    --batch_size 2 \
+    --num_workers 8 \
     --lr 0.001 \
     --weight_decay 1e-5 \
     --num_epochs 10 \

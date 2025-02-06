@@ -1,6 +1,6 @@
 import numpy as np
 
-def accuracy(gt_point, pred_point, threshold=10):
+def accuracy(gt, pred, threshold=10):
     """
     Computes accuracy based on whether the predicted point is within a specified threshold of the ground truth point.
 
@@ -12,8 +12,8 @@ def accuracy(gt_point, pred_point, threshold=10):
     Returns:
         int: 1 if the prediction is within the threshold distance, 0 otherwise.
     """
-    distance = np.linalg.norm(np.array(gt_point) - np.array(pred_point))
-    return 1 if distance <= threshold else 0
+    distance = np.sqrt((gt[0] - pred[0]) ** 2 + (gt[1] - pred[1]) ** 2)
+    return distance <= threshold
 
 def mean_squared_error(gt_point, pred_point):
     """

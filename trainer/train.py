@@ -4,7 +4,7 @@ import wandb  # Import W&B
 
 # Other imports
 from utils.losses import compute_loss
-from utils.metrics import compute_accuracy
+from utils.metrics import compute_accuracy, accuracy
 from trainer.validate import validate
 
 def train_one_epoch(
@@ -33,9 +33,9 @@ def train_one_epoch(
     train_acc = []
     
     for batch_idx, data in enumerate(data_loader):
-        description = data['description'].to(device)
+        description = data['description']
         gt_target = data['target'].to(device)
-        query = data['query'].to(device)
+        query = data['query']
         feature_map = data['feature_map'].to(device)
 
         # Forward pass: Get predictions
@@ -45,7 +45,8 @@ def train_one_epoch(
         loss = compute_loss(gt_target, pred_target, loss_choice)
         
         # Compute accuracy
-        train_acc.append(compute_accuracy(gt_target, pred_target))
+        # TODO: Implement accuracy computation with threshold
+        train_acc.append(accuracy(gt_target, pred_target))
 
         # Backward pass and optimization
         optimizer.zero_grad()
@@ -73,7 +74,6 @@ def train_and_validate(
     loss_choice='L2',
     device='cpu', 
     use_wandb=False, 
-    **kwargs
     ):
     """
     Full training loop that trains and validates the model for multiple epochs.
@@ -107,7 +107,7 @@ def train_and_validate(
 
     for epoch in range(1, num_epochs + 1):
         # Train for one epoch
-        train_loss, train_acc = train_one_epoch(model, train_loader, optimizer, loss_choice, device, use_wandb)
+        train_loss, train_acc = train_one_epoch(model, train_loader, optimizer, loss_choice, device)
 
         # Validate after each epoch
         val_loss, val_acc = validate(model, val_loader, loss_choice, device, use_wandb)

@@ -4,6 +4,8 @@ import json
 
 # Add base path to PYTHONPATH
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+base_path = '/Users/filippoziliotto/Desktop/Repos/eai-pers/'
+
 sys.path.append(base_path)
 
 # Import the function to load episodes
@@ -52,7 +54,7 @@ episodes = load_episodes(data_dir, split)
 for i, episode in enumerate(episodes):
     
     # Read the prompt from a text file
-    with open('model/extractor/prompt.txt', 'r') as f:
+    with open('models/extractor/prompt.txt', 'r') as f:
         prompt = f.read()
     
     output = call_gpt(prompt, episode['summary'])

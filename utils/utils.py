@@ -25,47 +25,60 @@ def reshape_map(map_tensor: Union[torch.Tensor, np.ndarray]) -> torch.Tensor:
         raise TypeError("Input must be either numpy array or torch tensor")
     
     # Add channel dimension if input is 2D
-    if map_tensor.dim() == 2:
-        map_tensor = map_tensor.unsqueeze(-1)
-    elif map_tensor.dim() != 3:
+    if map_tensor.dim() != 4:
         raise ValueError(f"Expected 2D or 3D input, got {map_tensor.dim()}D")
     
     # Reshape using view for better memory efficiency
-    h, w, n = map_tensor.shape
-    return map_tensor.view(-1, n)
+    b, h, w, n = map_tensor.shape
+    return map_tensor.view(b, -1, n)
 
-def find_non_zero_neighborhood_indices(value_map, w, neighborhood_size=10):
+import numpy as np
+
+import numpy as np
+
+def find_non_zero_neighborhood_indices(value_map, w, neighborhood_size=5, return_max=False):
     """
     Finds the indices of non-zero values in the neighborhood around the maximum value in the value_map.
+    If return_max is True, only the index of the maximum value is returned.
 
     Parameters:
     value_map (numpy.ndarray): 2D array of values where we want to find the maximum similarity.
-    w (int): Width of the value_map.
-    neighborhood_size (int): Size of the neighborhood to consider around the maximum value. Default is 10.
+    w (int): Width of the value_map (number of columns).
+    neighborhood_size (int): Half-size of the neighborhood around the maximum value. Default is 5.
+    return_max (bool): If True, return only the index of the maximum element. If False, return the indices
+                        of non-zero elements in the neighborhood.
 
     Returns:
-    list of tuple: List of indices (row, col) of non-zero values in the neighborhood around the maximum value.
+    tuple or list of tuples: If return_max is True, returns a tuple with the index of the max element.
+                              If return_max is False, returns a list of indices (row, col) of non-zero
+                              values in the neighborhood.
     """
     # Step 1: Find the index of the maximum value in the value_map
     max_idx = value_map.argmax()
-
-    # Step 2: Calculate the row and column indices of the maximum value
-    max_row, max_col = divmod(max_idx, w)
-
-    # Step 3: Define the neighborhood boundaries
+    
+    # Step 2: Convert the 1D index to 2D (row, col) coordinates
+    max_row, max_col = divmod(int(max_idx), w)
+    
+    # If return_max is True, return the index of the max element
+    if return_max:
+        return (max_row, max_col)
+    
+    # Step 3: Calculate the neighborhood boundaries, ensuring they stay within bounds
     row_start = max(0, max_row - neighborhood_size)
-    row_end = min(value_map.shape[0], max_row + neighborhood_size)
+    row_end = min(value_map.shape[0], max_row + neighborhood_size + 1)
     col_start = max(0, max_col - neighborhood_size)
-    col_end = min(value_map.shape[1], max_col + neighborhood_size)
+    col_end = min(value_map.shape[1], max_col + neighborhood_size + 1)
+    
+    # Step 4: Collect indices of non-zero values in the neighborhood
+    neighborhood_indices = [
+        (r, c)
+        for r in range(row_start, row_end)
+        for c in range(col_start, col_end)
+        if value_map[r, c] != 0
+    ]
+    
+    return neighborhood_indices
 
-    # Step 4: Extract the neighborhood around the maximum value
-    neighborhood = value_map[row_start:row_end, col_start:col_end]
-
-    # Step 5: Find the indices of non-zero values in the neighborhood
-    non_zero_indices = [(i + row_start, j + col_start) for i, row in enumerate(neighborhood) for j, val in enumerate(row) if val != 0]
-
-    # Output: List of tuples (row, col)
-    return non_zero_indices
 
 def set_seed(seed: int) -> None:
     """

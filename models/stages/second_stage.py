@@ -1,6 +1,10 @@
+
+# Library imports
 import torch
 import torch.nn as nn
+import numpy as np
 
+# Local imports
 from utils.similarity import cosine_similarity
 from utils.utils import find_non_zero_neighborhood_indices
 
@@ -25,29 +29,35 @@ class SimilarityMapModel(nn.Module):
         Returns:
             torch.Tensor: The encoded query.
         """
-        return self.encoder.get_embeddings(query, type='text')
+        return self.encoder.get_embeddings(text=query, modality='text')
 
     def forward(self, map_features, query):
         """
         Args:
-            map_features: Tensor of shape (w, h, E) - Feature map from the previous class.
-            query_feature: Tensor of shape (1, E) - Query vector for comparison.
-            ground_truth_coords: Tuple (x, y) - Ground truth pixel coordinates.
+            map_features: Tensor of shape (b, w, h, E) - Feature map from the previous class.
+            query_feature: Tensor of shape (b, 1, E) - Query vector for comparison.
+            ground_truth_coords: Tuple (b, x, y) - Ground truth pixel coordinates.
         
         Returns:
             loss: Computed loss value.
             predicted_coords: Tuple (x', y') - Predicted coordinates from the similarity map.
         """
-        w, h, E = map_features.size()
-        query_feature = self.encode_query(query)    
-        assert query_feature.size() == (1, E), "Query feature must have shape (1, E)"
+        b, w, h, E = map_features.size()
+        query_features = self.encode_query(query)    
+        query_features = query_features['text']
+        
+        assert query_features.size() == (b, E), "Query feature must have shape (b, E)"
         
         # Step 1: Compute cosine similarity for each pixel (wi, hj, E) and query (1, E)
         value_map = cosine_similarity(
-            map_features, query_feature, method=self.cosine_method
-        )  # Shape: (w, h)
+            map_features, query_features, method=self.cosine_method
+        )  # Shape: (b, w, h)
 
-        # Step 2: Find the predicted coordinates (x', y') with max similarity
-        predicted_coords = find_non_zero_neighborhood_indices(value_map, w, neighborhood_size=self.pixels_per_meter)
+        # Step 2: Find the predicted coordinates (b, x', y') with max similarity
+        predicted_coords = []
+        for b in range(value_map.shape[0]):
+            coords = find_non_zero_neighborhood_indices(value_map[b], w, neighborhood_size=self.pixels_per_meter//2, return_max=True)
+            predicted_coords.append(coords)
+        predicted_coords = torch.tensor(predicted_coords, device=value_map.device)
 
         return predicted_coords

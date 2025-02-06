@@ -45,7 +45,7 @@ class RetMapsDataset(Dataset):
         episode = self.episodes[idx]
         
         # Get episode Description
-        description = episode["description"]
+        description = episode["summary_extraction"]
         query = episode["query"]
         
         # Uncompress the feature map (.npz)
@@ -57,7 +57,7 @@ class RetMapsDataset(Dataset):
 
         # Transform the data, used only for convert to tensor or augmentations
         if self.transform:
-            description, feature_map, target = self.transform(feature_map, target, episode["description"])
+            feature_map, target, description = self.transform(feature_map, target, description)
             
         # Return as a dictionary
         return {
@@ -67,7 +67,7 @@ class RetMapsDataset(Dataset):
             "feature_map": feature_map
         }
 
-def get_dataloader(data_dir, data_split="val", batch_size=32, shuffle=True, num_workers=4, kwargs={}):
+def get_dataloader(data_dir, data_split="val", batch_size=32, shuffle=True, num_workers=4, collate_fn=None, kwargs={}):
     """
     Creates a dataloader with optional transformation arguments.
 
@@ -87,7 +87,7 @@ def get_dataloader(data_dir, data_split="val", batch_size=32, shuffle=True, num_
     transform = MapTransform(**kwargs)  # Pass all extra arguments to MapTransform
     
     dataset = RetMapsDataset(data_dir, data_split, transform=transform)
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, collate_fn=collate_fn)
     print("DataLoader initialized.")
     
     return dataloader

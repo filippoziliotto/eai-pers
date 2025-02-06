@@ -74,6 +74,7 @@ def load_all_maps(maps_base_dir: str) -> List[Dict]:
                     "robot_xyz": first_entry.get("current_pos", None),
                     "robot_xy": first_entry.get("robot_xy", None),
                     "robot_heading": first_entry.get("heading", None),
+                    "robot_rotation": first_entry.get("current_rot", None),
                     "feature_map_path": feature_map_path if os.path.exists(feature_map_path) else None,
                 }
 
@@ -116,6 +117,7 @@ def filter_episodes_by_maps(
             ep["robot_xyz"] = map_data.get("robot_xyz", None)
             ep["robot_xy"] = map_data.get("robot_xy", None)
             ep["robot_heading"] = map_data.get("robot_heading", None)
+            ep["robot_rot"] = map_data.get("robot_rotation", None)
             ep["feature_map_path"] = map_data.get("feature_map_path", None)
 
             # Add the updated episode to the filtered list
