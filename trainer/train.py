@@ -109,7 +109,7 @@ def train_and_validate(
         train_loss, train_acc = train_one_epoch(model, train_loader, optimizer, loss_choice, device)
 
         # Validate after each epoch
-        val_loss, val_acc = validate(model, val_loader, loss_choice, device, use_wandb)
+        val_loss, val_acc = validate(model, val_loader, loss_choice, device)
 
         # Log metrics to W&B if enabled
         if use_wandb:

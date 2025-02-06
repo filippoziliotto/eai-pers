@@ -33,13 +33,13 @@ def main(args):
     # Print all the args
     print("Starting run...")
     
-    # Log args and set seed
-    args_logger(args)
-    set_seed(args.seed)
-
     # Initialize W&B
     if args.use_wandb:
         wandb.init(project="EAI-Pers", name=args.run_name)
+    
+    # Log args and set seed
+    args_logger(args)
+    set_seed(args.seed)
         
     # Get Freezed text encoder and initialize
     if not DEBUG:

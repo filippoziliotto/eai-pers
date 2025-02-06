@@ -39,10 +39,12 @@ def validate(
     accuracy = []
     
     with torch.no_grad():
-        for data in data_loader:
-            description = data['description'].to(device)
+        for batch_idx, data in enumerate(data_loader):
+            
+            # Get data and move to device
+            description = data['description']
             gt_target = data['target'].to(device)
-            query = data['query'].to(device)
+            query = data['query']
             feature_map = data['feature_map'].to(device)
 
             # Forward pass: Get predictions
@@ -60,8 +62,5 @@ def validate(
     
     # accuracy = [ {'5': 0.8, '10': 0.9, '20': 1.0}, {'5': 0.8, '10': 0.9, '20': 1.0}, ...]
     val_avg_acc = {key: sum(d[key] for d in accuracy) / len(accuracy) for key in accuracy[0]}
-    
-    if kwargs.get('mode') in ['eval']:
-        log_epoch_metrics(val_avg_loss, val_avg_acc)
 
     return val_avg_loss, val_avg_acc
