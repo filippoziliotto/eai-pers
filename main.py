@@ -7,7 +7,7 @@ from trainer.train import train_and_validate
 from trainer.validate import validate
 
 # Importing utility functions
-from utils.utils import get_optimizer, get_scheduler, set_seed
+from utils.utils import get_optimizer, get_scheduler, set_seed, args_logger
 from dataset.utils import split_dataloader
 
 # Importing argument parsing function
@@ -25,18 +25,16 @@ DEBUG = False
 
 def main(args):
     
-    # Get args and set seed
-    set_seed(args.seed)
-    
     # Print all the args
     print("Starting run...")
-    for arg, value in vars(args).items():
-        print(f"{arg}: {value}")
-    print('-' * 20)
-        
+    
+    # Log args and set seed
+    args_logger(args)
+    set_seed(args.seed)
+
     # Initialize W&B
     if args.use_wandb:
-        wandb.init(project="EAI-Pers", entity=args.entity, name=args.run_name)
+        wandb.init(project="EAI-Pers", name=args.run_name)
         
     # Get Freezed text encoder and initialize
     encoder = Blip2Encoder(device=args.device, freeze_encoder=args.freeze_encoder)
@@ -64,21 +62,16 @@ def main(args):
         pixels_per_meter=args.pixels_per_meter,
     )
 
-    # Optimizer Initialization
-    optimizer = get_optimizer(
+    # Optimizer (and scheduler) initialization using **kwargs for scheduler parameters.
+    optimizer, scheduler = get_optimizer(
         optimizer_name=args.optimizer,
         model=model,
         lr=args.lr,
-        weight_decay=args.weight_decay
-    )
-
-    # Scheduler Initialization
-    scheduler = get_scheduler(
+        weight_decay=args.weight_decay,
         scheduler_name=args.scheduler,
-        optimizer=optimizer,
-        num_epochs=args.num_epochs,
-        step_size=args.step_size,
-        gamma=args.gamma
+        num_epochs=args.num_epochs,  # for cosine_annealing
+        step_size=args.step_size,    # for step_lr
+        gamma=args.gamma,            # for any scheduler that uses gamma
     )
     
     # Train and/or validate the model

@@ -17,8 +17,6 @@ Personalized user navigation through retrievable memory maps.
 │ │ └── base_map.py \
 │ ├── transform.py \
 │ └── utils.py \
-├── LAVIS/ \
-│ ├── ... \
 ├── main.py \
 ├── model/ \
 │ ├── README.md \
@@ -37,3 +35,8 @@ Personalized user navigation through retrievable memory maps.
 │ ├── losses.py \
 │ ├── similarity.py \
 │ └── utils.py \
+
+#### Getting started
+> **Note:** chmod +x scripts/train.sh:\
+
+> **Note:** chmod +x scripts/test.sh:\

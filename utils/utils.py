@@ -89,21 +89,26 @@ def set_seed(seed: int) -> None:
 Optimizer Utils
 """
 
-def get_optimizer(optimizer_name, model, lr, weight_decay=0.0):
+def get_optimizer(optimizer_name, model, lr, weight_decay=0.0, scheduler_name=None, **scheduler_kwargs):
     """
-    Returns a PyTorch optimizer based on the given optimizer name.
+    Returns a PyTorch optimizer (and optionally a scheduler) based on the given names.
 
     Args:
         optimizer_name (str): Name of the optimizer ('adam', 'sgd', etc.).
         model (torch.nn.Module): The model to optimize.
         lr (float): Learning rate.
         weight_decay (float): Weight decay for regularization (default: 0.0).
+        scheduler_name (str, optional): Name of the scheduler ('step_lr', 'cosine_annealing', etc.) or 'none'.
+                                        Defaults to None.
+        **scheduler_kwargs: Additional keyword arguments for scheduler initialization.
+            For example, you might pass `num_epochs=100` or `step_size=30`.
 
     Returns:
-        torch.optim.Optimizer: The initialized optimizer.
+        tuple: (optimizer, scheduler) where scheduler is either an instance of a scheduler or None.
     """
     optimizer_name = optimizer_name.lower()
-
+    
+    # Optimizer selection
     if optimizer_name == "adam":
         optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
     elif optimizer_name == "sgd":
@@ -116,47 +121,52 @@ def get_optimizer(optimizer_name, model, lr, weight_decay=0.0):
         raise ValueError(f"Unsupported optimizer name: {optimizer_name}")
 
     print(f"Optimizer loaded: {optimizer_name}")
-    return optimizer
-
-def get_scheduler(scheduler_name, optimizer, num_epochs=None, step_size=None, gamma=0.1, patience=10):
-    """
-    Returns a PyTorch learning rate scheduler based on the given scheduler name.
-
-    Args:
-        scheduler_name (str): Name of the scheduler ('step_lr', 'cosine_annealing', etc.) or 'none'.
-        optimizer (torch.optim.Optimizer): The optimizer to schedule.
-        num_epochs (int): Total number of epochs (required for some schedulers).
-        step_size (int): Step size for 'step_lr' scheduler (optional).
-        gamma (float): Multiplicative factor for learning rate decay (default: 0.1).
-        patience (int): Number of epochs with no improvement after which learning rate will be reduced (default: 10).
-
-    Returns:
-        torch.optim.lr_scheduler: The initialized scheduler, or None if scheduler_name is 'none'.
-    """
-    if scheduler_name is None or scheduler_name.lower() == "none":
-        return None
-
-    scheduler_name = scheduler_name.lower()
-
-    if scheduler_name == "step_lr":
-        if step_size is None:
-            raise ValueError("step_size must be provided for 'step_lr' scheduler.")
-        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=step_size, gamma=gamma)
-        
-    elif scheduler_name == "cosine_annealing":
-        if num_epochs is None:
-            raise ValueError("num_epochs must be provided for 'cosine_annealing' scheduler.")
-        
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epochs)
-    elif scheduler_name == "exponential_lr":
-        scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=gamma)
-        
-    elif scheduler_name == "reduce_on_plateau":
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=gamma, patience=patience)
-        
+    
+    # Scheduler selection
+    scheduler = None
+    if scheduler_name is not None and scheduler_name.lower() != "none":
+        scheduler_name_clean = scheduler_name.lower()
+        if scheduler_name_clean == "step_lr":
+            if 'step_size' not in scheduler_kwargs:
+                raise ValueError("step_size must be provided for 'step_lr' scheduler.")
+            gamma = scheduler_kwargs.get('gamma', 0.1)
+            scheduler = torch.optim.lr_scheduler.StepLR(optimizer,
+                                                        step_size=scheduler_kwargs['step_size'],
+                                                        gamma=gamma)
+        elif scheduler_name_clean == "cosine_annealing":
+            if 'num_epochs' not in scheduler_kwargs:
+                raise ValueError("num_epochs must be provided for 'cosine_annealing' scheduler.")
+            scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer,
+                                                                   T_max=scheduler_kwargs['num_epochs'])
+        elif scheduler_name_clean == "exponential_lr":
+            gamma = scheduler_kwargs.get('gamma', 0.1)
+            scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=gamma)
+        elif scheduler_name_clean == "reduce_on_plateau":
+            gamma = scheduler_kwargs.get('gamma', 0.1)
+            patience = scheduler_kwargs.get('patience', 10)
+            scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,
+                                                                   mode='min',
+                                                                   factor=gamma,
+                                                                   patience=patience)
+        else:
+            raise ValueError(f"Unsupported scheduler name: {scheduler_name_clean}")
+        print(f"Scheduler loaded: {scheduler_name_clean}")
     else:
-        raise ValueError(f"Unsupported scheduler name: {scheduler_name}")
+        print("No scheduler loaded.")
 
+    return optimizer, scheduler
 
-    print(f"Scheduler loaded: {scheduler_name}")
-    return scheduler
+def args_logger(args):
+    """
+    Logs the arguments to the console.
+    
+    Args:
+        args: The parsed arguments.
+    """
+    print(' ----------------')
+    print("|    Arguments   |")
+    print(' ----------------')
+    for arg in vars(args):
+        print(f"| {arg}: {getattr(args, arg)}")
+    print(' ----------------')
+    return

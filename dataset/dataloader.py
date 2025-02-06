@@ -10,13 +10,14 @@ base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.append(base_path)
     
 # Local imports
-from dataset.load_maps import load_episodes
+from dataset.load_maps import load_episodes, load_extracted_episodes
 from dataset.utils import xyz_to_map
 
 # Local Map imports
 from dataset.maps.base_map import BaseMap
 from dataset.transform import MapTransform
 
+USE_EXTRACTOR = True
 
 class RetMapsDataset(Dataset):
     """
@@ -26,7 +27,11 @@ class RetMapsDataset(Dataset):
     map = BaseMap(size=500, pixels_per_meter=10)
     
     def __init__(self, data_dir="data", data_split="val", transform=None):
-        self.episodes = load_episodes(data_dir, data_split)
+        
+        if USE_EXTRACTOR:
+            self.episodes = load_extracted_episodes(data_dir, data_split)
+        else:
+            self.episodes = load_episodes(data_dir, data_split)
         self.episodes_dir = os.path.join(data_dir, data_split)
         
         self.transform = transform

@@ -11,7 +11,6 @@ from dataset.load_maps import load_episodes
 
 # Import openai and its ChatCompletion resource, then set the API key
 import openai
-from openai import ChatCompletion  # New: import ChatCompletion directly
 openai.api_key = os.environ['OPENAI_API_KEY']
 
 # Function to call GPT-4o-mini using the new OpenAI API
@@ -30,16 +29,15 @@ def call_gpt(prompt: str, description: str) -> str:
         # Combine the prompt and description for better context
         full_input = f"{prompt}{description}"
         
-        response = ChatCompletion.create(
-            model="gpt-4o-mini",  # Replace with the correct model name if needed
+        response = openai.ChatCompletion.create(
+            model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "system", "content": "You are an helpful assistant."},
                 {"role": "user", "content": full_input}
             ],
-            max_tokens=500  # Adjust as needed
+            # temperature=0.7
         )
         
-        # Extract and return the assistant's reply
         return response.choices[0].message.content
     
     except Exception as e:
@@ -54,14 +52,14 @@ episodes = load_episodes(data_dir, split)
 for i, episode in enumerate(episodes):
     
     # Read the prompt from a text file
-    with open('extractor/prompt.txt', 'r') as f:
+    with open('model/extractor/prompt.txt', 'r') as f:
         prompt = f.read()
     
     output = call_gpt(prompt, episode['summary'])
     episode['summary_extraction'] = output
 
     print(f"Processed episode {i}")
-    break  # Remove or adjust the break if you want to process all episodes
+    # break  # Remove or adjust the break if you want to process all episodes
 
 # Save the extracted episodes to a JSON file
 output_file = os.path.join(data_dir, split, "filtered_episodes.json")

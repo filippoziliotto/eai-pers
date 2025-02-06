@@ -149,6 +149,21 @@ def load_episodes(base_path:str, split:str) -> List[Dict]:
 
     return filtered_episodes
 
+
+# We extracted the episodes descriptions with GPT and saved the JSON with the extracted summaries.
+# TODO: This is messy we need to adjust this
+def load_extracted_episodes(base_path: str, split: str) -> List[Dict]:
+    """
+    Load the extracted episodes from the JSON file.
+
+    Returns:
+        list[dict]: List of episodes with extracted summaries.
+    """
+    extracted_file = "data/val/filtered_episodes.json"
+    with open(extracted_file, "r") as f:
+        extracted_episodes = json.load(f)
+    return extracted_episodes
+
 if __name__ == "__main__":
     base_path = "data"
     split = "val"
