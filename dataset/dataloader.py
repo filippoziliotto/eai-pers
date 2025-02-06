@@ -67,7 +67,7 @@ class RetMapsDataset(Dataset):
             "feature_map": feature_map
         }
 
-def get_dataloader(data_dir, data_split="val", batch_size=32, shuffle=True, num_workers=4, **kwargs):
+def get_dataloader(data_dir, data_split="val", batch_size=32, shuffle=True, num_workers=4, kwargs={}):
     """
     Creates a dataloader with optional transformation arguments.
 

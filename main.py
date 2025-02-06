@@ -7,21 +7,27 @@ from trainer.train import train_and_validate
 from trainer.validate import validate
 
 # Importing utility functions
-from utils.utils import get_optimizer, get_scheduler, set_seed, args_logger
+from utils.utils import get_optimizer, set_seed, args_logger
 from dataset.utils import split_dataloader
 
 # Importing argument parsing function
 from args import get_args
 
-# Importing custom models
-from model.encoder import Blip2Encoder
-from model.model import RetrievalMapModel  
-
 # Dataloader
 from dataset.dataloader import get_dataloader
 
+
 # Useful to check if the functions run individually
-DEBUG = False
+DEBUG = True
+
+# Importing custom models
+if not DEBUG:
+    try:
+        from models.encoder import Blip2Encoder
+    except ImportError:
+        print("Blip2Encoder not imported correctly, check your lavis-dependencies.")
+from models.model import RetrievalMapModel  
+
 
 def main(args):
     
@@ -37,8 +43,11 @@ def main(args):
         wandb.init(project="EAI-Pers", name=args.run_name)
         
     # Get Freezed text encoder and initialize
-    encoder = Blip2Encoder(device=args.device, freeze_encoder=args.freeze_encoder)
-    encoder.inilialize()
+    if not DEBUG:
+        encoder = Blip2Encoder(device=args.device, freeze_encoder=args.freeze_encoder)
+        encoder.initialize()
+    else:
+        encoder = None
 
     # Dataset and DataLoader
     kwargs = vars(args)
@@ -46,12 +55,12 @@ def main(args):
         data_dir=args.data_dir,
         data_split=args.data_split,
         batch_size=args.batch_size,
-        shuffle=True,     
-        **kwargs
+        shuffle=False,     
+        kwargs=kwargs
     )
     
     # Get the different splits from the data_loader
-    train_loader, val_loader = split_dataloader(data_loader, split_ratio=0.8, batch_size=args.batch_size, **kwargs)
+    train_loader, val_loader = split_dataloader(data_loader, split_ratio=0.8, batch_size=args.batch_size)
 
     # Model Initialization
     model = RetrievalMapModel(
@@ -61,6 +70,7 @@ def main(args):
         cosine_method=args.cosine_method,
         pixels_per_meter=args.pixels_per_meter,
     )
+    print("N° of Model parameters: ", sum(p.numel() for p in model.parameters() if p.requires_grad))
 
     # Optimizer (and scheduler) initialization using **kwargs for scheduler parameters.
     optimizer, scheduler = get_optimizer(

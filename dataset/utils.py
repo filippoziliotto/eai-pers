@@ -53,7 +53,7 @@ def xyz_to_map(episode: Dict, map: BaseMap) -> List[float]:
     # Convert to pixel coordinates on the map
     return map._xy_to_px(target_map.reshape(1, 2))[0]
 
-def split_dataloader(data_loader: DataLoader, split_ratio: float, batch_size: int, **kwargs) -> Tuple[DataLoader, DataLoader]:
+def split_dataloader(data_loader: DataLoader, split_ratio: float, batch_size: int) -> Tuple[DataLoader, DataLoader]:
     """
     Splits a DataLoader into training and validation DataLoaders based on the given split ratio.
     
@@ -73,7 +73,7 @@ def split_dataloader(data_loader: DataLoader, split_ratio: float, batch_size: in
     
     train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
     
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, **kwargs)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, **kwargs)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
     
     return train_loader, val_loader

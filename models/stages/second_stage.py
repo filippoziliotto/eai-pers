@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 from utils.similarity import cosine_similarity
-from utils.utils import find_non_zero_neighborhood
+from utils.utils import find_non_zero_neighborhood_indices
 
 
 class SimilarityMapModel(nn.Module):
@@ -48,6 +48,6 @@ class SimilarityMapModel(nn.Module):
         )  # Shape: (w, h)
 
         # Step 2: Find the predicted coordinates (x', y') with max similarity
-        predicted_coords = find_non_zero_neighborhood(value_map, w, neighborhood_size=self.pixels_per_meter)
+        predicted_coords = find_non_zero_neighborhood_indices(value_map, w, neighborhood_size=self.pixels_per_meter)
 
         return predicted_coords

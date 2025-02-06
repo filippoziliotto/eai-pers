@@ -107,4 +107,4 @@ DATASETS.md
 DETAILS.md
 
 # OpenAI / Wandb Keys
-bash.sh
+scripts/keys.sh

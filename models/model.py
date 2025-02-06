@@ -3,8 +3,8 @@ import torch
 import torch.nn as nn
 
 # Importing custom models
-from model.stages.first_stage import MapAttentionModel
-from model.stages.second_stage import SimilarityMapModel
+from models.stages.first_stage import MapAttentionModel
+from models.stages.second_stage import SimilarityMapModel
 
 
 

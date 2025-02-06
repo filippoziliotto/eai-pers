@@ -4,6 +4,12 @@ import numpy as np
 from PIL import Image
 from typing import Optional, Tuple, Union
 
+import sys
+import os
+
+# Add the path to the lavis directory
+sys.path.append('LAVIS/')
+
 # Lavis imports
 from lavis.models import load_model_and_preprocess
 

@@ -1,16 +1,7 @@
 # Custom Transform
 import torch
 import args  # Import the arguments
-
-DEBUG = True
-if DEBUG:
-    args.USE_AUG = False
-    args.AUG_PROB = 0.5
-    args.USE_HORIZONTAL_FLIP = True
-    args.USE_VERTICAL_FLIP = True
-    args.USE_RANDOM_CROP = True
-    args.USE_DESC_AUG = True
-    
+   
 
 class MapTransform:
     """
@@ -18,20 +9,13 @@ class MapTransform:
     """
     
     def __init__(self, 
-                 use_aug=args.USE_AUG,
-                 prob=args.AUG_PROB,
-                 use_horizontal_flip=args.USE_HORIZONTAL_FLIP, 
-                 use_vertical_flip=args.USE_VERTICAL_FLIP, 
-                 use_random_crop=args.USE_RANDOM_CROP,
-                 use_desc_aug=args.USE_DESC_AUG,
-                 ):
+                 **kwargs):
         
-        self.use_aug = use_aug
-        self.prob = prob
-        self.use_horizontal_flip = use_horizontal_flip
-        self.use_vertical_flip = use_vertical_flip
-        self.use_random_crop = use_random_crop
-        self.use_desc_aug = use_desc_aug
+        self.use_aug = kwargs.get("use_aug", False)
+        self.use_horizontal_flip = kwargs.get("use_horizontal_flip", False)
+        self.use_vertical_flip = kwargs.get("use_vertical_flip", False)
+        self.use_random_crop = kwargs.get("use_random_crop", False)
+        self.use_desc_aug = kwargs.get("use_desc_aug", False)
 
     def __call__(self, feature_map, xy_coords, description):
         """

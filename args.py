@@ -44,6 +44,7 @@ def get_args():
     # Map parameters
     parser.add_argument("--map_size", type=int, default=500, help="Size of the map (e.g., 500x500)")
     parser.add_argument("--pixels_per_meter", type=int, default=10, help="Pixels per meter for map scaling")
+    parser.add_argument("--cosine_method", type=str, default="pytorch", choices=["scratch", "pytorch", "blip2_score"], help="Cosine method to use to caluclate similarity in similarity.py")
 
     # Optimizer Parameters
     parser.add_argument("--optimizer", type=str, default="adam", choices=["adam", "sgd", "adamw", "rmsprop"], help="Optimizer to use")
@@ -55,7 +56,7 @@ def get_args():
     parser.add_argument("--patience", type=int, default=10, help="Patience value for ReduceOnPlateau scheduler")
 
     # Device
-    parser.add_argument("--device", type=str, default="cpu", choices=["cpu", "cuda"], help="Device to train on")
+    parser.add_argument("--device", type=str, default="cpu", choices=["cpu", "cuda", "mps"], help="Device to train on")
     
     # Wandb
     parser.add_argument("--use_wandb", action="store_true", default=False, help="Use wandb for logging")
