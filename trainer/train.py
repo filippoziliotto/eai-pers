@@ -45,8 +45,7 @@ def train_one_epoch(
         loss = compute_loss(gt_target, pred_target, loss_choice)
         
         # Compute accuracy
-        # TODO: Implement accuracy computation with threshold
-        train_acc.append(accuracy(gt_target, pred_target))
+        train_acc.append(compute_accuracy(gt_target, pred_target))
 
         # Backward pass and optimization
         optimizer.zero_grad()

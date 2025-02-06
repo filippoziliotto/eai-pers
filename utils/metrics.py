@@ -1,19 +1,22 @@
+
+# Library imports
 import numpy as np
 
-def accuracy(gt, pred, threshold=10):
+def accuracy(gt_points, pred_points, threshold=10):
     """
-    Computes accuracy based on whether the predicted point is within a specified threshold of the ground truth point.
-
+    Computes accuracy for a batch of points.
+    
     Args:
-        gt_point (tuple): Ground truth coordinates (x, y).
-        pred_point (tuple): Predicted coordinates (x, y).
+        gt_points (np.ndarray): Ground truth coordinates of shape (N, 2).
+        pred_points (np.ndarray): Predicted coordinates of shape (N, 2).
         threshold (int): Distance threshold for considering the prediction correct (default is 10).
-
+    
     Returns:
-        int: 1 if the prediction is within the threshold distance, 0 otherwise.
+        np.ndarray: Array of 1s and 0s indicating whether each prediction is correct.
     """
-    distance = np.sqrt((gt[0] - pred[0]) ** 2 + (gt[1] - pred[1]) ** 2)
-    return distance <= threshold
+    assert gt_points.shape == pred_points.shape, "Ground truth and predictions must have the same shape."
+    distances = np.linalg.norm(gt_points - pred_points)
+    return (distances <= threshold).astype(int)
 
 def mean_squared_error(gt_point, pred_point):
     """
@@ -43,13 +46,10 @@ def success_rate(gt_points, pred_points, thresholds=[5, 10, 20]):
         dict: Success rate for each threshold, e.g., {'5': 0.8, '10': 0.9, '20': 1.0}.
     """
     assert len(gt_points) == len(pred_points), "Ground truth and predictions must have the same length."
-    success_rates = {}
-
-    for threshold in thresholds:
-        successes = sum(accuracy(gt, pred, threshold) for gt, pred in zip(gt_points, pred_points))
-        success_rates[str(threshold)] = successes / len(gt_points)
-    
-    return success_rates
+    return {
+        str(threshold): sum(accuracy(gt, pred, threshold) for gt, pred in zip(gt_points, pred_points)) / len(gt_points)
+        for threshold in thresholds
+    }
 
 def compute_accuracy(gt_points, pred_points, thresholds=[5, 10, 20]):
     """
@@ -65,11 +65,13 @@ def compute_accuracy(gt_points, pred_points, thresholds=[5, 10, 20]):
     """
     assert len(gt_points) == len(pred_points), "Ground truth and predictions must have the same length."
 
-    # Compute overall accuracy with the default threshold of 10
-    total_accuracy = sum(accuracy(gt, pred) for gt, pred in zip(gt_points, pred_points)) / len(gt_points)
-    
+    # Send tensors to CPU and convert to numpy arrays
+    gt_points = [gt.detach().cpu().numpy() for gt in gt_points]
+    pred_points = [pred.detach().cpu().numpy() for pred in pred_points]
+
+    # TODO: Fix this line   
     # Compute mean squared error for all points
-    mse = np.mean([mean_squared_error(gt, pred) for gt, pred in zip(gt_points, pred_points)])
+    # mse = torch.mean([mean_squared_error(gt, pred) for gt, pred in zip(gt_points, pred_points)])
     
     # Compute success rate at different thresholds
     success_rates = success_rate(gt_points, pred_points, thresholds)

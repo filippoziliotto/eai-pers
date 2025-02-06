@@ -54,10 +54,15 @@ class SimilarityMapModel(nn.Module):
         )  # Shape: (b, w, h)
 
         # Step 2: Find the predicted coordinates (b, x', y') with max similarity
+        # Here we choose to return only the max coordinate in a differentiable way.
+        # You can adjust the temperature to control how "hard" the soft-argmax is.
         predicted_coords = []
+        temperature = 0.1  # Lower values are closer to a hard argmax.
         for b in range(value_map.shape[0]):
-            coords = find_non_zero_neighborhood_indices(value_map[b], w, neighborhood_size=self.pixels_per_meter//2, return_max=True)
+            # Ensure that value_map[b] is a torch.Tensor with requires_grad (it should be if map_features/query_features are)
+            coords = find_non_zero_neighborhood_indices(
+                value_map[b], w, neighborhood_size=self.pixels_per_meter//2, return_max=True, temperature=temperature
+            )
             predicted_coords.append(coords)
-        predicted_coords = torch.tensor(predicted_coords, device=value_map.device)
-
+        predicted_coords = torch.stack(predicted_coords)  # Shape: (b, 2)
         return predicted_coords
