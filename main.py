@@ -16,10 +16,6 @@ from args import get_args
 # Dataloader
 from dataset.dataloader import get_dataloader
 
-
-# Config file
-import config
-
 # Importing custom models
 try:
     from models.encoder import Blip2Encoder
@@ -42,12 +38,9 @@ def main(args):
     set_seed(args.seed)
         
     # Get Freezed text encoder and initialize
-    if not DEBUG:
-        encoder = Blip2Encoder(device=args.device, freeze_encoder=args.freeze_encoder)
-        encoder.initialize()
-    else:
-        encoder = None
-
+    encoder = Blip2Encoder(device=args.device, freeze_encoder=args.freeze_encoder)
+    encoder.initialize()
+        
     # Dataset and DataLoader
     kwargs = vars(args)
     data_loader = get_dataloader(
@@ -113,9 +106,6 @@ def main(args):
     print("Run completed.")
 
 if __name__ == "__main__":
-    
-    # Configurations
-    config.DEBUG = True
         
     # Parse arguments
     args = get_args()

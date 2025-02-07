@@ -1,1 +1,2 @@
-DEBUG = False  # Set to True for debugging
+DEBUG = False
+VISUALIZE = False

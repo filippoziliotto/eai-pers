@@ -2,7 +2,7 @@
 
 Personalized user navigation through retrievable memory maps.
 
-![Example Image](images/example.gif)
+![Example Image](docs/example.gif)
 
 #### Getting started
 > **Note:** Run the following commands in the terminal:
