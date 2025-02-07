@@ -25,7 +25,7 @@ class RetrievalMapModel(nn.Module):
         self.second_stage = SimilarityMapModel(encoder, cosine_method, pixels_per_meter).to(device)
         print("Model initialized.")
 
-    def forward(self, description, map_tensor, query):
+    def forward(self, description, map_tensor, query, loss_choice):
         """
         Args:
             description (str): The description of the map.
@@ -39,6 +39,6 @@ class RetrievalMapModel(nn.Module):
         embed_map = self.first_stage(map_tensor, description)
 
         # Step 2: Encode the query
-        predicted_coords = self.second_stage(embed_map, query)
+        predicted_coords = self.second_stage(embed_map, query, loss_choice)
 
         return predicted_coords

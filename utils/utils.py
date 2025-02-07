@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+import torch.nn as nn
 from torch.nn import functional as F
 from typing import Union
 
@@ -209,6 +210,13 @@ def get_optimizer(optimizer_name, model, lr, weight_decay=0.0, scheduler_name=No
         print("No scheduler loaded.")
 
     return optimizer, scheduler
+
+
+def get_loss(loss_choice):
+    if loss_choice in ["CE"]:
+        return nn.CrossEntropyLoss()
+    else:
+        return nn.MSELoss()
 
 def args_logger(args):
     """

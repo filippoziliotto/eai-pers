@@ -13,6 +13,7 @@ from trainer.validate import validate
 def train_one_epoch(
     model, 
     data_loader, 
+    loss,
     optimizer, 
     loss_choice='L2',
     device='cpu',
@@ -35,17 +36,25 @@ def train_one_epoch(
     epoch_loss = 0.0
     train_acc = []
     
-    for batch_idx, data in tqdm(enumerate(data_loader), total=len(data_loader), desc="Batches"):
+    for batch_idx, data in tqdm(enumerate(data_loader), total=len(data_loader), desc="Batch", leave=False):
         description = data['description']
         gt_target = data['target'].to(device)
         query = data['query']
         feature_map = data['feature_map'].to(device)
 
         # Forward pass: Get predictions
-        pred_target = model(description=description, map_tensor=feature_map, query=query)
+        if loss_choice  in ['CE']:
+            pred_target = model(description=description, map_features=feature_map, query=query, loss_choice=loss_choice)
+            # Convert (x, y) coordinates in gt_target to a single index
+            x_coords = gt_target[:, 0]  # Shape: (batch,)
+            y_coords = gt_target[:, 1]  # Shape: (batch,)
+            gt_target = y_coords + x_coords * feature_map.size(2)  # Shape: (batch,) where we have a single int
+                    
+        elif loss_choice in ['L1', 'L2']:
+            pred_target = model(description=description, map_tensor=feature_map, query=query, loss_choice=loss_choice)
 
         # Compute loss
-        loss = compute_loss(gt_target, pred_target, loss_choice)
+        loss = compute_loss(gt_target, pred_target, loss, loss_choice)
         
         # Compute accuracy
         train_acc.append(compute_accuracy(gt_target, pred_target))
@@ -57,6 +66,9 @@ def train_one_epoch(
 
         # Accumulate loss
         epoch_loss += loss.item()
+        
+        if batch_idx == 2:
+            break
 
     # Calculate average loss for the epoch
     epoch_avg_loss = epoch_loss / len(data_loader)
@@ -70,6 +82,7 @@ def train_and_validate(
     model, 
     train_loader, 
     val_loader, 
+    loss,
     optimizer, 
     scheduler=None, 
     num_epochs=10, 

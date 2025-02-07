@@ -7,7 +7,7 @@ python main.py \
     --data_split "val" \
     --mode "train" \
     --seed 2025 \
-    --batch_size 2 \
+    --batch_size 1 \
     --num_workers 4 \
     --lr 0.001 \
     --weight_decay 1e-5 \
@@ -23,6 +23,6 @@ python main.py \
     --step_size 5 \
     --gamma 0.1 \
     --patience 10 \
-    --device "cpu" \
-    --use_wandb \
-    --run_name "prova-train"
+    --device "mps" \
+    #--use_wandb \
+    #--run_name "prova-train"

@@ -7,7 +7,7 @@ from trainer.train import train_and_validate
 from trainer.validate import validate
 
 # Importing utility functions
-from utils.utils import get_optimizer, set_seed, args_logger
+from utils.utils import get_optimizer, set_seed, args_logger, get_loss
 from dataset.utils import split_dataloader, custom_collate
 
 # Importing argument parsing function
@@ -85,12 +85,16 @@ def main(args):
         gamma=args.gamma,            # for any scheduler that uses gamma
     )
     
+    # Define loss function
+    loss = get_loss(args.loss_choice)
+    
     # Train and/or validate the model
     if args.mode in ['train']:    
         train_and_validate(
             model=model,
             train_loader=train_loader,
             val_loader=val_loader,
+            loss = loss,
             optimizer=optimizer,
             scheduler=scheduler,
             num_epochs=args.num_epochs,
@@ -102,6 +106,7 @@ def main(args):
         validate(
             model=model,
             data_loader=val_loader,
+            loss=loss,
             device=args.device,
             loss_choice=args.loss_choice,
             use_wandb=args.use_wandb,

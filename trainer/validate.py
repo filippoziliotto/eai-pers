@@ -17,6 +17,7 @@ def log_epoch_metrics(val_loss, val_acc):
 def validate(
     model, 
     data_loader, 
+    loss,
     loss_choice='L2', 
     device='cpu',
     **kwargs
@@ -40,7 +41,7 @@ def validate(
     accuracy = []
     
     with torch.no_grad():
-        for batch_idx, data in tqdm(enumerate(data_loader), total=len(data_loader), desc="Batches"):
+        for batch_idx, data in tqdm(enumerate(data_loader), total=len(data_loader), desc="Batch", leave=False):
             
             # Get data and move to device
             description = data['description']
@@ -57,6 +58,9 @@ def validate(
             
             # Compute accuracy
             accuracy.append(compute_accuracy(gt_target, pred_target))
+            
+            if batch_idx == 2:
+                break
     
     # Calculate average validation loss
     val_avg_loss = val_loss / len(data_loader)
