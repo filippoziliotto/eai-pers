@@ -67,7 +67,6 @@ def main(args):
         embed_dim=args.embed_dim,
         num_heads=args.num_heads,
         encoder=encoder,
-        cosine_method=args.cosine_method,
         pixels_per_meter=args.pixels_per_meter,
         device=args.device
     )
@@ -85,16 +84,12 @@ def main(args):
         gamma=args.gamma,            # for any scheduler that uses gamma
     )
     
-    # Define loss function
-    loss = get_loss(args.loss_choice)
-    
     # Train and/or validate the model
     if args.mode in ['train']:    
         train_and_validate(
             model=model,
             train_loader=train_loader,
             val_loader=val_loader,
-            loss = loss,
             optimizer=optimizer,
             scheduler=scheduler,
             num_epochs=args.num_epochs,
@@ -106,9 +101,8 @@ def main(args):
         validate(
             model=model,
             data_loader=val_loader,
-            loss=loss,
-            device=args.device,
             loss_choice=args.loss_choice,
+            device=args.device,
             use_wandb=args.use_wandb,
             **kwargs
         )

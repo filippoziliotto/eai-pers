@@ -8,7 +8,7 @@ from models.stages.second_stage import SimilarityMapModel
 
 
 class RetrievalMapModel(nn.Module):
-    def __init__(self, embed_dim, num_heads, encoder, cosine_method, pixels_per_meter, device):
+    def __init__(self, embed_dim, num_heads, encoder, pixels_per_meter, device):
         """
         Initializes the RetrievalMapModel with the given parameters.
 
@@ -22,15 +22,16 @@ class RetrievalMapModel(nn.Module):
         super(RetrievalMapModel, self).__init__()
         print("Initializing Model...")
         self.first_stage = MapAttentionModel(embed_dim, num_heads, encoder).to(device)
-        self.second_stage = SimilarityMapModel(encoder, cosine_method, pixels_per_meter).to(device)
+        self.second_stage = SimilarityMapModel(encoder, pixels_per_meter).to(device)
         print("Model initialized.")
 
-    def forward(self, description, map_tensor, query, loss_choice):
+    def forward(self, description, map_tensor, query):
         """
         Args:
             description (str): The description of the map.
             map_tensor: Tensor of shape (w, h, C) - The map tensor.
             query (str): The query to find in the map.
+            loss_choice (str): The loss function choice.
 
         Returns:
             predicted_coords: Tuple (x', y') - Predicted coordinates from the similarity map.
@@ -39,6 +40,6 @@ class RetrievalMapModel(nn.Module):
         embed_map = self.first_stage(map_tensor, description)
 
         # Step 2: Encode the query
-        predicted_coords = self.second_stage(embed_map, query, loss_choice)
+        value_map = self.second_stage(embed_map, query)
 
-        return predicted_coords
+        return value_map

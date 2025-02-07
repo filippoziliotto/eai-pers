@@ -12,7 +12,7 @@ python main.py \
     --lr 0.001 \
     --weight_decay 1e-5 \
     --num_epochs 2 \
-    --loss_choice "L2" \
+    --loss_choice "CE" \
     --embed_dim 768 \
     --num_heads 6 \
     --freeze_encoder \

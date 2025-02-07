@@ -1,80 +1,65 @@
 
 # Library imports
 import numpy as np
+import torch
 
-def accuracy(gt_points, pred_points, threshold=10):
-    """
-    Computes accuracy for a batch of points.
-    
-    Args:
-        gt_points (np.ndarray): Ground truth coordinates of shape (N, 2).
-        pred_points (np.ndarray): Predicted coordinates of shape (N, 2).
-        threshold (int): Distance threshold for considering the prediction correct (default is 10).
-    
-    Returns:
-        np.ndarray: Array of 1s and 0s indicating whether each prediction is correct.
-    """
-    assert gt_points.shape == pred_points.shape, "Ground truth and predictions must have the same shape."
-    distances = np.linalg.norm(gt_points - pred_points)
-    return (distances <= threshold).astype(int)
-
-def mean_squared_error(gt_point, pred_point):
-    """
-    Computes the Mean Squared Error (MSE) between the ground truth point and the predicted point.
-
-    Args:
-        gt_point (tuple): Ground truth coordinates (x, y).
-        pred_point (tuple): Predicted coordinates (x, y).
-
-    Returns:
-        float: Mean squared error.
-    """
-    error = np.array(gt_point) - np.array(pred_point)
-    mse = np.mean(error ** 2)
-    return mse
-
-def success_rate(gt_points, pred_points, thresholds=[5, 10, 20]):
-    """
-    Computes the success rate at multiple distance thresholds.
-
-    Args:
-        gt_points (list of tuples): List of ground truth coordinates [(x1, y1), (x2, y2), ...].
-        pred_points (list of tuples): List of predicted coordinates [(x1, y1), (x2, y2), ...].
-        thresholds (list of int): List of distance thresholds to compute success rates (default: [5, 10, 20]).
-
-    Returns:
-        dict: Success rate for each threshold, e.g., {'5': 0.8, '10': 0.9, '20': 1.0}.
-    """
-    assert len(gt_points) == len(pred_points), "Ground truth and predictions must have the same length."
-    return {
-        str(threshold): sum(accuracy(gt, pred, threshold) for gt, pred in zip(gt_points, pred_points)) / len(gt_points)
-        for threshold in thresholds
-    }
-
-def compute_accuracy(gt_points, pred_points, thresholds=[5, 10, 20]):
+def compute_accuracy(gt_target, value_map, thresholds=[5, 10, 20], topk=[1, 3, 5]):
     """
     Computes accuracy, mean squared error, and success rate at different thresholds.
 
     Args:
-        gt_points (list of tuples): List of ground truth coordinates [(x1, y1), (x2, y2), ...].
-        pred_points (list of tuples): List of predicted coordinates [(x1, y1), (x2, y2), ...].
+        gt_target (list of tuples): List of ground truth coordinates [(x1, y1), (x2, y2), ...].
+        value_map (torch.Tensor): Predicted value map of shape (batch, w, h).
         thresholds (list of int): List of distance thresholds to compute success rates (default: [5, 10, 20]).
+        topk (list of int): List of top-k max values to compute accuracy (default: [1, 3, 5]).
 
     Returns:
         dict: Dictionary containing overall accuracy, mean squared error, and success rate at each threshold.
     """
-    assert len(gt_points) == len(pred_points), "Ground truth and predictions must have the same length."
-
-    # Send tensors to CPU and convert to numpy arrays
-    gt_points = [gt.detach().cpu().numpy() for gt in gt_points]
-    pred_points = [pred.detach().cpu().numpy() for pred in pred_points]
-
-    # TODO: Fix this line   
-    # Compute mean squared error for all points
-    # mse = torch.mean([mean_squared_error(gt, pred) for gt, pred in zip(gt_points, pred_points)])
+    b, w, h = value_map.size()
     
-    # Compute success rate at different thresholds
-    success_rates = success_rate(gt_points, pred_points, thresholds)
+    # Convert (x, y) coordinates in gt_target to a single index
+    x_coords = gt_target[:, 0]  # Shape: (batch,)
+    y_coords = gt_target[:, 1]  # Shape: (batch,)
+    gt_target = y_coords + x_coords *  h # Shape: (batch,) where we have a single int
+
+    # Send tensors to CPU
+    gt_target = gt_target.cpu()
+    value_map_flat = value_map.view(b, -1).detach().cpu()
     
-    # TODO: return all metrics, for now we return only the success rates for each threshold
-    return success_rates
+    # Top-k Accuracy
+    # TODO: Move this into a separate function
+    # Initialize dictionary to store Top-k accuracies
+    top_k_accuracies = {}
+    
+    # Loop through each k value (1, 3, 5, etc.)
+    for k in topk:
+        correct_predictions = 0.0
+        
+        # Get the top k predicted indices from value_map_flat
+        _, top_k_indices = value_map_flat.topk(k, dim=1)  # Shape: (batch, k)
+        
+        for i in range(value_map_flat.size(0)):  # Iterate over batches
+            # Convert predicted indices to (x, y) coordinates
+            top_k_x_coords = top_k_indices[i] % w
+            top_k_y_coords = top_k_indices[i] // w
+            
+            # Check if any of the top k predicted indices fall within the neighborhood of the ground truth
+            for idx in range(k):
+                # Calculate the absolute distance between predicted and ground truth coordinates
+                dist_x = torch.abs(top_k_x_coords[idx] - x_coords[i])
+                dist_y = torch.abs(top_k_y_coords[idx] - y_coords[i])
+                
+                # If the distance is within the threshold (10x10 neighborhood), consider it correct
+                if dist_x <= 20 and dist_y <= 20:
+                    correct_predictions += 1
+                    break  # No need to check further for this batch
+        
+        # Calculate the accuracy for this value of k
+        top_k_accuracies[k] = correct_predictions / value_map_flat.size(0)
+    
+
+        # MSE Accuracy
+        # TODO:
+        
+    return top_k_accuracies

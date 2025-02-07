@@ -17,8 +17,7 @@ def log_epoch_metrics(val_loss, val_acc):
 def validate(
     model, 
     data_loader, 
-    loss,
-    loss_choice='L2', 
+    loss_choice='L2',
     device='cpu',
     **kwargs
     ):
@@ -45,19 +44,19 @@ def validate(
             
             # Get data and move to device
             description = data['description']
-            gt_target = data['target'].to(device)
             query = data['query']
+            gt_target = data['target'].to(device)
             feature_map = data['feature_map'].to(device)
 
-            # Forward pass: Get predictions
-            pred_target = model(description=description, map_tensor=feature_map, query=query)
+            # Forward pass
+            value_map = model(description=description, map_tensor=feature_map, query=query)
 
             # Compute loss
-            loss = compute_loss(gt_target, pred_target, loss_choice)
+            loss = compute_loss(gt_target, value_map, loss_choice)
             val_loss += loss.item()
             
             # Compute accuracy
-            accuracy.append(compute_accuracy(gt_target, pred_target))
+            accuracy.append(compute_accuracy(gt_target, value_map))
             
             if batch_idx == 2:
                 break
