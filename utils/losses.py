@@ -7,7 +7,7 @@ from torch.nn import functional as F
 Loss Utils
 """
 
-def compute_loss(ground_truth_coords, value_map, loss_choice='L2'):
+def compute_loss(ground_truth_coords, value_map, loss_choice='L2', device="cuda"):
     """
     Computes the loss between ground truth and predicted coordinates.
     
@@ -26,7 +26,7 @@ def compute_loss(ground_truth_coords, value_map, loss_choice='L2'):
     elif loss_choice == 'CE': # Cross-entropy loss
         return ce_loss(value_map, ground_truth_coords)
     elif loss_choice == 'NCE': # Neighborhood cross-entropy loss
-        return neighborhood_ce_loss(value_map, ground_truth_coords)
+        return neighborhood_ce_loss(value_map, ground_truth_coords, device=device)
     else:
         raise ValueError("Invalid loss_choice. Use 'L1' or 'L2'.")
 
@@ -93,7 +93,7 @@ def ce_loss(value_map_logits, gt_target):
     loss = F.cross_entropy(value_map_logits, gt_target)
     return loss
 
-def neighborhood_ce_loss(value_map_logits, gt_target, sigma=1.0):
+def neighborhood_ce_loss(value_map_logits, gt_target, sigma=1.0, device="cuda"):
     """
     Computes the modified cross-entropy loss with a Gaussian weighting to encourage
     predictions near the ground truth pixel.
@@ -121,8 +121,8 @@ def neighborhood_ce_loss(value_map_logits, gt_target, sigma=1.0):
     
     # Create a Gaussian kernel for the neighborhood around the ground truth
     # TODO: change to device
-    x = torch.arange(w).float().to("mps")  # Shape: (w, 1)
-    y = torch.arange(h).float().to("mps")  # Shape: (1, h)
+    x = torch.arange(w).float().to(device)  # Shape: (w, 1)
+    y = torch.arange(h).float().to(device)  # Shape: (1, h)
     X, Y = torch.meshgrid(x, y)  # Shape: (w, h)
     
     # Compute Gaussian weights

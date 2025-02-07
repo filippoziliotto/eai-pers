@@ -10,6 +10,9 @@ from utils.losses import compute_loss
 from utils.metrics import compute_accuracy
 from trainer.validate import validate
 
+# Config file
+import config
+
 def train_one_epoch(
     model, 
     data_loader, 
@@ -45,7 +48,7 @@ def train_one_epoch(
         value_map = model(description=description, map_tensor=feature_map, query=query) # Shape: (batch, w, h)
         
         # Compute loss
-        loss = compute_loss(gt_target, value_map, loss_choice)
+        loss = compute_loss(gt_target, value_map, loss_choice, device)
         epoch_loss += loss.item()
         
         # Compute accuracy
@@ -56,7 +59,7 @@ def train_one_epoch(
         loss.backward()
         optimizer.step()
         
-        if batch_idx == 2:
+        if config.DEBUG and batch_idx == 2:
             break
 
     # Calculate average loss for the epoch

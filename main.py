@@ -17,8 +17,8 @@ from args import get_args
 from dataset.dataloader import get_dataloader
 
 
-# Useful to check if the functions run individually
-DEBUG = False
+# Config file
+import config
 
 # Importing custom models
 try:
@@ -113,6 +113,10 @@ def main(args):
     print("Run completed.")
 
 if __name__ == "__main__":
+    
+    # Configurations
+    config.DEBUG = True
+        
     # Parse arguments
     args = get_args()
     main(args)

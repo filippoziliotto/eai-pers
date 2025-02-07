@@ -7,6 +7,9 @@ from tqdm import tqdm
 from utils.losses import compute_loss
 from utils.metrics import compute_accuracy
 
+# Config file
+import config
+
 def log_epoch_metrics(val_loss, val_acc):
     metrics = {
         "Val Loss": val_loss,
@@ -52,13 +55,13 @@ def validate(
             value_map = model(description=description, map_tensor=feature_map, query=query)
 
             # Compute loss
-            loss = compute_loss(gt_target, value_map, loss_choice)
+            loss = compute_loss(gt_target, value_map, loss_choice, device)
             val_loss += loss.item()
             
             # Compute accuracy
             accuracy.append(compute_accuracy(gt_target, value_map))
             
-            if batch_idx == 2:
+            if config.DEBUG and batch_idx == 2:
                 break
     
     # Calculate average validation loss
