@@ -56,6 +56,7 @@ examples/images
 
 # Sphinx documentation
 docs/_build/
+docs/Things_to_say.txt
 
 # PyBuilder
 target/
@@ -107,3 +108,6 @@ DETAILS.md
 
 # OpenAI / Wandb Keys
 scripts/keys.sh
+
+# Checkpoints
+model/checkpoints

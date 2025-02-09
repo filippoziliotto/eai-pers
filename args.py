@@ -34,6 +34,11 @@ def get_args():
     parser.add_argument("--num_epochs", type=int, default=10, help="Number of training epochs")
     parser.add_argument("--loss_choice", type=str, default="L2", choices=["L1", "L2", "CE", "NCE"], help="Loss function choice")
     
+    # Checkpoints Parameters
+    parser.add_argument("--save_checkpoint", action="store_true", default=False, help="Save model checkpoints")
+    parser.add_argument("--checkpoint_path", type=str, default="model/checkpoints/model.pth", help="Path to save model checkpoints")
+    parser.add_argument("--load_checkpoint", action="store_true", default=False, help="Load model checkpoints")
+    
     # Attention parameters
     parser.add_argument("--embed_dim", type=int, default=512, help="Embedding dimension for attention")
     parser.add_argument("--num_heads", type=int, default=8, help="Number of attention heads")

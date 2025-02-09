@@ -24,5 +24,7 @@ python main.py \
     --gamma 0.1 \
     --patience 10 \
     --device "mps" \
+    --save_checkpoint \
+    --checkpoint_path "model/checkpoints/model.pth" \
     #--use_wandb \
     #--run_name "prova-train"

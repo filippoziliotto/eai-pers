@@ -61,7 +61,9 @@ def main(args):
         num_heads=args.num_heads,
         encoder=encoder,
         pixels_per_meter=args.pixels_per_meter,
-        device=args.device
+        device=args.device,
+        load_checkpoint=args.load_checkpoint,
+        checkpoint_path=args.checkpoint_path
     )
     print("N° of Model parameters: ", sum(p.numel() for p in model.parameters() if p.requires_grad))
 
@@ -88,7 +90,10 @@ def main(args):
             num_epochs=args.num_epochs,
             loss_choice=args.loss_choice,
             device=args.device,
-            use_wandb=args.use_wandb
+            use_wandb=args.use_wandb,
+            load_checkpoint=args.load_checkpoint,
+            save_checkpoint=args.save_checkpoint,
+            checkpoint_path=args.checkpoint_path,
         )
     elif args.mode in ['eval']:
         validate(
@@ -97,6 +102,8 @@ def main(args):
             loss_choice=args.loss_choice,
             device=args.device,
             use_wandb=args.use_wandb,
+            load_checkpoint=args.load_checkpoint,
+            checkpoint_path=args.checkpoint_path,
             **kwargs
         )
         

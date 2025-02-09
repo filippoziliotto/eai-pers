@@ -4,6 +4,7 @@ import torch
 from torch.utils.data import DataLoader
 import wandb
 from tqdm import tqdm
+import os
 
 # Other imports
 from utils.losses import compute_loss
@@ -12,32 +13,41 @@ from trainer.validate import validate
 
 # Config file
 import config
+from typing import Optional, Dict
 
 def train_one_epoch(
-    model, 
-    data_loader, 
-    optimizer, 
-    loss_choice='L2',
-    device='cpu',
+    model: torch.nn.Module,
+    data_loader: DataLoader,
+    optimizer: torch.optim.Optimizer,
+    loss_choice: str = 'NCE',
+    device: str = 'cpu',
     ):
+    
     """
-    Trains the model for one epoch and logs the training loss to W&B.
+    Trains the model for one epoch, logs the training loss and accuracy, and 
+    optionally loads and/or saves model weights to a checkpoint file.
 
     Args:
         model: The PyTorch model to train.
-        data_loader: DataLoader providing (ground_truth_coords, input_data) batches.
+        data_loader: DataLoader providing batches with keys 'description', 'query', 'target', and 'feature_map'.
         optimizer: Optimizer for updating model weights.
         loss_choice: Loss function choice ('L1' or 'L2').
         device: Device to run the training on ('cpu' or 'cuda').
+        load_checkpoint (bool): If True, load model weights from checkpoint_path before training.
+        save_checkpoint (bool): If True, save model weights to checkpoint_path after training.
+        checkpoint_path (str): Path to the checkpoint file.
 
     Returns:
         epoch_avg_loss: Average training loss for the epoch.
-        epoch_avg_acc: Average training accuracy for each threshold for the epoch.
+        train_avg_acc: Average training accuracy for each threshold for the epoch.
     """
+            
+    # Set model to training mode
     model.train()
     epoch_loss = 0.0
     train_acc = []
     
+    # Iterate over the data loader
     for batch_idx, data in tqdm(enumerate(data_loader), total=len(data_loader), desc="Batch", leave=False):
         description = data['description']
         query = data['query']
@@ -72,14 +82,17 @@ def train_one_epoch(
 
 def train_and_validate(
     model, 
-    train_loader, 
-    val_loader, 
-    optimizer, 
-    scheduler=None, 
-    num_epochs=10, 
-    loss_choice='L2',
-    device='cpu', 
-    use_wandb=False, 
+    train_loader: DataLoader,
+    val_loader: DataLoader, 
+    optimizer: torch.optim.Optimizer, 
+    scheduler= Optional[torch.optim.lr_scheduler._LRScheduler],
+    num_epochs: int=10,
+    loss_choice: str='L2',
+    device: str='cpu',
+    use_wandb: bool=False,
+    load_checkpoint: bool=False,
+    save_checkpoint: bool=False,
+    checkpoint_path: Optional[str]=None,
     ):
     """
     Full training loop that trains and validates the model for multiple epochs.
@@ -93,14 +106,27 @@ def train_and_validate(
         num_epochs: Number of epochs to train the model.
         loss_choice: Loss function choice ('L1' or 'L2').
         device: Device to run the training on ('cpu' or 'cuda').
+        use_wandb: If True, log metrics to W&B.
+        load_checkpoint (bool): If True, load model weights from checkpoint_path before training.
+        save_checkpoint (bool): If True, save model weights to checkpoint_path after training.
+        checkpoint_path (str): Path to the checkpoint file.
     """
 
     # Move model to device if not already on it
     if device == 'cuda' and not next(model.parameters()).is_cuda:
         model.to(device)
+        
+    # Optionally load model weights from checkpoint
+    if load_checkpoint:
+        assert os.path.exists(checkpoint_path), f"Checkpoint path {checkpoint_path} does not exist."
+        model.load_state_dict(torch.load(checkpoint_path, map_location=device))
+        print(f"Loaded checkpoint from {checkpoint_path}...")
+    else:
+        print(f"Starting training from scratch...")
     
     print("Starting training...")
 
+    # Log metrics to W&B if enabled
     def log_epoch_metrics(epoch, train_loss, train_acc, val_loss, val_acc):
         metrics = {
             "Epoch": epoch,
@@ -111,9 +137,10 @@ def train_and_validate(
         metrics.update({f"Val Acc [{k}]": v for k, v in val_acc.items()})
         wandb.log(metrics)
 
+    # Train for the specified number of epochs
     for epoch in tqdm(range(1, num_epochs + 1), desc="Epochs"):
         # Train for one epoch
-        train_loss, train_acc = train_one_epoch(model, train_loader, optimizer, loss_choice, device)
+        train_loss, train_acc = train_one_epoch(model, train_loader, optimizer, loss_choice, device, load_checkpoint, save_checkpoint, checkpoint_path)
 
         # Validate after each epoch
         val_loss, val_acc = validate(model, val_loader, loss_choice, device)
@@ -132,8 +159,14 @@ def train_and_validate(
         for key in train_acc:
             print(f"Train Acc [{key}]: {train_acc[key]:.4f}, Val Acc [{key}]: {val_acc[key]:.4f}")
         print('-' * 20)
+        
+        # Optionally save model weights to checkpoint
+        if save_checkpoint:
+            assert os.path.exists(os.path.dirname(checkpoint_path)), f"Checkpoint directory {os.path.dirname(checkpoint_path)} does not exist."
+            torch.save(model.state_dict(), checkpoint_path)
+            print(f"Saved checkpoint to {checkpoint_path}...")
 
-    print("Training complete.")
+    print("Training complete...")
     
 
 # Example usage (replace with actual dataset, model, optimizer, and scheduler)

@@ -1,6 +1,7 @@
 # Importing necessary libraries
 import torch
 import torch.nn as nn
+import os
 
 # Importing custom models
 from models.stages.first_stage import MapAttentionModel
@@ -16,8 +17,8 @@ class RetrievalMapModel(nn.Module):
             embed_dim (int): The embedding dimension.
             num_heads (int): The number of attention heads.
             encoder (Blip2Encoder): The encoder model.
-            cosine_method (str): The cosine method to use.
             pixels_per_meter (int): The number of pixels per meter.
+            device (str): The device to run the model on.
         """
         super(RetrievalMapModel, self).__init__()
         print("Initializing Model...")
