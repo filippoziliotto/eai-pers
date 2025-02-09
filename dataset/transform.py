@@ -1,6 +1,10 @@
 # Custom Transform
 import torch
 import args  # Import the arguments
+
+
+# Import utility functions
+from dataset.utils import random_crop_preserving_target
    
 
 class MapTransform:
@@ -35,14 +39,12 @@ class MapTransform:
             xy_coords[1] = feature_map.shape[0] - xy_coords[1]
         
         # Apply random crop
-        if self.use_random_crop and torch.rand(1) > self.prob:
-            crop_size = torch.randint(0, 100, (1,)).item()
-            feature_map = feature_map[crop_size:-crop_size, crop_size:-crop_size]
-            xy_coords[0] -= crop_size
-            xy_coords[1] -= crop_size
+        if self.use_random_crop and torch.rand(1) > self.prob/2:
+            feature_map, xy_coords = random_crop_preserving_target(feature_map, xy_coords)
         
         # Change in description order   
         if self.use_desc_aug and torch.rand(1) > self.prob:
+            # TODO:
             pass 
         
         return feature_map, xy_coords, description

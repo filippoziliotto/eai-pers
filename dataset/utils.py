@@ -113,3 +113,49 @@ def split_dataloader(data_loader: DataLoader, split_ratio: float, batch_size: in
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
     
     return train_loader, val_loader
+
+"""
+Transforms Utils for Maps
+"""
+def random_crop_preserving_target(feature_map, xy_coords, p=1.0):
+    """
+    Randomly crops the feature_map while ensuring that the target point given by xy_coords
+    is still within the cropped image.
+
+    Args:
+        feature_map (torch.Tensor): A 2D tensor of shape (H, W) representing the feature map.
+        xy_coords (list or tuple of int): The target point as [x, y], where x is the column and y is the row.
+
+    Returns:
+        cropped_feature_map (torch.Tensor): The cropped feature map.
+        new_xy_coords (list of int): The adjusted target coordinates after cropping.
+    """
+
+    # Get the height and width of the feature map.
+    # This works for a 2D tensor; if your tensor includes channels as the first dimension,
+    # adjust accordingly.
+    B, H, W, C = feature_map.shape[:2]
+    
+    # Extract target coordinates (assumed to be [x, y] where x is the horizontal coordinate).
+    x, y = xy_coords[0], xy_coords[1]
+
+    # Determine the maximum number of pixels that can be cropped on each side without
+    # removing the target point.
+    max_crop_left   = x             # Maximum crop from left.
+    max_crop_top    = y             # Maximum crop from top.
+    max_crop_right  = W - x - 1     # Maximum crop from right.
+    max_crop_bottom = H - y - 1     # Maximum crop from bottom.
+
+    # Randomly select crop margins for each side.
+    crop_left   = torch.randint(0, max_crop_left + 1, (1,)).item()   if max_crop_left > 0 else 0
+    crop_top    = torch.randint(0, max_crop_top + 1, (1,)).item()     if max_crop_top > 0 else 0
+    crop_right  = torch.randint(0, max_crop_right + 1, (1,)).item()   if max_crop_right > 0 else 0
+    crop_bottom = torch.randint(0, max_crop_bottom + 1, (1,)).item()   if max_crop_bottom > 0 else 0
+
+    # Crop the feature map.
+    cropped_feature_map = feature_map[crop_top : H - crop_bottom, crop_left : W - crop_right]
+
+    # Adjust the target coordinates relative to the new cropped image.
+    new_xy_coords = [x - crop_left, y - crop_top]
+
+    return cropped_feature_map, new_xy_coords

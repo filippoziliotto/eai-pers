@@ -1,7 +1,5 @@
 # Importing necessary libraries
-import torch
 import torch.nn as nn
-import os
 
 # Importing custom models
 from models.stages.first_stage import MapAttentionModel

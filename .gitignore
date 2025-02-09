@@ -88,6 +88,7 @@ data
 
 # mypy
 .mypy_cache/
+.pytest_cache/
 
 # vim
 *.swp

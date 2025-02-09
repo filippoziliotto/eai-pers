@@ -33,9 +33,6 @@ def train_one_epoch(
         optimizer: Optimizer for updating model weights.
         loss_choice: Loss function choice ('L1' or 'L2').
         device: Device to run the training on ('cpu' or 'cuda').
-        load_checkpoint (bool): If True, load model weights from checkpoint_path before training.
-        save_checkpoint (bool): If True, save model weights to checkpoint_path after training.
-        checkpoint_path (str): Path to the checkpoint file.
 
     Returns:
         epoch_avg_loss: Average training loss for the epoch.
@@ -177,4 +174,4 @@ if __name__ == '__main__':
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.1)
     
-    train_and_validate(model, train_loader, val_loader, optimizer, scheduler, num_epochs=20, loss_choice='L2', device='cuda')
+    train_and_validate(model, train_loader, val_loader, optimizer, scheduler, ...)
