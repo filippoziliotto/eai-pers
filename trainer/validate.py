@@ -68,7 +68,7 @@ def validate(
             # Get data and move to device
             description = data['description']
             query = data['query']
-            gt_target = data['target'].to(device)
+            gt_target = data['target'].to(torch.float32).to(device)
             feature_map = data['feature_map'].to(device)
 
             # Forward pass

@@ -124,7 +124,7 @@ def visualize(
         value_map (np.ndarray): The value map.
     """
     value_map = value_map.cpu().numpy()
-    gt_target = gt_target.cpu().numpy()
+    gt_target = gt_target.cpu().numpy().astype(int)
     
     # Find the pixel with the maximum value in the value map
     max_val = find_index_max_value(value_map)

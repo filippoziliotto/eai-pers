@@ -53,7 +53,7 @@ def main(args):
     )
     
     # Get the different splits from the data_loader
-    train_loader, val_loader = split_dataloader(data_loader, split_ratio=0.8, batch_size=args.batch_size)
+    train_loader, val_loader = split_dataloader(data_loader, split_ratio=0.8, batch_size=args.batch_size, collate_fn=custom_collate)
 
     # Model Initialization
     model = RetrievalMapModel(

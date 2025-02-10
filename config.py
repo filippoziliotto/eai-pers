@@ -1,3 +1,3 @@
-DEBUG = True
-VISUALIZE = True
+DEBUG = False
+VISUALIZE = False
 RANDOM_BASELINE = False

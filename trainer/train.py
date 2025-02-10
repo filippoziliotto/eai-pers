@@ -48,7 +48,7 @@ def train_one_epoch(
     for batch_idx, data in tqdm(enumerate(data_loader), total=len(data_loader), desc="Batch", leave=False):
         description = data['description']
         query = data['query']
-        gt_target = data['target'].to(device)
+        gt_target = data['target'].to(torch.float32).to(device)
         feature_map = data['feature_map'].to(device)
 
         # Forward pass
