@@ -128,7 +128,6 @@ def visualize(
     
     # Find the pixel with the maximum value in the value map
     max_val = find_index_max_value(value_map)
-    max_val = np.flipud(np.unravel_index(np.argmax(value_map, axis=None), value_map.shape))
     
     # Convert the value map to an RGB image 
     image_rgb = monochannel_to_inferno_rgb(value_map)

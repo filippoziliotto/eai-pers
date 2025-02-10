@@ -22,9 +22,9 @@ def get_args():
     # Augmentations Parameters
     parser.add_argument("--use_aug", action="store_true", default=False, help="Use augmentations for training")
     parser.add_argument("--aug_prob", type=float, default=0.5, help="Probability of applying augmentations")
-    parser.add_argument("--use_horizontalflip", action="store_true", help="Use horizontal flip")
-    parser.add_argument("--use_verticalflip", action="store_true", help="Use vertical flip")
-    parser.add_argument("--use_randomcrop", action="store_true", help="Use rotation")
+    parser.add_argument("--use_horizontal_flip", action="store_true", help="Use horizontal flip")
+    parser.add_argument("--use_vertical_flip", action="store_true", help="Use vertical flip")
+    parser.add_argument("--use_random_crop", action="store_true", help="Use rotation")
     parser.add_argument("--use_desc_aug", action="store_true", help="Use description augmentation")
     
     # Model and Training Parameters

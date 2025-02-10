@@ -86,15 +86,12 @@ def validate(
                     torch.randint(0, h, (b,), device=value_map.device)
                 ], dim=1)
 
-                
             # Compute accuracy
             accuracy.append(compute_accuracy(gt_target, pred_target))
             
             # Visualize results
             if config.VISUALIZE:
-                # Take the last input/output batch
                 for query, gt_target, value_map, map_path in zip(query, gt_target, value_map, data['map_path']):
-                    # Visualize the value_map
                     visualize(query, gt_target, value_map, map_path)
         
             if config.DEBUG and batch_idx == 2:
