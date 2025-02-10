@@ -31,6 +31,7 @@ def compute_accuracy(gt_target, value_map, thresholds=[5, 10, 20], topk=[1, 3, 5
     # TODO: Move this into a separate function
     # Initialize dictionary to store Top-k accuracies
     top_k_accuracies = {}
+    pred_targets = {}
     
     # Loop through each k value (1, 3, 5, etc.)
     for k in topk:
@@ -38,6 +39,7 @@ def compute_accuracy(gt_target, value_map, thresholds=[5, 10, 20], topk=[1, 3, 5
         
         # Get the top k predicted indices from value_map_flat
         _, top_k_indices = value_map_flat.topk(k, dim=1)  # Shape: (batch, k)
+        pred_targets[k] = top_k_indices[:, 0].cpu().numpy()
         
         for i in range(value_map_flat.size(0)):  # Iterate over batches
             # Convert predicted indices to (x, y) coordinates
@@ -58,6 +60,7 @@ def compute_accuracy(gt_target, value_map, thresholds=[5, 10, 20], topk=[1, 3, 5
         # Calculate the accuracy for this value of k
         top_k_accuracies[k] = correct_predictions / value_map_flat.size(0)
     
+        pred_target = top_k_indices[:, 0].cpu().numpy()
 
         # MSE Accuracy
         # TODO:

@@ -62,8 +62,6 @@ def main(args):
         encoder=encoder,
         pixels_per_meter=args.pixels_per_meter,
         device=args.device,
-        load_checkpoint=args.load_checkpoint,
-        checkpoint_path=args.checkpoint_path
     )
     print("N° of Model parameters: ", sum(p.numel() for p in model.parameters() if p.requires_grad))
 

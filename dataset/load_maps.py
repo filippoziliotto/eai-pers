@@ -71,10 +71,10 @@ def load_all_maps(maps_base_dir: str) -> List[Dict]:
                 map_data = {
                     "scene_id": scene_id,
                     "floor_id": floor_id,
-                    "robot_xyz": first_entry.get("current_pos", None),
+                    "robot_xyz": first_entry.get("start_position", None),
                     "robot_xy": first_entry.get("robot_xy", None),
                     "robot_heading": first_entry.get("heading", None),
-                    "robot_rotation": first_entry.get("current_rot", None),
+                    "robot_rotation": first_entry.get("start_rotation", None),
                     "feature_map_path": feature_map_path if os.path.exists(feature_map_path) else None,
                 }
 
@@ -161,7 +161,8 @@ def load_extracted_episodes(base_path: str, split: str) -> List[Dict]:
     Returns:
         list[dict]: List of episodes with extracted summaries.
     """
-    extracted_file = "data/val/filtered_episodes.json"
+    extracted_file = os.path.join(base_path, split, "filtered_episodes.json")
+    #extracted_file = "data/val/filtered_episodes.json"
     with open(extracted_file, "r") as f:
         extracted_episodes = json.load(f)
     return extracted_episodes

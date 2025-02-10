@@ -58,6 +58,17 @@ def xyz_to_map(episode: Dict, map: BaseMap) -> List[float]:
     # Convert to pixel coordinates on the map
     return map._xy_to_px(target_map.reshape(1, 2))[0]
 
+def load_obstacle_map(path: str) -> np.ndarray:
+    """
+    Load an obstacle map from a given path.
+
+    Args:
+        path (str): The path to the obstacle map file.
+
+    Returns:
+        np.ndarray: The obstacle map as a NumPy array.
+    """
+    return np.load(path).astype(np.int8)
 """
 BATCHING UTILITIES
 """
@@ -81,12 +92,16 @@ def custom_collate(batch):
     targets = torch.stack([item["target"] for item in batch])
     feature_maps = torch.stack([item["feature_map"] for item in batch])
     
+    # Stack map_path
+    map_paths = [item["map_path"] for item in batch]
+    
     # Return the collated batch as a dictionary
     return {
         "description": descriptions,
         "query": queries,
         "target": targets,
         "feature_map": feature_maps,
+        "map_path": map_paths
     }
     
 def split_dataloader(data_loader: DataLoader, split_ratio: float, batch_size: int) -> Tuple[DataLoader, DataLoader]:

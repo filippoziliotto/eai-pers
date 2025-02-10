@@ -10,6 +10,7 @@ from utils.metrics import compute_accuracy
 
 # Config file
 import config
+from utils.visualize import visualize
 
 def log_epoch_metrics(val_loss, val_acc):
     metrics = {
@@ -78,8 +79,16 @@ def validate(
             val_loss += loss.item()
             
             # Compute accuracy
-            accuracy.append(compute_accuracy(gt_target, value_map))
+            topk = compute_accuracy(gt_target, value_map, loss_choice)
+            accuracy.append(topk)
             
+            # Visualize results
+            if config.VISUALIZE:
+                # Take the last input/output batch
+                for query, gt_target, value_map, map_path in zip(query, gt_target, value_map, data['map_path']):
+                    # Visualize the value_map
+                    visualize(query, gt_target, value_map, map_path)
+        
             if config.DEBUG and batch_idx == 2:
                 break
     
@@ -90,7 +99,7 @@ def validate(
     val_avg_acc = {key: sum(d[key] for d in accuracy) / len(accuracy) for key in accuracy[0]}
     
     # Log metrics to W&B if in evaluation mode
-    if kwargs.get('mode', 'eval'):
+    if use_wandb and kwargs.get('mode', 'eval'):
         log_epoch_metrics(val_avg_loss, val_avg_acc)
 
     return val_avg_loss, val_avg_acc

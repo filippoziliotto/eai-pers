@@ -23,9 +23,6 @@ var/
 .installed.cfg
 *.egg
 
-# Hydra
-outputs/
-
 # PyInstaller
 #  Usually these files are written by a python script from a template
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
@@ -112,3 +109,6 @@ scripts/keys.sh
 
 # Checkpoints
 model/checkpoints
+
+# Ignore all files in trainer/visualizations
+trainer/visualizations/*

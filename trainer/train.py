@@ -59,14 +59,15 @@ def train_one_epoch(
         epoch_loss += loss.item()
         
         # Compute accuracy
-        train_acc.append(compute_accuracy(gt_target, value_map, loss_choice))
+        topk = compute_accuracy(gt_target, value_map, loss_choice)
+        train_acc.append(topk)
 
         # Backward pass and optimization
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
         
-        if config.DEBUG and batch_idx == 2:
+        if config.DEBUG and batch_idx == 1:
             break
 
     # Calculate average loss for the epoch
@@ -137,7 +138,7 @@ def train_and_validate(
     # Train for the specified number of epochs
     for epoch in tqdm(range(1, num_epochs + 1), desc="Epochs"):
         # Train for one epoch
-        train_loss, train_acc = train_one_epoch(model, train_loader, optimizer, loss_choice, device, load_checkpoint, save_checkpoint, checkpoint_path)
+        train_loss, train_acc = train_one_epoch(model, train_loader, optimizer, loss_choice, device)
 
         # Validate after each epoch
         val_loss, val_acc = validate(model, val_loader, loss_choice, device)

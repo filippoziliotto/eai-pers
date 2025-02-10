@@ -51,6 +51,10 @@ class RetMapsDataset(Dataset):
         # Uncompress the feature map (.npz)
         feature_map = np.load(episode["feature_map_path"])
         feature_map = torch.tensor(feature_map["arr_0"])
+        
+        # Path to obstacle_map
+        # TODO: save augmentations type and add to obstalce_map
+        map_path = episode["feature_map_path"].split("feature_map.npz")[0]
 
         # This is the y label
         target = xyz_to_map(episode, self.map)
@@ -64,7 +68,8 @@ class RetMapsDataset(Dataset):
             "description": description,
             "target": target,
             "query": query,
-            "feature_map": feature_map
+            "feature_map": feature_map,
+            "map_path": map_path
         }
 
 def get_dataloader(data_dir, data_split="val", batch_size=32, shuffle=True, num_workers=4, collate_fn=None, kwargs={}):
