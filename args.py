@@ -32,7 +32,7 @@ def get_args():
     parser.add_argument("--lr", type=float, default=0.001, help="Learning rate for the optimizer")
     parser.add_argument("--weight_decay", type=float, default=1e-5, help="Weight decay for regularization")
     parser.add_argument("--num_epochs", type=int, default=10, help="Number of training epochs")
-    parser.add_argument("--loss_choice", type=str, default="L2", choices=["L1", "L2", "CE", "NCE"], help="Loss function choice")
+    parser.add_argument("--loss_choice", type=str, default="L2", choices=["MSE", "L2", "CE", "NCE"], help="Loss function choice")
     
     # Checkpoints Parameters
     parser.add_argument("--save_checkpoint", action="store_true", default=False, help="Save model checkpoints")

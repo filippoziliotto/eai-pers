@@ -75,12 +75,11 @@ def validate(
             value_map = model(description=description, map_tensor=feature_map, query=query)
 
             # Compute loss
-            loss = compute_loss(gt_target, value_map, loss_choice, device)
+            loss, pred_target = compute_loss(gt_target, value_map, loss_choice, device)
             val_loss += loss.item()
             
             # Compute accuracy
-            topk = compute_accuracy(gt_target, value_map, loss_choice)
-            accuracy.append(topk)
+            accuracy.append(compute_accuracy(gt_target, pred_target))
             
             # Visualize results
             if config.VISUALIZE:

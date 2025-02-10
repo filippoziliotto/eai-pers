@@ -55,12 +55,11 @@ def train_one_epoch(
         value_map = model(description=description, map_tensor=feature_map, query=query) # Shape: (batch, w, h)
         
         # Compute loss
-        loss = compute_loss(gt_target, value_map, loss_choice, device)
+        loss, pred_target = compute_loss(gt_target, value_map, loss_choice, device)
         epoch_loss += loss.item()
         
         # Compute accuracy
-        topk = compute_accuracy(gt_target, value_map, loss_choice)
-        train_acc.append(topk)
+        train_acc.append(compute_accuracy(gt_target, pred_target))
 
         # Backward pass and optimization
         optimizer.zero_grad()

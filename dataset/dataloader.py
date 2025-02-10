@@ -53,10 +53,10 @@ class RetMapsDataset(Dataset):
         feature_map = torch.tensor(feature_map["arr_0"])
         
         # Path to obstacle_map
-        # TODO: save augmentations type and add to obstalce_map
+        # TODO: save augmentations type and add to obstacle_map
         map_path = episode["feature_map_path"].split("feature_map.npz")[0]
 
-        # This is the y label
+        # This is the gt position of the object in map frame
         target = xyz_to_map(episode, self.map)
 
         # Transform the data, used only for convert to tensor or augmentations

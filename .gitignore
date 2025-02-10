@@ -107,8 +107,5 @@ DETAILS.md
 # OpenAI / Wandb Keys
 scripts/keys.sh
 
-# Checkpoints
-model/checkpoints
-
 # Ignore all files in trainer/visualizations
 trainer/visualizations/*

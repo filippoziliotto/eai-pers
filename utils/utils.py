@@ -34,94 +34,43 @@ def reshape_map(map_tensor: Union[torch.Tensor, np.ndarray]) -> torch.Tensor:
     b, h, w, n = map_tensor.shape
     return map_tensor.view(b, -1, n)
 
-def differentiable_soft_argmax(value_map, temperature=1.0):
+def soft_argmax(heatmaps, beta=1.0):
     """
-    Computes a differentiable approximation of argmax using a softmax weighted average.
-    
-    Parameters:
-        value_map (torch.Tensor): A 2D tensor (H x W) of values.
-        temperature (float): Temperature parameter to control the sharpness of the softmax.
-                             Lower temperatures approximate a hard argmax.
-    
+    Compute the soft-argmax of a batch of heatmaps.
+
+    Args:
+        heatmaps (torch.Tensor): Tensor of shape (batch_size, height, width).
+        beta (float): Temperature parameter to control the sharpness of the softmax.
+
     Returns:
-        torch.Tensor: A tensor of shape (2,) containing the soft (row, col) coordinates.
+        coords (torch.Tensor): Tensor of shape (batch_size, 2) containing the (x, y) coordinates.
     """
-    H, W = value_map.shape
+    batch_size, height, width = heatmaps.shape
 
-    # Compute softmax over the flattened value_map
-    value_map_flat = value_map.view(-1)  # shape: (H*W,)
-    weights = F.softmax(value_map_flat / temperature, dim=0)  # shape: (H*W,)
+    # Create coordinate grid
+    # Note: Ensure that the grid is on the same device as the heatmaps.
+    grid_y = torch.linspace(0, height - 1, height, device=heatmaps.device)
+    grid_x = torch.linspace(0, width - 1, width, device=heatmaps.device)
+    # Reshape and expand to match heatmap shape
+    grid_y = grid_y.view(1, height, 1).expand(batch_size, height, width)
+    grid_x = grid_x.view(1, 1, width).expand(batch_size, height, width)
     
-    # Create coordinate grids for rows and columns
-    rows = torch.arange(H, dtype=torch.float32, device=value_map.device)
-    cols = torch.arange(W, dtype=torch.float32, device=value_map.device)
+    # Apply the softmax with temperature scaling
+    heatmaps = heatmaps * beta
+    heatmaps_flat = heatmaps.view(batch_size, -1)
+    softmax = F.softmax(heatmaps_flat, dim=1).view(batch_size, height, width)
     
-    # Expand to 2D grids
-    # row_grid has shape (H, W) with each row constant
-    row_grid = rows.view(H, 1).expand(H, W)
-    # col_grid has shape (H, W) with each column constant
-    col_grid = cols.view(1, W).expand(H, W)
+    # Compute expected coordinates
+    exp_x = torch.sum(softmax * grid_x, dim=(1, 2))
+    exp_y = torch.sum(softmax * grid_y, dim=(1, 2))
     
-    # Flatten the grids
-    row_grid_flat = row_grid.reshape(-1)
-    col_grid_flat = col_grid.reshape(-1)
-    
-    # Compute the expected row and column coordinates
-    soft_row = torch.sum(weights * row_grid_flat)
-    soft_col = torch.sum(weights * col_grid_flat)
-    
-    return torch.stack([soft_row, soft_col])
+    # Stack the coordinates together (shape: batch_size x 2)
+    coords = torch.stack([exp_x, exp_y], dim=1)
+    return coords
 
-def find_non_zero_neighborhood_indices(value_map, w, neighborhood_size=5, return_max=False, temperature=1.0):
-    """
-    Finds indices around the maximum value in value_map.
-    
-    If return_max is True, returns the index of the maximum value.
-    In the differentiable version (when return_max is True) we use soft-argmax so that
-    the returned coordinates are differentiable.
-    
-    Parameters:
-        value_map (torch.Tensor): 2D tensor of shape (H, W).
-        w (int): The width of the value_map (number of columns).
-        neighborhood_size (int): Half-size of the neighborhood around the maximum value.
-        return_max (bool): If True, return the (row, col) coordinate of the maximum value.
-        temperature (float): Temperature for soft-argmax. Lower values approximate a hard argmax.
-        
-    Returns:
-        If return_max is True:
-            torch.Tensor: A tensor of shape (2,) with differentiable (row, col) coordinates.
-        Else:
-            A list of (row, col) tuples corresponding to nonzero values in the neighborhood
-            (Note: these indices will be non-differentiable).
-    """
-    if return_max:
-        # Use the differentiable soft-argmax.
-        return differentiable_soft_argmax(value_map, temperature=temperature)
-    
-    # Otherwise, use the discrete approach (non-differentiable)
-    # Step 1: Find the index of the maximum value in the value_map
-    max_idx = value_map.argmax()
-    
-    # Step 2: Convert the 1D index to 2D (row, col) coordinates
-    max_row, max_col = divmod(int(max_idx), w)
-    
-    # Calculate the neighborhood boundaries, ensuring they stay within bounds
-    row_start = max(0, max_row - neighborhood_size)
-    row_end = min(value_map.shape[0], max_row + neighborhood_size + 1)
-    col_start = max(0, max_col - neighborhood_size)
-    col_end = min(value_map.shape[1], max_col + neighborhood_size + 1)
-    
-    # Collect indices of non-zero values in the neighborhood
-    neighborhood_indices = [
-        (r, c)
-        for r in range(row_start, row_end)
-        for c in range(col_start, col_end)
-        if value_map[r, c] != 0
-    ]
-    
-    return neighborhood_indices
-
-
+"""
+Seed Utils
+"""
 def set_seed(seed: int) -> None:
     """
     Set random seed for reproducibility.
