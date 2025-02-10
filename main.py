@@ -89,6 +89,7 @@ def main(args):
             loss_choice=args.loss_choice,
             device=args.device,
             use_wandb=args.use_wandb,
+            mode=args.mode,
             load_checkpoint=args.load_checkpoint,
             save_checkpoint=args.save_checkpoint,
             checkpoint_path=args.checkpoint_path,
@@ -102,7 +103,7 @@ def main(args):
             use_wandb=args.use_wandb,
             load_checkpoint=args.load_checkpoint,
             checkpoint_path=args.checkpoint_path,
-            **kwargs
+            mode=args.mode
         )
         
     # Finish run

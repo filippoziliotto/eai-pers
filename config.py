@@ -1,2 +1,3 @@
 DEBUG = True
 VISUALIZE = False
+RANDOM_BASELINE = True

@@ -87,6 +87,7 @@ def train_and_validate(
     loss_choice: str='L2',
     device: str='cpu',
     use_wandb: bool=False,
+    mode: str='train',
     load_checkpoint: bool=False,
     save_checkpoint: bool=False,
     checkpoint_path: Optional[str]=None,
@@ -104,6 +105,7 @@ def train_and_validate(
         loss_choice: Loss function choice ('L1' or 'L2').
         device: Device to run the training on ('cpu' or 'cuda').
         use_wandb: If True, log metrics to W&B.
+        mode: Mode of operation ('train' or 'eval').
         load_checkpoint (bool): If True, load model weights from checkpoint_path before training.
         save_checkpoint (bool): If True, save model weights to checkpoint_path after training.
         checkpoint_path (str): Path to the checkpoint file.
@@ -140,7 +142,7 @@ def train_and_validate(
         train_loss, train_acc = train_one_epoch(model, train_loader, optimizer, loss_choice, device)
 
         # Validate after each epoch
-        val_loss, val_acc = validate(model, val_loader, loss_choice, device)
+        val_loss, val_acc = validate(model, val_loader, loss_choice, device, mode='train')
 
         # Log metrics to W&B if enabled
         if use_wandb:

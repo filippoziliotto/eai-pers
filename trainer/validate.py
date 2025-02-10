@@ -27,7 +27,7 @@ def validate(
     use_wandb=False,
     load_checkpoint=False,
     checkpoint_path=None,
-    **kwargs
+    mode:str='eval',
     ):
     
     """
@@ -78,6 +78,15 @@ def validate(
             loss, pred_target = compute_loss(gt_target, value_map, loss_choice, device)
             val_loss += loss.item()
             
+            # Predict random index for random baseline
+            if config.RANDOM_BASELINE:
+                b, w, h = value_map.shape
+                pred_target = torch.stack([
+                    torch.randint(0, w, (b,), device=value_map.device),
+                    torch.randint(0, h, (b,), device=value_map.device)
+                ], dim=1)
+
+                
             # Compute accuracy
             accuracy.append(compute_accuracy(gt_target, pred_target))
             
@@ -98,7 +107,7 @@ def validate(
     val_avg_acc = {key: sum(d[key] for d in accuracy) / len(accuracy) for key in accuracy[0]}
     
     # Log metrics to W&B if in evaluation mode
-    if use_wandb and kwargs.get('mode', 'eval'):
+    if use_wandb and mode in ['eval']:
         log_epoch_metrics(val_avg_loss, val_avg_acc)
 
     return val_avg_loss, val_avg_acc
