@@ -181,3 +181,43 @@ def args_logger(args):
         print(f"| {arg}: {getattr(args, arg)}")
     print(' ----------------')
     return
+
+
+"""
+Random Baseline
+"""
+def get_random_target(value_map: torch.Tensor, type='random') -> torch.Tensor:
+    """
+    For each sample in the batch, returns a random (x, y) coordinate
+    where the value in the value_map is non-zero.
+    If no non-zero value exists for a sample, a random coordinate is selected.
+    
+    Args:
+        value_map (torch.Tensor): Tensor of shape (batch, width, height)
+    
+    Returns:
+        torch.Tensor: A tensor of shape (batch, 2) with the selected (x, y) coordinates.
+    """
+    b, w, h = value_map.shape
+    pred_target = []
+
+    if type in ['random']:
+        for i in range(b):
+            # Get indices of non-zero values for sample i.
+            nonzero_idx = (value_map[i] != 0).nonzero(as_tuple=False)
+            if nonzero_idx.numel() == 0:
+                # If no non-zero value is present, select a random coordinate.
+                rand_x = torch.randint(0, w, (1,), device=value_map.device).item()
+                rand_y = torch.randint(0, h, (1,), device=value_map.device).item()
+                pred_target.append(torch.tensor([rand_x, rand_y], device=value_map.device))
+            else:
+                # Select a random index among the non-zero indices.
+                idx = torch.randint(0, nonzero_idx.size(0), (1,)).item()
+                pred_target.append(nonzero_idx[idx])
+    elif type in ['center']:
+        for i in range(b):
+            pred_target.append(torch.tensor([w//2, h//2], device=value_map.device))
+    else:
+        raise ValueError(f"Unsupported type: {type}")
+    
+    return torch.stack(pred_target, dim=0)

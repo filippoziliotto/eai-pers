@@ -23,6 +23,10 @@ except ImportError:
     print("Blip2Encoder cannot be imported, check your salesforce-lavis dependencies!!!")
 from models.model import RetrievalMapModel  
 
+# Avoid LAVIS (useless) FutureWarnings ;)
+import warnings
+warnings.filterwarnings('ignore', category=FutureWarning)
+
 
 def main(args):
     

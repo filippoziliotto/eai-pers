@@ -8,9 +8,10 @@ import os
 from utils.losses import compute_loss
 from utils.metrics import compute_accuracy
 
-# Config file
+# Config & Utils imports
 import config
 from utils.visualize import visualize
+from utils.utils import get_random_target
 
 def log_epoch_metrics(val_loss, val_acc):
     metrics = {
@@ -80,11 +81,7 @@ def validate(
             
             # Predict random index for random baseline
             if config.RANDOM_BASELINE:
-                b, w, h = value_map.shape
-                pred_target = torch.stack([
-                    torch.randint(0, w, (b,), device=value_map.device),
-                    torch.randint(0, h, (b,), device=value_map.device)
-                ], dim=1)
+                pred_target = get_random_target(value_map, type='center')
 
             # Compute accuracy
             accuracy.append(compute_accuracy(gt_target, pred_target))
@@ -92,10 +89,10 @@ def validate(
             # Visualize results
             if config.VISUALIZE:
                 for query, gt_target, value_map, map_path in zip(query, gt_target, value_map, data['map_path']):
-                    visualize(query, gt_target, value_map, map_path)
+                    visualize(query, gt_target, value_map, map_path, batch_idx)
         
-            if config.DEBUG and batch_idx == 2:
-                break
+            #if config.DEBUG and batch_idx == 2:
+            #    break
     
     # Calculate average validation loss
     val_avg_loss = val_loss / len(data_loader)

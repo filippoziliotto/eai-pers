@@ -86,14 +86,14 @@ def monochannel_to_inferno_rgb(image: np.ndarray) -> np.ndarray:
 
     return inferno_colormap
 
-def save_image_to_disk(image: np.ndarray, base_path: str="trainer/visualizations/", name: str="image.png") -> None:
+def save_image_to_disk(image: np.ndarray, base_path: str="trainer/visualizations/", name: str="image", idx_:int=0) -> None:
     """Save an image to disk.
     Args:
         image (numpy.ndarray): The image to save.
         base_path (str, optional): The base path to save the image to. Defaults to "trainer/visualizations/".
         name (str, optional): The name of the image file. Defaults to "image.png".
     """
-    cv2.imwrite(base_path + name, image)
+    cv2.imwrite(f"{base_path}{name}_{idx_}.png", image)
     
     
 query = "find my mac"
@@ -111,7 +111,8 @@ def visualize(
     gt_target: np.ndarray, 
     value_map: np.ndarray,
     map_path: str,
-    name: str="map.png",
+    batch_idx: int,
+    name: str="map",
     overlay_obstacle_map: bool=False
     ) -> None:
     """Visualize the image, query, ground truth and predicted pixel, and the value map.
@@ -152,5 +153,5 @@ def visualize(
         image_rgb = image_rgb + obstacle_map_rgb
     
     # Save the images to disk
-    save_image_to_disk(image_rgb, name=name)
+    save_image_to_disk(image_rgb, name=name, idx_=batch_idx)
     
