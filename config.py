@@ -6,5 +6,5 @@ DEBUG = True
 RANDOM_BASELINE = False
 
 # Visualizations 
-VISUALIZE = True
-USE_OBSTACLE_MAP = True
+VISUALIZE = False
+USE_OBSTACLE_MAP = False

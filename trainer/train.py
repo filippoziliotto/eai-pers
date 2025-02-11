@@ -10,6 +10,7 @@ import os
 from utils.losses import compute_loss
 from utils.metrics import compute_accuracy
 from trainer.validate import validate
+from utils.utils import log_lr_scheduler
 
 # Config file
 import config
@@ -154,6 +155,8 @@ def train_and_validate(
                 scheduler.step(val_loss)  # Pass validation loss for ReduceLROnPlateau
             else:
                 scheduler.step()  # Standard step for other schedulers
+            # Log learning rate to console
+            log_lr_scheduler(optimizer)
 
         # Print epoch summary
         print(f"Epoch {epoch}/{num_epochs} - Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}")

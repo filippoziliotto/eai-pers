@@ -4,6 +4,9 @@ import torch.nn as nn
 from torch.nn import functional as F
 from typing import Union
 
+# Global variable to store the previous learning rate
+_previous_lr = None
+
 """
 General utility functions
 """
@@ -159,6 +162,30 @@ def get_optimizer(optimizer_name, model, lr, weight_decay=0.0, scheduler_name=No
         print("No scheduler loaded.")
 
     return optimizer, scheduler
+
+
+def log_lr_scheduler(optimizer):
+    """
+    Log the current learning rate of the optimizer to the console only if it changes.
+    
+    Args:
+        optimizer: The optimizer object.
+    """
+    global _previous_lr  # Access the global variable defined in this module
+    
+    # Get the current learning rate from the first parameter group
+    current_lr = optimizer.param_groups[0]['lr']
+    
+    # If _previous_lr is not set, this is the first call
+    if _previous_lr is None:
+        print(f"Initial learning rate: {current_lr:.6f}")
+    # Otherwise, print only if the learning rate has changed
+    elif current_lr != _previous_lr:
+        print(f"Learning rate changed: {_previous_lr:.6f} -> {current_lr:.6f}")
+    
+    # Update the previous learning rate for the next call
+    _previous_lr = current_lr
+    return
 
 
 def get_loss(loss_choice):
