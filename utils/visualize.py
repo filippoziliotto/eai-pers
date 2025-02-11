@@ -2,156 +2,226 @@
 # Internal imports
 import cv2
 import numpy as np
-import torch
 import os
 
 # External imports
 from dataset.utils import load_obstacle_map
 
-def find_index_max_value(value_map: np.ndarray) -> np.ndarray:
-    """Find the maximum value in a 3D array.
 
-    Args:
-        value_map (numpy.ndarray): The input 3D array.
-
-    Returns:
-        numpy.ndarray: The index of the maximum value in the 3D array.
-    """
-    max_val = np.unravel_index(np.argmax(value_map, axis=None), value_map.shape)
-    return np.flipud(max_val)
-
-def add_circles_on_image(image: np.ndarray, gt_target: np.ndarray, max_val: np.array) -> np.ndarray:
-    """Add a blue circle on the predicted pixel and a red circle on the ground truth pixel.
-    Then we also add a yellow circle on the pixel with the maximum value in the value map.
-
-    Args:
-        image (numpy.ndarray): The input image.
-        gt_target (numpy.ndarray): The ground truth pixel coordinates.
-        max_val (numpy.ndarray): The pixel coordinates with the maximum value in the value map.
-
-    Returns:
-        numpy.ndarray: The image with the circles added.
-    """
     
-    # Add a red circle on the ground truth pixel
-    image_rgb = cv2.circle(image, (gt_target[0], gt_target[1]), 5, (0, 0, 255), -1)
-    image_rgb = cv2.putText(image_rgb, "GT", (gt_target[0]+5, gt_target[1]-5), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 0, 255), 1, cv2.LINE_AA)
-    
-    # Add a yellow circle on the pixel with the maximum value in the value map
-    image_rgb = cv2.circle(image_rgb, (max_val[0], max_val[1]), 5, (0, 255, 255), -1)
-    image_rgb = cv2.putText(image_rgb, "Max", (max_val[0]+5, max_val[1]-5), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 255, 255), 1, cv2.LINE_AA)
-
-    return image_rgb
-
-def add_query_to_image(image: np.ndarray, text: str) -> np.ndarray:
-    """Add text to the upper left corner of an image.
-
-    Args:
-        image (numpy.ndarray): The input image.
-        text (str): The text to add to the image.
-
-    Returns:
-        numpy.ndarray: The image with the text added to the upper left corner.
-    """
-
-    # Add the text to the image
-    cv2.putText(image, text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
-
-    return image
-
-def crop_map_borders(value_map: np.ndarray) -> np.ndarray:
-    # TODO:
-    pass
-
-def monochannel_to_inferno_rgb(image: np.ndarray) -> np.ndarray:
-    """Convert a monochannel float32 image to an RGB representation using the Inferno
-    colormap.
-
-    Args:
-        image (numpy.ndarray): The input monochannel float32 image.
-
-    Returns:
-        numpy.ndarray: The RGB image with Inferno colormap.
-    """
-    # Normalize the input image to the range [0, 1]
-    min_val, max_val = np.min(image), np.max(image)
-    peak_to_peak = max_val - min_val
-    if peak_to_peak == 0:
-        normalized_image = np.zeros_like(image)
-    else:
-        normalized_image = (image - min_val) / peak_to_peak
-
-    # Apply the Inferno colormap
-    inferno_colormap = cv2.applyColorMap((normalized_image * 255).astype(np.uint8), cv2.COLORMAP_INFERNO)
-
-    return inferno_colormap
-
-def save_image_to_disk(image: np.ndarray, base_path: str="trainer/visualizations/", name: str="image", idx_:int=0) -> None:
-    """Save an image to disk.
-    Args:
-        image (numpy.ndarray): The image to save.
-        base_path (str, optional): The base path to save the image to. Defaults to "trainer/visualizations/".
-        name (str, optional): The name of the image file. Defaults to "image.png".
-    """
-    cv2.imwrite(f"{base_path}{name}_{idx_}.png", image)
-    
-    
-query = "find my mac"
-gt_target = torch.tensor([100,100])
-pred_target = torch.tensor([50,50])
-value_map  = torch.rand(100, 100)
-
-# Move imahe to numpy
-value_map = value_map.cpu().numpy()
-gt_target = gt_target.cpu().numpy()
-
+import os
+import cv2
+import numpy as np
 
 def visualize(
     query: str, 
     gt_target: np.ndarray, 
-    value_map: np.ndarray,
+    value_map,  # can be a torch.Tensor or np.ndarray
     map_path: str,
     batch_idx: int,
-    name: str="map",
-    overlay_obstacle_map: bool=False
-    ) -> None:
-    """Visualize the image, query, ground truth and predicted pixel, and the value map.
-
-    Args:
-        image (numpy.ndarray): The input image.
-        query (str): The query text.
-        gt_target (numpy.ndarray): The ground truth pixel coordinates.
-        pred_target (np.ndarray): The predicted pixel coordinates.
-        value_map (np.ndarray): The value map.
+    name: str = "prediction",
+    use_obstacle_map: bool = False,
+    upscale_factor: float = 1.0
+) -> None:
     """
+    Creates a visualization by combining the value map (with annotations) and, if requested,
+    the obstacle map. Circles indicating the ground truth (GT) and the maximum value (Max)
+    are drawn on both images. A top margin is added for the query text, and the final image
+    is saved using a naming scheme.
+    """
+    # Convert the value map to numpy if needed.
+    if hasattr(value_map, "requires_grad") and value_map.requires_grad:
+        value_map = value_map.detach().cpu().numpy()
+    elif hasattr(value_map, "cpu"):
+        value_map = value_map.cpu().numpy()
     
-    value_map = value_map.detach().cpu().numpy() if value_map.requires_grad else value_map.cpu().numpy()
-    gt_target = gt_target.cpu().numpy().astype(np.int32)
+    # Ensure ground truth is a numpy int32 array.
+    if hasattr(gt_target, "cpu"):
+        gt_target = gt_target.cpu().numpy().astype(np.int32)
+    else:
+        gt_target = gt_target.astype(np.int32)
     
-    # Find the pixel with the maximum value in the value map
-    max_val = find_index_max_value(value_map)
+    # Compute the pixel with the maximum value.
+    max_pixel = find_index_max_value(value_map)
     
-    # Convert the value map to an RGB image 
-    image_rgb = monochannel_to_inferno_rgb(value_map)
+    # Convert the value map into an RGB image using the Inferno colormap.
+    value_map_img = monochannel_to_inferno_rgb(value_map)
     
-    # Add circles on the image
-    image_rgb = add_circles_on_image(image_rgb, gt_target, max_val)
-    
-    # Add the query to the image
-    image_rgb = add_query_to_image(image_rgb, query)
-    
-    if overlay_obstacle_map:
-        # Load the obstacle map and process it
+    if use_obstacle_map:
+        # ----- Process obstacle map -----
         obstacle_map_filepath = os.path.join(map_path, "obstacle_map.npy")
         obstacle_map = load_obstacle_map(obstacle_map_filepath)
+        
+        # Ensure obstacle map is in a supported uint8 format.
+        if obstacle_map.dtype == np.bool_:
+            obstacle_map_uint8 = obstacle_map.astype(np.uint8) * 255
+        elif obstacle_map.dtype != np.uint8:
+            obstacle_map_uint8 = cv2.convertScaleAbs(obstacle_map)
+        else:
+            obstacle_map_uint8 = obstacle_map
+        
+        # Convert obstacle map to a 3-channel RGB image.
+        obstacle_map_rgb = cv2.cvtColor(obstacle_map_uint8, cv2.COLOR_GRAY2RGB)
+        
+        # ----- Crop both images -----
+        # Compute crop boundaries from the obstacle map (assumed to be similar to value_map).
+        crop_coords = crop_map_borders(obstacle_map_rgb)
+        x_min, x_max, y_min, y_max = crop_coords
+        
+        value_map_img_cropped = crop_image(value_map_img, crop_coords)
+        obstacle_map_rgb_cropped = crop_image(obstacle_map_rgb, crop_coords)
+        
+        # ----- Adjust coordinates and add circles -----
+        # Adjust coordinates to the cropped image (subtract crop offsets).
+        adjusted_gt = (gt_target[0] - x_min, gt_target[1] - y_min)
+        adjusted_max = (max_pixel[0] - x_min, max_pixel[1] - y_min)
+        
+        # Draw circles on both images.
+        value_map_img_cropped = add_circles_on_image(value_map_img_cropped, adjusted_gt, adjusted_max)
+        obstacle_map_rgb_cropped = add_circles_on_image(obstacle_map_rgb_cropped, adjusted_gt, adjusted_max)
+        
+        # Concatenate the annotated images side-by-side.
+        combined_image = np.concatenate((value_map_img_cropped, obstacle_map_rgb_cropped), axis=1)
+    else:
+        # If no obstacle map is used, add circles on the value map.
+        value_map_img = add_circles_on_image(value_map_img, gt_target, max_pixel)
+        combined_image = value_map_img
 
-        # Convert obstacle map to 8-bit and then to an RGB representation
-        obstacle_map_8u = cv2.convertScaleAbs(obstacle_map)
-        obstacle_map_rgb = cv2.cvtColor(obstacle_map_8u, cv2.COLOR_GRAY2RGB)        
+    # ----- Add top margin for query text -----
+    final_image = add_top_margin(combined_image, margin_height=15, query_text=query, font_scale=0.3, thickness=1)
     
-        # overlay obstacle map on value map
-        image_rgb = image_rgb + obstacle_map_rgb
+    # ----- Upscale the final image if requested -----
+    if upscale_factor != 1.0:
+        final_image = cv2.resize(final_image, None, fx=upscale_factor, fy=upscale_factor, interpolation=cv2.INTER_CUBIC)
     
-    # Save the images to disk
-    save_image_to_disk(image_rgb, name=name, idx_=batch_idx)
+    # ----- Save the final image -----
+    save_image_to_disk(final_image, base_path="trainer/visualizations/", name=name, idx_=batch_idx)
+
+
+def find_index_max_value(value_map: np.ndarray) -> np.ndarray:
+    """
+    Find the pixel location with the maximum value in the value map.
+    """
+    max_index = np.unravel_index(np.argmax(value_map, axis=None), value_map.shape)
+    # Adjust ordering if needed.
+    return np.flipud(max_index)
+
+
+def add_circles_on_image(image: np.ndarray, gt_target, max_pixel) -> np.ndarray:
+    """
+    Draws a red circle (with label "GT") for the ground truth pixel and
+    a yellow circle (with label "Max") for the maximum value pixel.
     
+    Args:
+        image: The input image.
+        gt_target: The (x, y) coordinates for the ground truth pixel.
+        max_pixel: The (x, y) coordinates for the maximum value pixel.
+    
+    Returns:
+        The image with the circles and labels added.
+    """
+    # Draw a red circle and label for GT.
+    image = cv2.circle(image, (int(gt_target[0]), int(gt_target[1])), 3, (0, 0, 255), -1)
+    image = cv2.putText(image, "GT", (int(gt_target[0]) + 5, int(gt_target[1]) - 5),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 0, 255), 1, cv2.LINE_AA)
+    
+    # Draw a yellow circle and label for Max.
+    image = cv2.circle(image, (int(max_pixel[0]), int(max_pixel[1])), 3, (0, 255, 255), -1)
+    image = cv2.putText(image, "Max", (int(max_pixel[0]) + 5, int(max_pixel[1]) - 5),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 255, 255), 1, cv2.LINE_AA)
+    
+    return image
+
+
+def monochannel_to_inferno_rgb(image: np.ndarray) -> np.ndarray:
+    """
+    Normalize a single-channel image and apply the Inferno colormap.
+    """
+    min_val, max_val = np.min(image), np.max(image)
+    if max_val - min_val == 0:
+        normalized = np.zeros_like(image, dtype=np.uint8)
+    else:
+        normalized = ((image - min_val) / (max_val - min_val) * 255).astype(np.uint8)
+    colored = cv2.applyColorMap(normalized, cv2.COLORMAP_INFERNO)
+    return colored
+
+
+def load_obstacle_map(filepath: str) -> np.ndarray:
+    """
+    Load the obstacle map from a .npy file.
+    """
+    return np.load(filepath)
+
+
+def crop_map_borders(image: np.ndarray) -> tuple:
+    """
+    Compute the crop boundaries based on nonzero pixels in the image.
+    
+    Returns:
+        A tuple (x_min, x_max, y_min, y_max) representing the bounding box.
+        If no nonzero pixels are found, returns full image boundaries.
+    """
+    # Convert to grayscale if the image is colored.
+    if len(image.shape) == 3:
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    else:
+        gray = image.copy()
+    
+    coords = cv2.findNonZero(gray)
+    if coords is None:
+        return (0, image.shape[1], 0, image.shape[0])
+    
+    x, y, w, h = cv2.boundingRect(coords)
+    return (x, x + w, y, y + h)
+
+
+def crop_image(image: np.ndarray, crop_coords: tuple) -> np.ndarray:
+    """
+    Crop an image using the specified coordinates.
+    
+    Args:
+        image: The image to crop.
+        crop_coords: A tuple (x_min, x_max, y_min, y_max).
+    
+    Returns:
+        The cropped image.
+    """
+    x_min, x_max, y_min, y_max = crop_coords
+    return image[y_min:y_max, x_min:x_max]
+
+
+def add_top_margin(
+    image: np.ndarray, 
+    margin_height: int, 
+    query_text: str, 
+    font_scale: float = 0.5, 
+    thickness: int = 1
+) -> np.ndarray:
+    """
+    Adds a top margin to the image and writes the query text in that space.
+    
+    Args:
+        image: The input image.
+        margin_height: The height (in pixels) of the margin.
+        query_text: The text to add in the margin.
+        font_scale: Scale factor for the text.
+        thickness: Thickness of the text strokes.
+    
+    Returns:
+        The image with the added top margin.
+    """
+    height, width = image.shape[:2]
+    margin = np.zeros((margin_height, width, 3), dtype=np.uint8)
+    cv2.putText(margin, f"Query: {query_text}", (5, margin_height - 4),
+                cv2.FONT_HERSHEY_SIMPLEX, font_scale, (255, 255, 255), thickness, cv2.LINE_AA)
+    final_image = np.concatenate((margin, image), axis=0)
+    return final_image
+
+
+def save_image_to_disk(image: np.ndarray, base_path: str = "trainer/visualizations/", name: str = "prediction", idx_: int = 0) -> None:
+    """
+    Saves the image to disk with the naming scheme: <name>_<idx_>.png.
+    """
+    os.makedirs(base_path, exist_ok=True)
+    filepath = os.path.join(base_path, f"{name}_{idx_}.png")
+    cv2.imwrite(filepath, image)

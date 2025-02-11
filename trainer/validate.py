@@ -89,10 +89,19 @@ def validate(
             # Visualize results
             if config.VISUALIZE:
                 for query, gt_target, value_map, map_path in zip(query, gt_target, value_map, data['map_path']):
-                    visualize(query, gt_target, value_map, map_path, batch_idx)
+                    visualize(
+                        query, 
+                        gt_target, 
+                        value_map, 
+                        map_path, 
+                        batch_idx, 
+                        name="prediction", 
+                        use_obstacle_map=config.USE_OBSTACLE_MAP,  # this flag decides if the obstacle map is shown
+                        upscale_factor=2.0
+                    )
         
-            #if config.DEBUG and batch_idx == 2:
-            #    break
+            if config.DEBUG and batch_idx == 2:
+                break
     
     # Calculate average validation loss
     val_avg_loss = val_loss / len(data_loader)

@@ -16,16 +16,16 @@ from args import get_args
 # Dataloader
 from dataset.dataloader import get_dataloader
 
+# Avoid LAVIS (useless) FutureWarnings ;)
+import warnings
+warnings.filterwarnings('ignore', category=FutureWarning)
+
 # Importing custom models
 try:
     from models.encoder import Blip2Encoder
 except ImportError:
     print("Blip2Encoder cannot be imported, check your salesforce-lavis dependencies!!!")
 from models.model import RetrievalMapModel  
-
-# Avoid LAVIS (useless) FutureWarnings ;)
-import warnings
-warnings.filterwarnings('ignore', category=FutureWarning)
 
 
 def main(args):
@@ -103,6 +103,7 @@ def main(args):
             checkpoint_path=args.checkpoint_path,
         )
     elif args.mode in ['eval']:
+        assert args.load_checkpoint, "Checkpoint path must be provided for evaluation."
         validate(
             model=model,
             data_loader=val_loader,
