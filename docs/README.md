@@ -2,7 +2,7 @@
 
 Personalized user navigation through retrievable memory maps.
 
-![Example Image](docs/example.gif)
+![Example Image](eai-pers/docs/example.gif)
 
 #### Getting started
 > **Note:** Run the following commands in the terminal:

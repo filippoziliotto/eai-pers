@@ -150,13 +150,16 @@ def train_and_validate(
 
         # Scheduler step (if provided)
         if scheduler:
-            scheduler.step()
+            if isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
+                scheduler.step(val_loss)  # Pass validation loss for ReduceLROnPlateau
+            else:
+                scheduler.step()  # Standard step for other schedulers
 
         # Print epoch summary
         print(f"Epoch {epoch}/{num_epochs} - Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}")
         # Print accuracy summary for each th key
         for key in train_acc:
-            print(f"Train Acc [{key}]: {train_acc[key]:.4f}, Val Acc [{key}]: {val_acc[key]:.4f}")
+            print(f"\nTrain Acc [{key}]: {train_acc[key]:.4f}, Val Acc [{key}]: {val_acc[key]:.4f}")
         print('-' * 20)
         
         # Optionally save model weights to checkpoint

@@ -121,12 +121,12 @@ def add_circles_on_image(image: np.ndarray, gt_target, max_pixel) -> np.ndarray:
         The image with the circles and labels added.
     """
     # Draw a red circle and label for GT.
-    image = cv2.circle(image, (int(gt_target[0]), int(gt_target[1])), 3, (0, 0, 255), -1)
+    image = cv2.circle(image, (int(gt_target[0]), int(gt_target[1])), 3, (0, 0, 255), 2)
     image = cv2.putText(image, "GT", (int(gt_target[0]) + 5, int(gt_target[1]) - 5),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 0, 255), 1, cv2.LINE_AA)
     
     # Draw a yellow circle and label for Max.
-    image = cv2.circle(image, (int(max_pixel[0]), int(max_pixel[1])), 3, (0, 255, 255), -1)
+    image = cv2.circle(image, (int(max_pixel[0]), int(max_pixel[1])), 3, (0, 255, 255), 2)
     image = cv2.putText(image, "Max", (int(max_pixel[0]) + 5, int(max_pixel[1]) - 5),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 255, 255), 1, cv2.LINE_AA)
     
