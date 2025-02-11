@@ -74,27 +74,33 @@ class RetMapsDataset(Dataset):
 
 def get_dataloader(data_dir, data_split="val", batch_size=32, shuffle=True, num_workers=4, collate_fn=None, kwargs={}):
     """
-    Creates a dataloader with optional transformation arguments.
-
+    Creates a DataLoader with optional transformation arguments.
+    
     Parameters:
         data_dir (str): Path to the dataset.
         data_split (str): Dataset split ("train", "val", "test").
         batch_size (int): Number of samples per batch.
         shuffle (bool): Whether to shuffle the dataset.
         num_workers (int): Number of workers for data loading.
-        **kwargs: Additional keyword arguments for MapTransform.
-
+        collate_fn: Function to collate samples into batches.
+        kwargs (dict): Additional keyword arguments for MapTransform.
+    
     Returns:
         DataLoader: PyTorch DataLoader instance.
     """
     print("Initializing DataLoader...")
     
-    transform = MapTransform(**kwargs)  # Pass all extra arguments to MapTransform
+    # Create one transform for the dataset with augmentations enabled (i.e. training mode)
+    transform = MapTransform(**kwargs)
     
+    # Instantiate the dataset; note that the dataset should store data_dir, data_split, and transform
     dataset = RetMapsDataset(data_dir, data_split, transform=transform)
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, collate_fn=collate_fn)
-    print("DataLoader initialized.")
     
+    # Create a DataLoader from the dataset instance
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, 
+                            num_workers=num_workers, collate_fn=collate_fn)
+    
+    print("DataLoader initialized.")
     return dataloader
 
 

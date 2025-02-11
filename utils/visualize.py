@@ -123,8 +123,9 @@ def visualize(
         pred_target (np.ndarray): The predicted pixel coordinates.
         value_map (np.ndarray): The value map.
     """
-    value_map = value_map.cpu().numpy()
-    gt_target = gt_target.cpu().numpy().astype(int)
+    
+    value_map = value_map.detach().cpu().numpy() if value_map.requires_grad else value_map.cpu().numpy()
+    gt_target = gt_target.cpu().numpy().astype(np.int32)
     
     # Find the pixel with the maximum value in the value map
     max_val = find_index_max_value(value_map)

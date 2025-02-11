@@ -8,7 +8,7 @@ from trainer.validate import validate
 
 # Importing utility functions
 from utils.utils import get_optimizer, set_seed, args_logger, get_loss
-from dataset.utils import split_dataloader, custom_collate
+from dataset.utils import split_dataset, custom_collate
 
 # Importing argument parsing function
 from args import get_args
@@ -43,17 +43,21 @@ def main(args):
         
     # Dataset and DataLoader
     kwargs = vars(args)
+    # Create the initial DataLoader from the "val" dataset (or any split you have)
     data_loader = get_dataloader(
         data_dir=args.data_dir,
         data_split=args.data_split,
         batch_size=args.batch_size,
-        shuffle=False,     
+        shuffle=False,
         collate_fn=custom_collate,
-        kwargs=kwargs
+        kwargs=vars(args)
     )
-    
-    # Get the different splits from the data_loader
-    train_loader, val_loader = split_dataloader(data_loader, split_ratio=0.8, batch_size=args.batch_size, collate_fn=custom_collate)
+
+    # Split the data_loader into train and validation loaders.
+    train_loader, val_loader = split_dataset(data_loader,
+                                            split_ratio=0.8,
+                                            batch_size=args.batch_size,
+                                            collate_fn=custom_collate)
 
     # Model Initialization
     model = RetrievalMapModel(

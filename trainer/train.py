@@ -68,7 +68,7 @@ def train_one_epoch(
         
         if config.DEBUG and batch_idx == 1:
             break
-
+        
     # Calculate average loss for the epoch
     epoch_avg_loss = epoch_loss / len(data_loader)
     
