@@ -10,7 +10,7 @@ import os
 from utils.losses import compute_loss
 from utils.metrics import compute_accuracy
 from trainer.validate import validate
-from utils.utils import log_lr_scheduler
+from utils.utils import log_lr_scheduler, log_epoch_metrics
 
 # Config file
 import config
@@ -126,17 +126,6 @@ def train_and_validate(
     
     print("Starting training...")
 
-    # Log metrics to W&B if enabled
-    def log_epoch_metrics(epoch, train_loss, train_acc, val_loss, val_acc):
-        metrics = {
-            "Epoch": epoch,
-            "Train Loss": train_loss,
-            "Val Loss": val_loss,
-        }
-        metrics.update({f"Train Acc [{k}]": v for k, v in train_acc.items()})
-        metrics.update({f"Val Acc [{k}]": v for k, v in val_acc.items()})
-        wandb.log(metrics)
-
     # Train for the specified number of epochs
     for epoch in tqdm(range(1, num_epochs + 1), desc="Epochs"):
         # Train for one epoch
@@ -147,7 +136,7 @@ def train_and_validate(
 
         # Log metrics to W&B if enabled
         if use_wandb:
-            log_epoch_metrics(epoch, train_loss, train_acc, val_loss, val_acc)
+            log_epoch_metrics(epoch, optimizer, train_loss, train_acc, val_loss, val_acc)
 
         # Scheduler step (if provided)
         if scheduler:

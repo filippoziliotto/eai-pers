@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 from typing import Union
+import wandb
 
 # Global variable to store the previous learning rate
 _previous_lr = None
@@ -163,6 +164,23 @@ def get_optimizer(optimizer_name, model, lr, weight_decay=0.0, scheduler_name=No
 
     return optimizer, scheduler
 
+"""
+Logging Utils
+"""
+def args_logger(args):
+    """
+    Logs the arguments to the console.
+    
+    Args:
+        args: The parsed arguments.
+    """
+    print(' ----------------')
+    print("|    Arguments   |")
+    print(' ----------------')
+    for arg in vars(args):
+        print(f"| {arg}: {getattr(args, arg)}")
+    print(' ----------------')
+    return
 
 def log_lr_scheduler(optimizer):
     """
@@ -187,28 +205,26 @@ def log_lr_scheduler(optimizer):
     _previous_lr = current_lr
     return
 
+def log_epoch_metrics(epoch, optimizer, train_loss, train_acc, val_loss, val_acc):
+    metrics = {
+        "Epoch": epoch,
+        'Learning Rate': optimizer.param_groups[0]['lr'],
+        "Train Loss": train_loss,
+        "Val Loss": val_loss,
+    }
+    metrics.update({f"Train Acc [{k}]": v for k, v in train_acc.items()})
+    metrics.update({f"Val Acc [{k}]": v for k, v in val_acc.items()})
+    wandb.log(metrics)
+    return
 
+"""
+Loss Utils
+"""
 def get_loss(loss_choice):
     if loss_choice in ["CE"]:
         return nn.CrossEntropyLoss()
     else:
         return nn.MSELoss()
-
-def args_logger(args):
-    """
-    Logs the arguments to the console.
-    
-    Args:
-        args: The parsed arguments.
-    """
-    print(' ----------------')
-    print("|    Arguments   |")
-    print(' ----------------')
-    for arg in vars(args):
-        print(f"| {arg}: {getattr(args, arg)}")
-    print(' ----------------')
-    return
-
 
 """
 Random Baseline

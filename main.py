@@ -11,6 +11,7 @@ from utils.utils import get_optimizer, set_seed, args_logger, get_loss
 from dataset.utils import split_dataset, custom_collate
 
 # Importing argument parsing function
+import config
 from args import get_args
 
 # Dataloader
@@ -45,16 +46,15 @@ def main(args):
     encoder = Blip2Encoder(device=args.device, freeze_encoder=args.freeze_encoder)
     encoder.initialize()
         
-    # Dataset and DataLoader
+    # Create the initial Dataset and DataLoader from the "val" dataset
     kwargs = vars(args)
-    # Create the initial DataLoader from the "val" dataset (or any split you have)
     data_loader = get_dataloader(
         data_dir=args.data_dir,
         data_split=args.data_split,
         batch_size=args.batch_size,
         shuffle=False,
         collate_fn=custom_collate,
-        kwargs=vars(args)
+        kwargs=kwargs
     )
 
     # Split the data_loader into train and validation loaders.
@@ -103,7 +103,8 @@ def main(args):
             checkpoint_path=args.checkpoint_path,
         )
     elif args.mode in ['eval']:
-        assert args.load_checkpoint, "Checkpoint path must be provided for evaluation."
+        if not config.DEBUG:
+            assert args.load_checkpoint, "Checkpoint path must be provided for evaluation."
         validate(
             model=model,
             data_loader=val_loader,

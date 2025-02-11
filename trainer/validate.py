@@ -13,13 +13,6 @@ import config
 from utils.visualize import visualize
 from utils.utils import get_random_target
 
-def log_epoch_metrics(val_loss, val_acc):
-    metrics = {
-        "Val Loss": val_loss,
-    }
-    metrics.update({f"Val Acc [{k}]": v for k, v in val_acc.items()})
-    wandb.log(metrics)
-
 def validate(
     model, 
     data_loader, 
@@ -114,3 +107,14 @@ def validate(
         log_epoch_metrics(val_avg_loss, val_avg_acc)
 
     return val_avg_loss, val_avg_acc
+
+
+# TODO: Sicne there is already a log_epoch_metrics function in utils/utils.py
+# We can remove this function and make it cleaner
+def log_epoch_metrics(val_loss, val_acc):
+    metrics = {
+        "Val Loss": val_loss,
+    }
+    metrics.update({f"Val Acc [{k}]": v for k, v in val_acc.items()})
+    wandb.log(metrics)
+    return

@@ -1,6 +1,6 @@
 
 # Debugging stuff
-DEBUG = True
+DEBUG = False
 
 # Baseline
 RANDOM_BASELINE = False
