@@ -105,10 +105,17 @@ def validate(
     
     # Calculate average accuracy for the epoch for each th key
     val_avg_acc = {key: sum(d[key] for d in accuracy) / len(accuracy) for key in accuracy[0]}
-    
-    # Log metrics to W&B if in evaluation mode
-    if use_wandb and mode in ['eval']:
-        log_epoch_metrics(val_avg_loss, val_avg_acc)
+        
+    # If evaluation mode log the results
+    if mode in ['eval']:
+        print(f"Val Loss: {val_avg_loss:.4f}")
+        for key in val_avg_acc:
+            print(f"\nVal Acc [{key}]: {val_avg_acc[key]:.4f}")
+        print('-' * 20)
+        
+        # Log metrics to W&B if in evaluation mode
+        if use_wandb:
+            log_epoch_metrics(val_avg_loss, val_avg_acc)
 
     return val_avg_loss, val_avg_acc
 

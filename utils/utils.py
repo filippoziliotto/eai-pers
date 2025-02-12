@@ -149,6 +149,7 @@ def get_optimizer(optimizer_name, model, lr, weight_decay=0.0, scheduler_name=No
         elif scheduler_name_clean == "exponential_lr":
             gamma = scheduler_kwargs.get('gamma', 0.1)
             scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=gamma)
+            
         elif scheduler_name_clean == "reduce_on_plateau":
             gamma = scheduler_kwargs.get('gamma', 0.1)
             patience = scheduler_kwargs.get('patience', 10)

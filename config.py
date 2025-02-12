@@ -3,9 +3,10 @@
 DEBUG = False
 
 # Visualizations 
-VISUALIZE = True
-USE_OBSTACLE_MAP = True
+VISUALIZE = False
+USE_OBSTACLE_MAP = False
 
 # Baseline
 RANDOM_BASELINE = False
+VLFM_BASELINE = True
 
