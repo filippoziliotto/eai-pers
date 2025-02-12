@@ -11,7 +11,7 @@ from utils.metrics import compute_accuracy
 # Config & Utils imports
 import config
 from utils.visualize import visualize
-from utils.utils import get_random_target
+from utils.utils import get_random_target, dynamic_min_max_normalize
 
 def validate(
     model, 
@@ -52,8 +52,9 @@ def validate(
     
     # Set model to evaluation mode
     model.eval()
-    val_loss = 0.0
+    epoch_loss = 0.0
     accuracy = []
+    raw_losses = []  # List to store raw loss values from each batch.
     
     # Iterate over the data loader
     with torch.no_grad():
@@ -70,7 +71,9 @@ def validate(
 
             # Compute loss
             loss, pred_target = compute_loss(gt_target, value_map, loss_choice, device)
-            val_loss += loss.item()
+            val_loss = loss.item()
+            raw_losses.append(val_loss)
+            epoch_loss += val_loss
             
             # Predict random index for random baseline
             if config.RANDOM_BASELINE:
@@ -96,10 +99,11 @@ def validate(
             if config.DEBUG and batch_idx == 2:
                 break
     
-    # Calculate average validation loss
-    val_avg_loss = val_loss / len(data_loader)
+    # Compute average validation normalized loss
+    normalized_losses = dynamic_min_max_normalize(raw_losses) # Use the utility function to normalize the list of raw losses.
+    val_avg_loss = sum(normalized_losses) / len(normalized_losses)
     
-    # accuracy = [ {'5': 0.8, '10': 0.9, '20': 1.0}, {'5': 0.8, '10': 0.9, '20': 1.0}, ...]
+    # Calculate average accuracy for the epoch for each th key
     val_avg_acc = {key: sum(d[key] for d in accuracy) / len(accuracy) for key in accuracy[0]}
     
     # Log metrics to W&B if in evaluation mode

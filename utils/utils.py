@@ -196,11 +196,11 @@ def log_lr_scheduler(optimizer):
     
     # If _previous_lr is not set, this is the first call
     if _previous_lr is None:
-        print(f"Initial learning rate: {current_lr:.6f}")
+        print(f"Initial learning rate: {current_lr:.0e}")
     # Otherwise, print only if the learning rate has changed
     elif current_lr != _previous_lr:
-        print(f"Learning rate changed: {_previous_lr:.6f} -> {current_lr:.6f}")
-    
+        print(f"Learning rate changed: {_previous_lr:.0e} -> {current_lr:.0e}")
+        
     # Update the previous learning rate for the next call
     _previous_lr = current_lr
     return
@@ -225,6 +225,27 @@ def get_loss(loss_choice):
         return nn.CrossEntropyLoss()
     else:
         return nn.MSELoss()
+
+def dynamic_min_max_normalize(loss_list, epsilon=1e-8):
+    """
+    Normalizes a list of loss values using dynamic min-max normalization.
+
+    Args:
+        loss_list (List[float]): List of raw loss values.
+        epsilon (float): Small constant to prevent division by zero.
+
+    Returns:
+        List[float]: List of normalized loss values in the range [0, 1].
+    """
+    if not loss_list:
+        return []
+    
+    min_loss = min(loss_list)
+    max_loss = max(loss_list)
+    normalized_losses = [
+        (loss_val - min_loss) / (max_loss - min_loss + epsilon) for loss_val in loss_list
+    ]
+    return normalized_losses
 
 """
 Random Baseline

@@ -62,7 +62,7 @@ source scripts/keys.sh
 
 The episodes used in the experiments can be found in the data folder, as well as the maps used to retrieve objects. \
 Maps are heavy so we leave the link to a dropbox inorder to download them. 
-##### STAY TUNED FOR THIS!!
+`STAY TUNED FOR THIS!!`
 
 ----
 ### Training and Evaluation
