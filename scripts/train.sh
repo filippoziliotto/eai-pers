@@ -4,10 +4,12 @@
 
 python main.py \
     --data_dir "data" \
-    --data_split "val" \
+    --data_split "train+val" \
     --mode "train" \
+    --increase_dataset_size \
+    --validate_after_n_epochs 1 \
     --seed 2025 \
-    --batch_size 1 \
+    --batch_size 8 \
     --num_workers 4 \
     --lr 0.001 \
     --weight_decay 1e-5 \
@@ -26,5 +28,11 @@ python main.py \
     --device "mps" \
     --save_checkpoint \
     --checkpoint_path "model/checkpoints/model.pth" \
+    --use_aug \
+    --use_horizontal_flip \
+    --use_vertical_flip \
+    --use_random_rotation \
+    --use_desc_aug \
+    --aug_prob 0.5 \
     #--use_wandb \
     #--run_name "prova-train"

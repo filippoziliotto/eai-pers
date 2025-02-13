@@ -68,6 +68,6 @@ def get_args():
     
     # Wandb
     parser.add_argument("--use_wandb", action="store_true", default=False, help="Use wandb for logging")
-    parser.add_argument("--run_name", type=str, default="EAI-Pers", help="Run name for wandb")
+    parser.add_argument("--run_name", type=str, default="none", help="Run name for wandb")
 
     return parser.parse_args()

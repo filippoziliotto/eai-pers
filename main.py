@@ -6,7 +6,7 @@ from trainer.train import train_and_validate
 from trainer.validate import validate
 
 # Importing utility functions
-from utils.utils import get_optimizer, set_seed, args_logger, get_loss
+from utils.utils import get_optimizer, set_seed, args_logger, generate_wandb_run_name
 from dataset.utils import custom_collate
 
 # Importing argument parsing function
@@ -34,7 +34,8 @@ def main(args):
     
     # Initialize W&B
     if args.use_wandb:
-        wandb.init(project="EAI-Pers", name=args.run_name)
+        run_name = generate_wandb_run_name(args)
+        wandb.init(project="EAI-Pers", name=run_name)
     
     # Log args and set seed
     args_logger(args)

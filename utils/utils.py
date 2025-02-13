@@ -172,7 +172,7 @@ def get_optimizer(optimizer_name, model, lr, weight_decay=0.0, scheduler_name=No
     return optimizer, scheduler
 
 """
-Logging Utils
+Logging & WB Utils
 """
 def args_logger(args):
     """
@@ -237,6 +237,30 @@ def log_epoch_metrics(epoch, optimizer, train_loss, train_acc, val_loss=None, va
         
     wandb.log(metrics)
     return
+
+def generate_wandb_run_name(args):
+    """Generate a concise and descriptive W&B run name based on selected arguments."""
+    
+    if args.run_name not in 'none':
+        return args.run_name
+    
+    important_args = {
+        "batch": args.batch_size,
+        "lr": args.lr,
+        "wd": args.weight_decay,
+        "epochs": args.num_epochs,
+        "loss": args.loss_choice,
+        "embed": args.embed_dim,
+        "heads": args.num_heads,
+        "opt": args.optimizer,
+        "sched": args.scheduler,
+        "aug": "yes" if args.use_aug else "no",
+        "dsetx2": "yes" if args.increase_dataset_size else "no",
+    }
+
+    # Sort the keys to ensure consistent ordering.
+    run_name_parts = [f"{key}_{important_args[key]}" for key in sorted(important_args)]
+    return "-".join(run_name_parts)
 
 """
 Loss Utils

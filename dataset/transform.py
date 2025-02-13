@@ -12,8 +12,7 @@ class MapTransform:
     Custom transformation class for maps and their corresponding descriptions.
     """
     
-    def __init__(self, 
-                 **kwargs):
+    def __init__(self, **kwargs):
         
         self.use_aug = kwargs.get("use_aug", False)
         self.use_horizontal_flip = kwargs.get("use_horizontal_flip", False)
