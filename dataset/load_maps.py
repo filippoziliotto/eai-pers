@@ -2,7 +2,7 @@ import os
 import json
 from typing import List, Dict
 
-def load_all_episodes(base_dir: str) -> List[Dict]:
+def load_all_episodes(base_dir: str, split:str) -> List[Dict]:
     """
     Reads all 'episodes.json' files from subdirectories in base_dir and merges them into a single list.
 
@@ -14,8 +14,7 @@ def load_all_episodes(base_dir: str) -> List[Dict]:
     """
     all_episodes = []
     
-    # TODO: modify this+
-    base_dir = os.path.join(base_dir, "val")
+    base_dir = os.path.join(base_dir, split)
 
     # Traverse through each subdirectory
     for root, _, files in os.walk(base_dir):
@@ -84,7 +83,7 @@ def load_all_maps(maps_base_dir: str) -> List[Dict]:
     return all_maps
 
 def filter_episodes_by_maps(
-    all_episodes: List[Dict], all_maps: List[Dict]
+    all_episodes: List[Dict], all_maps: List[Dict], split:str
 ) -> List[Dict]:
     """
     Filters all_episodes to retain only episodes with matching scene_id and floor_id in all_maps.
@@ -124,7 +123,7 @@ def filter_episodes_by_maps(
             filtered_episodes.append(ep)
             filtered_episodes[-1]["episode_id"] = len(filtered_episodes)-1
 
-    print(f"Total Episode count: {len(filtered_episodes)}")
+    print(f"N° {split} Episodes: {len(filtered_episodes)}")
     return filtered_episodes
 
 def load_episodes(base_path:str, split:str) -> List[Dict]:
@@ -141,9 +140,9 @@ def load_episodes(base_path:str, split:str) -> List[Dict]:
     episodes_dir = os.path.join(base_path, split, "episodes")
     maps_dir = os.path.join(base_path, split, "maps")
     
-    all_episodes = load_all_episodes(episodes_dir)
+    all_episodes = load_all_episodes(episodes_dir, split)
     all_maps = load_all_maps(maps_dir)
-    filtered_episodes = filter_episodes_by_maps(all_episodes, all_maps)
+    filtered_episodes = filter_episodes_by_maps(all_episodes, all_maps, split)
     
     assert len(all_episodes) > 0, "No episodes found!"
     assert len(all_maps) > 0, "No maps found!"
@@ -167,9 +166,51 @@ def load_extracted_episodes(base_path: str, split: str) -> List[Dict]:
         extracted_episodes = json.load(f)
     return extracted_episodes
 
+def create_valid_scenes_episodes(base_path: str, split: str, save_to_json: bool = False) -> Dict[str, List[str]]:
+    """
+    Load and group map subfolders by scene name and optionally save the result to a JSON file.
+
+    Parameters:
+        base_path (str): The base directory containing the dataset.
+        split (str): The data split (e.g., 'train', 'val').
+        save_to_json (bool): If True, saves the grouped scenes to a JSON file.
+
+    Returns:
+        Dict[str, List[str]]: A dictionary mapping each scene name to a list of floor subfolders.
+    """
+    maps_dir = os.path.join(base_path, split, "maps")
+    
+    # Get all valid scenes folders where the folder name contains "_floor_"
+    scenes = [
+        folder for folder in os.listdir(maps_dir)
+        if os.path.isdir(os.path.join(maps_dir, folder)) and "_floor_" in folder
+    ]
+    
+    # Group folders by scene name (extracted from the part before "_floor_")
+    valid_scenes = {}
+    for folder in scenes:
+        scene_name = folder.split("_floor_")[0]
+        valid_scenes.setdefault(scene_name, []).append(folder)
+
+    # Optionally save the valid_scenes dictionary to a JSON file
+    if save_to_json:
+        episodes_dir = os.path.join(base_path, split, "episodes", split)
+        os.makedirs(episodes_dir, exist_ok=True)
+        json_path = os.path.join(episodes_dir, "valid_scenes_and_floors.json")
+        with open(json_path, "w") as f:
+            json.dump(valid_scenes, f, indent=4)
+
+    return valid_scenes
+    
+
 if __name__ == "__main__":
     base_path = "data"
-    split = "val"
+    split = "train"
     episodes = load_episodes(base_path, split)
     print(episodes[:2])  # Display first two episodes
+    
+    # This has to be done first to create the valid_scenes episodes
+    #valid_scenes = create_valid_scenes_episodes(base_path, split, save_to_json=False)
+    
+    
     

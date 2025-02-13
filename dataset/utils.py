@@ -131,69 +131,6 @@ def custom_collate(batch):
         "map_path": map_paths
     }
 
-def split_dataset(data_loader: DataLoader,
-                  split_ratio: float,
-                  batch_size: int,
-                  collate_fn,
-                  num_workers: int = 4) -> Tuple[DataLoader, DataLoader]:
-    """
-    Splits a DataLoader's underlying dataset into training and validation DataLoaders.
-    The training subset uses the dataset's original transform (with augmentations enabled),
-    while the validation subset uses a duplicate of the transform with augmentations disabled.
-    
-    Args:
-        data_loader (DataLoader): The original DataLoader (whose dataset will be split).
-        split_ratio (float): The fraction of data to assign to training (e.g., 0.8 for 80% train).
-        batch_size (int): Batch size for the new DataLoaders.
-        collate_fn: The collate function for the new DataLoaders.
-        num_workers (int): Number of workers for DataLoader (default: 4).
-    
-    Returns:
-        Tuple[DataLoader, DataLoader]: (train_loader, val_loader)
-    """
-    # Get the underlying dataset and determine the total number of samples.
-    original_dataset = data_loader.dataset
-    total_samples = len(original_dataset)
-    
-    # Generate shuffled indices and split them based on the split_ratio.
-    indices = torch.randperm(total_samples).tolist()
-    split_idx = int(total_samples * split_ratio)
-    train_indices = indices[:split_idx]
-    val_indices = indices[split_idx:]
-    
-    # Create a Subset for training from the original dataset.
-    train_subset = Subset(original_dataset, train_indices)
-    
-    # For validation, create a new dataset instance with the same data
-    # but with a modified transform that has augmentations disabled.
-    # Deep copy the original transform and disable augmentation.
-    val_transform = copy.deepcopy(original_dataset.transform)
-    val_transform.use_aug = False  # Disable augmentation for validation.
-    
-    # Re-create the dataset for validation using the same parameters as the original.
-    # It is assumed that the original dataset has attributes like 'data_dir' and 'data_split'.
-    dataset_class = type(original_dataset)
-    val_dataset = dataset_class(transform=val_transform)
-    
-    # Create a Subset for validation.
-    val_subset = Subset(val_dataset, val_indices)
-    
-    # Build DataLoaders for both subsets.
-    train_loader = DataLoader(train_subset,
-                              batch_size=batch_size,
-                              shuffle=True,       # Optionally shuffle within training loader.
-                              collate_fn=collate_fn,
-                              num_workers=num_workers)
-    
-    val_loader = DataLoader(val_subset,
-                            batch_size=batch_size,
-                            shuffle=False,      # No need to shuffle validation data.
-                            collate_fn=collate_fn,
-                            num_workers=num_workers)
-    
-    return train_loader, val_loader
-
-
 """
 Transforms Utils for Maps
 """

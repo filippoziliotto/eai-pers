@@ -18,23 +18,31 @@ The **EAI-Pers** package supports **Python 3.9 or higher**.
 
 ---
 
-To install the **EAI-Pers** package, make sure you have Python 3.9 or higher.  
+To install the **EAI-Pers** package, make sure you have Python 3.9 or higher.
 
-1. Clone the repository:  
+1. Create the `conda` environment using
+
+    ```sh
+    conda create --name eai-pers python=3.9
+    ```
+
+2. Clone the repository:  
     ```sh
     git clone https://github.com/filippoziliotto/eai-pers.git
     cd eai-pers
     ```
 
-2. Install the required packages:  
+3. Install the required packages:  
     ```sh
     pip install -r requirements.txt
     ```
 
-3. Install the package using `setup.py`:  
+4. Install the package using `setup.py`:  
     ```sh
     python setup.py install
     ```
+
+5. Make sure the `data` directory exists, otherwise create it. Here you will store the `episodes` and the stored retrievable `maps`
 
 ---
 

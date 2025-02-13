@@ -8,7 +8,7 @@ from trainer.validate import validate
 
 # Importing utility functions
 from utils.utils import get_optimizer, set_seed, args_logger, get_loss
-from dataset.utils import split_dataset, custom_collate
+from dataset.utils import custom_collate
 
 # Importing argument parsing function
 import config
@@ -46,22 +46,16 @@ def main(args):
     encoder = Blip2Encoder(device=args.device, freeze_encoder=args.freeze_encoder)
     encoder.initialize()
         
-    # Create the initial Dataset and DataLoader from the "val" dataset
+    # Create the initial Dataset and DataLoader
     kwargs = vars(args)
-    data_loader = get_dataloader(
+    train_loader, val_loader = get_dataloader(
         data_dir=args.data_dir,
         data_split=args.data_split,
         batch_size=args.batch_size,
-        shuffle=False,
+        num_workers=args.num_workers,
         collate_fn=custom_collate,
         kwargs=kwargs
     )
-
-    # Split the data_loader into train and validation loaders.
-    train_loader, val_loader = split_dataset(data_loader,
-                                            split_ratio=0.8,
-                                            batch_size=args.batch_size,
-                                            collate_fn=custom_collate)
 
     # Model Initialization
     model = RetrievalMapModel(

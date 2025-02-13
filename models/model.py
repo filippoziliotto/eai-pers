@@ -23,14 +23,12 @@ class RetrievalMapModel(nn.Module):
             use_vlfm_baseline (bool): Flag to use the VLFM baseline approach.
         """
         super(RetrievalMapModel, self).__init__()
-
+        print("Initializing Model...")
+        
         # Initialize first stage and move to device
         self.first_stage = MapAttentionModel(embed_dim, num_heads, encoder).to(device)
         # Initialize second stage and move to device
         self.second_stage = SimilarityMapModel(encoder, pixels_per_meter).to(device)
-
-        # Debug messages can be replaced with logging in production
-        print("Initializing Model...")
         print("Model initialized.")
 
         # If using VLFM baseline, print a message
