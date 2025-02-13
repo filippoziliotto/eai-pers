@@ -1,6 +1,12 @@
+
+# Library imports
 import os
 import json
 from typing import List, Dict
+import random
+
+# Local imports
+from dataset.utils import augment_episodes
 
 def load_all_episodes(base_dir: str, split:str) -> List[Dict]:
     """
@@ -151,19 +157,31 @@ def load_episodes(base_path:str, split:str) -> List[Dict]:
     return filtered_episodes
 
 
+# TODO:
 # We extracted the episodes descriptions with GPT and saved the JSON with the extracted summaries.
-# TODO: This is messy we need to adjust this
-def load_extracted_episodes(base_path: str, split: str) -> List[Dict]:
+# This is a bit messy but it works, we need to adjust this
+def load_extracted_episodes(base_path: str, split: str, increase_dataset_size: bool = False) -> List[Dict]:
     """
     Load the extracted episodes from the JSON file.
 
     Returns:
         list[dict]: List of episodes with extracted summaries.
     """
-    extracted_file = os.path.join(base_path, split, "filtered_episodes.json")
-    #extracted_file = "data/val/filtered_episodes.json"
+    # Adjust the split name if needed
+    split = 'train' if split in ['train+val'] else split
+    
+    # Load the extracted episodes from the JSON file
+    extracted_file = os.path.join(base_path, split, f"{split}_episodes.json")
     with open(extracted_file, "r") as f:
         extracted_episodes = json.load(f)
+    
+    # Increase dataset size
+    if increase_dataset_size and split in ['train']:
+        # Unique persons in the dataset
+        # Default augmentation is 2x the dataset size
+        persons = set([entry["person"] for entry in extracted_episodes])
+        extracted_episodes.extend(augment_episodes(extracted_episodes, persons))
+             
     return extracted_episodes
 
 def create_valid_scenes_episodes(base_path: str, split: str, save_to_json: bool = False) -> Dict[str, List[str]]:
@@ -205,9 +223,11 @@ def create_valid_scenes_episodes(base_path: str, split: str, save_to_json: bool 
 
 if __name__ == "__main__":
     base_path = "data"
-    split = "train"
-    episodes = load_episodes(base_path, split)
-    print(episodes[:2])  # Display first two episodes
+    split = "val"
+    #episodes = load_episodes(base_path, split)
+    #print(episodes[:2])  # Display first two episodes
+    
+    extracted_episodes = load_extracted_episodes(base_path, split, augment_dataset=True)
     
     # This has to be done first to create the valid_scenes episodes
     #valid_scenes = create_valid_scenes_episodes(base_path, split, save_to_json=False)

@@ -54,6 +54,7 @@ def main(args):
         batch_size=args.batch_size,
         num_workers=args.num_workers,
         collate_fn=custom_collate,
+        increase_dataset_size=args.increase_dataset_size,
         kwargs=kwargs
     )
 
@@ -97,6 +98,7 @@ def main(args):
             checkpoint_path=args.checkpoint_path,
         )
     elif args.mode in ['eval']:
+        assert args.data_split in ['train+val'], "Data split must be 'train+val' for evaluation."
         if not config.DEBUG:
             assert args.load_checkpoint, "Checkpoint path must be provided for evaluation."
         validate(

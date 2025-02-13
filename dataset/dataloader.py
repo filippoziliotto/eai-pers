@@ -26,10 +26,10 @@ class RetMapsDataset(Dataset):
     """
     map = BaseMap(size=500, pixels_per_meter=10)
     
-    def __init__(self, data_dir="data", data_split="val", transform=None):
+    def __init__(self, data_dir="data", data_split="val", increase_dataset_size=False, transform=None):
         
         if config.USE_EXTRACTOR:
-            self.episodes = load_extracted_episodes(data_dir, data_split)
+            self.episodes = load_extracted_episodes(data_dir, data_split, increase_dataset_size)
         else:
             self.episodes = load_episodes(data_dir, data_split)
         self.episodes_dir = os.path.join(data_dir, data_split)
@@ -53,7 +53,6 @@ class RetMapsDataset(Dataset):
         feature_map = torch.tensor(feature_map["arr_0"])
         
         # Path to obstacle_map
-        # TODO: save augmentations type and add to obstacle_map
         map_path = episode["feature_map_path"].split("feature_map.npz")[0]
 
         # This is the gt position of the object in map frame
@@ -73,7 +72,7 @@ class RetMapsDataset(Dataset):
         }
 
 def get_dataloader(data_dir, data_split="train+val", batch_size=32, num_workers=4, 
-                   collate_fn=None, shuffle=None, kwargs={}):
+                   collate_fn=None, increase_dataset_size=False, kwargs={}):
     """
     Returns DataLoaders based on the specified data_split.
     
@@ -92,7 +91,6 @@ def get_dataloader(data_dir, data_split="train+val", batch_size=32, num_workers=
       batch_size (int): Batch size.
       num_workers (int): Number of DataLoader workers.
       collate_fn (callable): Custom collate function.
-      shuffle (bool): (Not used here; DataLoader shuffle is set internally: train=True, val=False)
       kwargs (dict): Additional keyword arguments for MapTransform.
       
     Returns:
@@ -105,7 +103,7 @@ def get_dataloader(data_dir, data_split="train+val", batch_size=32, num_workers=
                
         # --- Determine the split indices ---
         # Load a temporary dataset without any transformation to get the full list of episodes.
-        temp_dataset = RetMapsDataset(data_dir, "val", transform=None)
+        temp_dataset = RetMapsDataset(data_dir, "val", increase_dataset_size, transform=None)
         total_samples = len(temp_dataset)
         train_size = int(0.8 * total_samples)
         indices = list(range(total_samples))
@@ -143,12 +141,12 @@ def get_dataloader(data_dir, data_split="train+val", batch_size=32, num_workers=
         # --- Training dataset from the "train" folder ---
         kwargs_train = kwargs.copy()
         kwargs_train["use_aug"] = kwargs.get("use_aug", True)
-        train_dataset = RetMapsDataset(data_dir, "train", transform=MapTransform(**kwargs_train))
+        train_dataset = RetMapsDataset(data_dir, "train", increase_dataset_size, transform=MapTransform(**kwargs_train))
         
         # --- Validation dataset from the "val" folder (always no augmentation) ---
         kwargs_val = kwargs.copy()
         kwargs_val["use_aug"] = False
-        val_dataset = RetMapsDataset(data_dir, "val", transform=MapTransform(**kwargs_val))
+        val_dataset = RetMapsDataset(data_dir, "val", False, transform=MapTransform(**kwargs_val))
         
         train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True,
                                   num_workers=num_workers, collate_fn=collate_fn)

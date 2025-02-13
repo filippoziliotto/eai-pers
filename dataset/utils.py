@@ -1,13 +1,17 @@
 # Library imports
 from typing import List, Tuple, Dict
-from dataset.maps.base_map import BaseMap
-from torch.utils.data import DataLoader, Subset
+import math
+import re
 import numpy as np
+import random
+
+# Torch imports
 import torch
 import torch.nn.functional as F
 import torchvision.transforms.functional as TF
-import math
-import copy
+
+# Local imports
+from dataset.maps.base_map import BaseMap
 
 # Geometry utilities imports
 from utils.geometry_utils import quaternion_from_coeff, quaternion_rotate_vector
@@ -235,4 +239,57 @@ def random_rotate_preserving_target(feature_map, xy_coords, angle_range=(-15, 15
         rotated_feature_map = rotated_fm.permute(1, 2, 0)
         return rotated_feature_map, [new_x, new_y]
 
+"""
+Dataset Augmentation Utils
+"""
 
+def augment_episodes(extracted_episodes: List, persons:str , x: int = 2):
+    """
+    Augment episodes by replicating provided episodes x times.
+    For each episode, if the person is not "common", it replaces the person with an alternative name from 'persons'
+    that is different from the current name.
+    
+    Parameters:
+        extracted_episodes (list): List of episode dictionaries.
+        persons (set): Set of all unique person names.
+        x (int): Augmentation factor.
+    
+    Returns:
+        list: A list of augmented episodes.
+    """
+    augmented_episodes = []
+    for _ in range(1, x):
+        for entry in extracted_episodes:
+            current_name = entry.get("person")
+            if current_name != "common":
+                # Get alternative names excluding the current one.
+                alternative_names = list(persons - {current_name})
+                if alternative_names:
+                    new_name = random.choice(alternative_names)  # Choose the first alternative name.
+                    augmented_episodes.append(update_person(entry, new_name))
+    return augmented_episodes
+             
+def update_person(entry: Dict, new_name: str) -> Dict:
+    """
+    Update the person's name in the entry while preserving the text's capitalization.
+
+    Parameters:
+        entry (Dict): A dictionary containing text fields and a 'person' key.
+        new_name (str): The new person name to apply.
+
+    Returns:
+        Dict: The updated entry.
+    """
+    old_name = entry["person"]
+
+    def replace_preserve(match: re.Match) -> str:
+        matched_text = match.group()
+        return new_name.capitalize() if matched_text[0].isupper() else new_name
+
+    pattern = re.compile(re.escape(old_name), re.IGNORECASE)
+    
+    for field in ["summary", "summary_extraction", "query"]:
+        entry[field] = pattern.sub(replace_preserve, entry[field])
+        
+    entry["person"] = new_name
+    return entry

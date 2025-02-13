@@ -1,9 +1,14 @@
+
+# Python imports
+from typing import Union
 import numpy as np
+import wandb
+import random
+
+# Torch imports
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
-from typing import Union
-import wandb
 
 # Global variable to store the previous learning rate
 _previous_lr = None
@@ -82,6 +87,7 @@ def set_seed(seed: int) -> None:
     Args:
         seed (int): Random seed value.
     """
+    random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)

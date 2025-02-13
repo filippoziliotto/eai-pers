@@ -1,6 +1,6 @@
 
 # Debugging stuff
-DEBUG = False
+DEBUG = True
 
 # Visualizations 
 VISUALIZE = False
