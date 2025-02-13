@@ -16,6 +16,7 @@ def get_args():
     
     # Mode Parameters
     parser.add_argument("--mode", type=str, default="train", choices=["train", "eval"], help="Mode to run the script")
+    parser.add_argument("--validate_after_n_epochs", type=int, default=1, help="Validate the model after every n epochs")
     
     # Seed for reproducibility
     parser.add_argument("--seed", type=int, default=2025, help="Random seed for reproducibility")

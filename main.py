@@ -1,5 +1,4 @@
 # Importing necessary libraries
-import numpy as np
 import wandb
 
 # Importing training and validation functions
@@ -11,7 +10,6 @@ from utils.utils import get_optimizer, set_seed, args_logger, get_loss
 from dataset.utils import custom_collate
 
 # Importing argument parsing function
-import config
 from args import get_args
 
 # Dataloader
@@ -96,11 +94,11 @@ def main(args):
             load_checkpoint=args.load_checkpoint,
             save_checkpoint=args.save_checkpoint,
             checkpoint_path=args.checkpoint_path,
+            validate_every_n_epocs=args.validate_after_n_epochs
         )
     elif args.mode in ['eval']:
         assert args.data_split in ['train+val'], "Data split must be 'train+val' for evaluation."
-        if not config.DEBUG:
-            assert args.load_checkpoint, "Checkpoint path must be provided for evaluation."
+        assert args.load_checkpoint, "Checkpoint path must be provided for evaluation."
         validate(
             model=model,
             data_loader=val_loader,
@@ -115,6 +113,8 @@ def main(args):
     # Finish run
     if args.use_wandb:
         wandb.finish()
+        
+    # Log completion
     print("Run completed.")
 
 if __name__ == "__main__":

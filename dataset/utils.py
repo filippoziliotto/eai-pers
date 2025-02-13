@@ -243,7 +243,7 @@ def random_rotate_preserving_target(feature_map, xy_coords, angle_range=(-15, 15
 Dataset Augmentation Utils
 """
 
-def augment_episodes(extracted_episodes: List, persons:str , x: int = 2):
+def augment_episodes(extracted_episodes: list, persons: set, x: int = 2):
     """
     Augment episodes by replicating provided episodes x times.
     For each episode, if the person is not "common", it replaces the person with an alternative name from 'persons'
@@ -258,14 +258,21 @@ def augment_episodes(extracted_episodes: List, persons:str , x: int = 2):
         list: A list of augmented episodes.
     """
     augmented_episodes = []
+    # Pre-generate a list of random indices (one per episode).
+    # This list has as many elements as extracted_episodes and each index is in the range [0, 4].
+    random_indices = [random.randint(0, 4) for _ in range(len(extracted_episodes))]
+    
+    # Repeat augmentation x-1 times
     for _ in range(1, x):
-        for entry in extracted_episodes:
+        for idx, entry in enumerate(extracted_episodes):
             current_name = entry.get("person")
             if current_name != "common":
-                # Get alternative names excluding the current one.
-                alternative_names = list(persons - {current_name})
+                # Create a list of alternative names, ensuring it always has 5 elements.
+                # (Assuming that persons - {current_name} always yields 5 alternatives.)
+                alternative_names = sorted(persons - {current_name})
                 if alternative_names:
-                    new_name = random.choice(alternative_names)  # Choose the first alternative name.
+                    # Use the pre-generated random index for this episode.
+                    new_name = alternative_names[random_indices[idx]]
                     augmented_episodes.append(update_person(entry, new_name))
     return augmented_episodes
              

@@ -21,6 +21,7 @@ def train_one_epoch(
     data_loader: DataLoader,
     optimizer: torch.optim.Optimizer,
     loss_choice: str = 'NCE',
+    use_wandb: bool = False,
     device: str = 'cpu',
     ):
     
@@ -33,6 +34,7 @@ def train_one_epoch(
         data_loader: DataLoader providing batches with keys 'description', 'query', 'target', and 'feature_map'.
         optimizer: Optimizer for updating model weights.
         loss_choice: Loss function choice ('L1' or 'L2').
+        use_wandb: If True, log metrics to W&B.
         device: Device to run the training on ('cpu' or 'cuda').
 
     Returns:
@@ -61,6 +63,10 @@ def train_one_epoch(
         train_loss = loss.item()
         raw_losses.append(train_loss)
         epoch_loss += train_loss
+        
+        # Log batch loss to W&B
+        if use_wandb:
+            wandb.log({"Batch Train Loss": train_loss/len(query), "Batch": batch_idx})
         
         # Compute accuracy
         train_acc.append(compute_accuracy(gt_target, pred_target))
@@ -96,6 +102,7 @@ def train_and_validate(
     load_checkpoint: bool = False,
     save_checkpoint: bool = False,
     checkpoint_path: Optional[str] = None,
+    validate_every_n_epocs: int = 5
 ):
     """
     Full training loop that trains and validates the model for multiple epochs.
@@ -114,8 +121,8 @@ def train_and_validate(
         load_checkpoint (bool): If True, load model weights from checkpoint_path before training.
         save_checkpoint (bool): If True, save model weights to checkpoint_path after training (when improved).
         checkpoint_path (str): Path to the checkpoint file.
+        validate_every_n_epocs (int): Run validation (and log validation metrics) every n epochs.
     """
-
     # Move model to device if not already on it
     if device == 'cuda' and not next(model.parameters()).is_cuda:
         model.to(device)
@@ -129,45 +136,57 @@ def train_and_validate(
         print("Starting training from scratch...")
     
     print("Starting training...")
-
-    # Initialize best validation loss to a large number
     best_val_loss = float('inf')
 
-    # Train for the specified number of epochs
-    for epoch in tqdm(range(1, num_epochs + 1), desc="Epochs"):
-        # Train for one epoch
-        train_loss, train_acc = train_one_epoch(model, train_loader, optimizer, loss_choice, device)
-
-        # Validate after each epoch
-        val_loss, val_acc = validate(model, val_loader, loss_choice, device, mode='train')
-
-        # Log metrics to W&B if enabled
-        if use_wandb:
-            log_epoch_metrics(epoch, optimizer, train_loss, train_acc, val_loss, val_acc)
-
-        # Scheduler step
-        if scheduler:
-            if isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
-                scheduler.step(val_loss)  # Pass validation loss for ReduceLROnPlateau
-            else:
-                scheduler.step()  # Standard step for other schedulers
-            # Log learning rate to console
-            log_lr_scheduler(optimizer)
-
-        # Print epoch summary
-        print(f"Epoch {epoch}/{num_epochs} - Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}")
-        # Print accuracy summary for each key
-        for key in train_acc:
-            print(f"\nTrain Acc [{key}]: {train_acc[key]:.4f}, Val Acc [{key}]: {val_acc[key]:.4f}")
-        print('-' * 20)
+    for epoch in tqdm(range(num_epochs), desc="Epochs"):
+        # Train for one epoch and get training metrics
+        train_loss, train_acc = train_one_epoch(model, train_loader, optimizer, loss_choice, use_wandb, device)
         
-        # Optionally save model weights to checkpoint only if validation loss has improved
-        if save_checkpoint and (val_loss < best_val_loss):
-            best_val_loss = val_loss
-            assert os.path.exists(os.path.dirname(checkpoint_path)), \
-                f"Checkpoint directory {os.path.dirname(checkpoint_path)} does not exist."
-            torch.save(model.state_dict(), checkpoint_path)
-            print(f"Saved checkpoint to {checkpoint_path} with improved validation loss: {val_loss:.4f}")
+        # Always print training metrics
+        print(f"\nEpoch {epoch}/{num_epochs} - Train Loss: {train_loss:.4f}")
+        for key in train_acc:
+            print(f"Train Acc [{key}]: {train_acc[key]:.4f}")
+
+        # Determine if validation should be run this epoch
+        if (epoch % validate_every_n_epocs == 0) or (epoch == num_epochs):
+            # Validate the model and get validation metrics
+            val_loss, val_acc = validate(model, val_loader, loss_choice, device, mode=mode)
+            
+            # Log both training and validation metrics to W&B if enabled
+            if use_wandb:
+                log_epoch_metrics(epoch, optimizer, train_loss, train_acc, val_loss, val_acc)
+            
+            # Scheduler step (pass validation loss if ReduceLROnPlateau)
+            if scheduler:
+                if isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
+                    scheduler.step(val_loss)
+                else:
+                    scheduler.step()
+                log_lr_scheduler(optimizer)
+            
+            # Optionally save the model if validation loss improves
+            if save_checkpoint and (val_loss < best_val_loss):
+                best_val_loss = val_loss
+                checkpoint_dir = os.path.dirname(checkpoint_path)
+                assert os.path.exists(checkpoint_dir), f"Checkpoint directory {checkpoint_dir} does not exist."
+                torch.save(model.state_dict(), checkpoint_path)
+                print(f"Saved checkpoint to {checkpoint_path} with improved validation loss: {val_loss:.4f}")
+                
+            # Print epoch summary with both training and validation metrics
+            print(f"Epoch {epoch}/{num_epochs} - Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}")
+            for key in train_acc:
+                print(f"Train Acc [{key}]: {train_acc[key]:.4f} | Val Acc [{key}]: {val_acc.get(key, 0):.4f}")
+            print('-' * 20)
+            
+        else:
+            # Log only training metrics to W&B if enabled
+            if use_wandb:
+                log_epoch_metrics(epoch, optimizer, train_loss, train_acc)
+                
+            # For epochs without validation, update scheduler if it doesn't depend on validation loss
+            if scheduler and not isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
+                scheduler.step()
+                log_lr_scheduler(optimizer)
 
     print("Training complete...")
     

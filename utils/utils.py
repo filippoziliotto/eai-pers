@@ -212,15 +212,29 @@ def log_lr_scheduler(optimizer):
     _previous_lr = current_lr
     return
 
-def log_epoch_metrics(epoch, optimizer, train_loss, train_acc, val_loss, val_acc):
+def log_epoch_metrics(epoch, optimizer, train_loss, train_acc, val_loss=None, val_acc=None):
+    """
+    Log training metrics, and optionally validation metrics if provided.
+
+    Args:
+        epoch (int): Current epoch.
+        optimizer (torch.optim.Optimizer): Optimizer, used here to log the current learning rate.
+        train_loss (float): Training loss.
+        train_acc (dict): Dictionary of training accuracies.
+        val_loss (float, optional): Validation loss.
+        val_acc (dict, optional): Dictionary of validation accuracies.
+    """
     metrics = {
-        "Epoch": epoch,
-        'Learning Rate': optimizer.param_groups[0]['lr'],
+        "Epoch": epoch+1,
+        "Learning Rate": optimizer.param_groups[0]['lr'],
         "Train Loss": train_loss,
-        "Val Loss": val_loss,
     }
     metrics.update({f"Train Acc [{k}]": v for k, v in train_acc.items()})
-    metrics.update({f"Val Acc [{k}]": v for k, v in val_acc.items()})
+    
+    if val_loss is not None and val_acc is not None:
+        metrics["Val Loss"] = val_loss
+        metrics.update({f"Val Acc [{k}]": v for k, v in val_acc.items()})
+        
     wandb.log(metrics)
     return
 
