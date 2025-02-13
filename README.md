@@ -43,6 +43,12 @@ To install the **EAI-Pers** package, make sure you have Python 3.9 or higher.
     ```
 
 5. Make sure the `data` directory exists, otherwise create it. Here you will store the `episodes` and the stored retrievable `maps`
+    ```sh
+    mkdir data/train
+    ```
+    ```sh
+    mkdir data/val
+    ```
 
 ---
 

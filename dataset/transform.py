@@ -25,7 +25,7 @@ class MapTransform:
         
         # Angle range for random rotation
         if self.use_random_rotate:
-            self.angle_range = (-45., 45.)
+            self.angle_range = (-90., 90.)
 
     def __call__(self, feature_map, xy_coords, description):
         """

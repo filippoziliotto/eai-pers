@@ -223,14 +223,14 @@ def create_valid_scenes_episodes(base_path: str, split: str, save_to_json: bool 
 
 if __name__ == "__main__":
     base_path = "data"
-    split = "val"
+    split = "train"
     #episodes = load_episodes(base_path, split)
     #print(episodes[:2])  # Display first two episodes
     
-    extracted_episodes = load_extracted_episodes(base_path, split, augment_dataset=True)
+    #extracted_episodes = load_extracted_episodes(base_path, split, augment_dataset=True)
     
     # This has to be done first to create the valid_scenes episodes
-    #valid_scenes = create_valid_scenes_episodes(base_path, split, save_to_json=False)
+    # valid_scenes = create_valid_scenes_episodes(base_path, split, save_to_json=False)
     
     
     

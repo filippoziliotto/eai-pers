@@ -47,7 +47,7 @@ def call_gpt(prompt: str, description: str) -> str:
 
 # Load episodes from the specified data split
 data_dir = "data"
-split = "val"
+split = "train"
 episodes = load_episodes(data_dir, split)
 
 # Process episodes: For each episode, read the prompt and call the GPT model
@@ -62,9 +62,9 @@ for i, episode in enumerate(episodes):
 
     print(f"Processed episode {i}")
     # break  # Remove or adjust the break if you want to process all episodes
-
+    
 # Save the extracted episodes to a JSON file
-output_file = os.path.join(data_dir, split, "filtered_episodes.json")
+output_file = os.path.join(data_dir, split, f"{split}_episodes.json")
 with open(output_file, "w") as f:
     json.dump(episodes, f, indent=2)
 
