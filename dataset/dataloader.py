@@ -35,6 +35,7 @@ class RetMapsDataset(Dataset):
         self.episodes_dir = os.path.join(data_dir, data_split)
         
         self.transform = transform
+        self.use_fp16 = config.USE_FP16
 
     def __len__(self):
         return len(self.episodes)
@@ -49,8 +50,11 @@ class RetMapsDataset(Dataset):
         query = episode["query"]
         
         # Uncompress the feature map (.npz)
-        feature_map = np.load(episode["feature_map_path"])
-        feature_map = torch.tensor(feature_map["arr_0"])
+        npz_file = np.load(episode["feature_map_path"])
+        feature_map = torch.tensor(npz_file["arr_0"])
+        
+        if config.USE_FP16:
+            feature_map = feature_map.half()
         
         # Path to obstacle_map
         map_path = episode["feature_map_path"].split("feature_map.npz")[0]

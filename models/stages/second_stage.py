@@ -2,7 +2,6 @@
 # Library imports
 import torch
 import torch.nn as nn
-import numpy as np
 
 class SimilarityMapModel(nn.Module):
     def __init__(self, encoder, pixels_per_meter):

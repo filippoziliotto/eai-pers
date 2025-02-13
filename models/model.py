@@ -1,5 +1,7 @@
 # Importing necessary libraries
 import torch.nn as nn
+import torch.utils.checkpoint as checkpoint
+import torch
 
 # Importing custom models
 from models.stages.first_stage import MapAttentionModel
@@ -8,6 +10,9 @@ from models.stages.second_stage import SimilarityMapModel
 # Import config
 import config
 
+# Warnings
+import warnings
+warnings.filterwarnings('ignore', category=UserWarning)
 
 class RetrievalMapModel(nn.Module):
     def __init__(self, embed_dim, num_heads, encoder, pixels_per_meter, device):
@@ -51,9 +56,16 @@ class RetrievalMapModel(nn.Module):
         # bewteen the original feature map and the query
         if config.VLFM_BASELINE:
             return self.second_stage(map_tensor, query)
-
+        
         # Step 1: Encode the description
-        embed_map = self.first_stage(map_tensor, description)
+        if config.USE_GRAD_CHECK:
+            # Use gradient checkpointing for the heavy first stage.
+            # We use a lambda to "capture" the non-tensor argument `description`.
+            # Create a dummy tensor that requires grad
+            dummy = torch.ones(1, device=map_tensor.device, requires_grad=True)
+            embed_map = checkpoint.checkpoint(lambda m, d: self.first_stage(m, description), map_tensor, dummy)
+        else:
+            embed_map = self.first_stage(map_tensor, description)
 
         # Step 2: Encode the query
         return self.second_stage(embed_map, query)

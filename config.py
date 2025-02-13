@@ -1,6 +1,9 @@
 
 # Debugging stuff
 DEBUG = True
+USE_FP16 = False
+USE_GRAD_CHECK = True
+USE_MIXED_PRECISION = False
 
 # Visualizations 
 VISUALIZE = False

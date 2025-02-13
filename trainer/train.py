@@ -48,6 +48,11 @@ def train_one_epoch(
     train_acc = []
     raw_losses = []  # List to store raw loss values from each batch.
     
+    # Mixed Precision Training
+    if config.USE_MIXED_PRECISION:
+        assert device == 'cuda', "Mixed precision training is only supported on CUDA devices."
+        scaler = torch.cuda.amp.GradScaler()
+    
     # Iterate over the data loader
     for batch_idx, data in tqdm(enumerate(data_loader), total=len(data_loader), desc="Batch", leave=False):
         description = data['description']
@@ -59,22 +64,32 @@ def train_one_epoch(
         value_map = model(description=description, map_tensor=feature_map, query=query) # Shape: (batch, w, h)
         
         # Compute loss
-        loss, pred_target = compute_loss(gt_target, value_map, loss_choice, device)
+        # Mixed Precision Training
+        if config.USE_MIXED_PRECISION:
+            with torch.cuda.amp.autocast():
+                loss, pred_target = compute_loss(gt_target, value_map, loss_choice, device)
+            # Backward pass and optimization
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
+        else:
+            loss, pred_target = compute_loss(gt_target, value_map, loss_choice, device)
+            # Backward pass and optimization
+            loss.backward()
+            optimizer.step()
+        optimizer.zero_grad()
+
+        # Append raw loss to list
         train_loss = loss.item()
         raw_losses.append(train_loss)
         epoch_loss += train_loss
         
+        # Compute accuracy
+        train_acc.append(compute_accuracy(gt_target, pred_target))
+        
         # Log batch loss to W&B
         if use_wandb:
             wandb.log({"Batch Train Loss": train_loss/len(query), "Batch": batch_idx})
-        
-        # Compute accuracy
-        train_acc.append(compute_accuracy(gt_target, pred_target))
-
-        # Backward pass and optimization
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
         
         if config.DEBUG and batch_idx == 1:
             break
