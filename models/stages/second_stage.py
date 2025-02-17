@@ -2,9 +2,10 @@
 # Library imports
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 class SimilarityMapModel(nn.Module):
-    def __init__(self, encoder, pixels_per_meter):
+    def __init__(self, encoder, pixels_per_meter, use_scale_similarity=False):
         """
         Computes the loss based on cosine similarity between a map and a query vector.
         """
@@ -15,6 +16,18 @@ class SimilarityMapModel(nn.Module):
         
         # Instatiate the similarity
         self.cosine_similarity = nn.CosineSimilarity(dim=-1, eps=1e-08)
+        
+        # Use a trainable scale parameters for similarity map amplification
+        self.use_scale_similarity = use_scale_similarity
+        if self.use_scale_similarity:
+            # Small CNN module to predict per-pixel scaling
+            self.scale_predictor = nn.Sequential(
+                nn.Conv2d(in_channels=1, out_channels=16, kernel_size=3, padding=1),
+                nn.ReLU(),
+                nn.Conv2d(in_channels=16, out_channels=1, kernel_size=3, padding=1)
+            )
+        else:
+            self.scale_predictor = 1.
         
     def encode_query(self, query):
         """
@@ -45,8 +58,18 @@ class SimilarityMapModel(nn.Module):
         
         # Reshape y to match dimensions for broadcasting: (b, 1, 1, E)
         x = map_features.view(b, w, h, E)
-        y = query_features.view(b, 1, 1, E)
+        y = query_features.view(b, 1, 1, E)   
         
-        # Compute cosine similarity along the last dimension (embedding dimension)
-        return self.cosine_similarity(x, y)  # similarity: (b, w, h)
+        if not self.use_scale_similarity:
+            return self.cosine_similarity(x, y) # (b, w, h)
+        
+        # Compute cosine similarity between x and y
+        # Add a channel dimension before feeding into the scale predictor
+        similarity_map = self.cosine_similarity(x, y).unsqueeze(1)  # shape: (b, 1, w, h)
+
+        # Generate the scale map and remove the added channel
+        scale_map = self.scale_predictor(similarity_map).squeeze(1)  # shape: (b, w, h)
+
+        # Return the element-wise product of the scale map and the initial cosine similarity
+        return scale_map * similarity_map.squeeze(1)
 

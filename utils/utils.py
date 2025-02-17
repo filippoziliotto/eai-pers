@@ -181,10 +181,12 @@ def args_logger(args):
     Args:
         args: The parsed arguments.
     """
+    # Sort args by name
+
     print(' ----------------')
     print("|    Arguments   |")
     print(' ----------------')
-    for arg in vars(args):
+    for arg in sorted(vars(args)):
         print(f"| {arg}: {getattr(args, arg)}")
     print(' ----------------')
     return

@@ -63,6 +63,7 @@ def main(args):
         num_heads=args.num_heads,
         encoder=encoder,
         pixels_per_meter=args.pixels_per_meter,
+        use_scale_similarity=args.use_scale_similarity,
         device=args.device,
     )
     print("N° of Model parameters: ", sum(p.numel() for p in model.parameters() if p.requires_grad))

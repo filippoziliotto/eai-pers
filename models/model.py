@@ -15,7 +15,7 @@ import warnings
 warnings.filterwarnings('ignore', category=UserWarning)
 
 class RetrievalMapModel(nn.Module):
-    def __init__(self, embed_dim, num_heads, encoder, pixels_per_meter, device):
+    def __init__(self, embed_dim, num_heads, encoder, pixels_per_meter, use_scale_similarity, device):
         """
         Initializes the RetrievalMapModel.
 
@@ -33,7 +33,7 @@ class RetrievalMapModel(nn.Module):
         # Initialize first stage and move to device
         self.first_stage = MapAttentionModel(embed_dim, num_heads, encoder).to(device)
         # Initialize second stage and move to device
-        self.second_stage = SimilarityMapModel(encoder, pixels_per_meter).to(device)
+        self.second_stage = SimilarityMapModel(encoder, pixels_per_meter, use_scale_similarity).to(device)
         print("Model initialized.")
 
         # If using VLFM baseline, print a message
