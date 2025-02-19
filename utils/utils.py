@@ -43,40 +43,6 @@ def reshape_map(map_tensor: Union[torch.Tensor, np.ndarray]) -> torch.Tensor:
     b, h, w, n = map_tensor.shape
     return map_tensor.view(b, -1, n)
 
-def soft_argmax(heatmaps, beta=1.0):
-    """
-    Compute the soft-argmax of a batch of heatmaps.
-
-    Args:
-        heatmaps (torch.Tensor): Tensor of shape (batch_size, height, width).
-        beta (float): Temperature parameter to control the sharpness of the softmax.
-
-    Returns:
-        coords (torch.Tensor): Tensor of shape (batch_size, 2) containing the (x, y) coordinates.
-    """
-    batch_size, height, width = heatmaps.shape
-
-    # Create coordinate grid
-    # Note: Ensure that the grid is on the same device as the heatmaps.
-    grid_y = torch.linspace(0, height - 1, height, device=heatmaps.device)
-    grid_x = torch.linspace(0, width - 1, width, device=heatmaps.device)
-    # Reshape and expand to match heatmap shape
-    grid_y = grid_y.view(1, height, 1).expand(batch_size, height, width)
-    grid_x = grid_x.view(1, 1, width).expand(batch_size, height, width)
-    
-    # Apply the softmax with temperature scaling
-    heatmaps = heatmaps * beta
-    heatmaps_flat = heatmaps.view(batch_size, -1)
-    softmax = F.softmax(heatmaps_flat, dim=1).view(batch_size, height, width)
-    
-    # Compute expected coordinates
-    exp_x = torch.sum(softmax * grid_x, dim=(1, 2))
-    exp_y = torch.sum(softmax * grid_y, dim=(1, 2))
-    
-    # Stack the coordinates together (shape: batch_size x 2)
-    coords = torch.stack([exp_x, exp_y], dim=1)
-    return coords
-
 """
 Seed Utils
 """
@@ -273,27 +239,6 @@ def get_loss(loss_choice):
     else:
         return nn.MSELoss()
 
-def dynamic_min_max_normalize(loss_list, epsilon=1e-8):
-    """
-    Normalizes a list of loss values using dynamic min-max normalization.
-
-    Args:
-        loss_list (List[float]): List of raw loss values.
-        epsilon (float): Small constant to prevent division by zero.
-
-    Returns:
-        List[float]: List of normalized loss values in the range [0, 1].
-    """
-    if not loss_list:
-        return []
-    
-    min_loss = min(loss_list)
-    max_loss = max(loss_list)
-    normalized_losses = [
-        (loss_val - min_loss) / (max_loss - min_loss + epsilon) for loss_val in loss_list
-    ]
-    return normalized_losses
-
 """
 Random Baseline
 """
@@ -309,6 +254,7 @@ def get_random_target(value_map: torch.Tensor, type='random') -> torch.Tensor:
     Returns:
         torch.Tensor: A tensor of shape (batch, 2) with the selected (x, y) coordinates.
     """
+    output = {}
     b, w, h = value_map.shape
     pred_target = []
 
@@ -331,4 +277,5 @@ def get_random_target(value_map: torch.Tensor, type='random') -> torch.Tensor:
     else:
         raise ValueError(f"Unsupported type: {type}")
     
-    return torch.stack(pred_target, dim=0)
+    output['reg_coords'] = torch.stack(pred_target, dim=0)
+    return output

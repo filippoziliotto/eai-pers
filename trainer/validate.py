@@ -11,12 +11,16 @@ from utils.metrics import compute_accuracy
 # Config & Utils imports
 import config
 from utils.visualize import visualize
-from utils.utils import get_random_target, dynamic_min_max_normalize
+from utils.utils import get_random_target
+
+# Get the normalization constant for the loss
+loss_norm_val = None
 
 def validate(
     model, 
     data_loader, 
     loss_choice='L2',
+    loss_scaling=0.5,
     device='cpu',
     use_wandb=False,
     load_checkpoint=False,
@@ -39,6 +43,7 @@ def validate(
         val_avg_loss: Average validation loss.
         val_avg_acc: Average validation accuracy for each threshold.
     """
+    global loss_norm_val
     
     # Move model to device if not already on it
     if device == 'cuda' and not next(model.parameters()).is_cuda:
@@ -67,31 +72,33 @@ def validate(
             feature_map = data['feature_map'].to(device)
 
             # Forward pass
-            value_map = model(description=description, map_tensor=feature_map, query=query)
+            output = model(description=description, map_tensor=feature_map, query=query)
+            value_map = output['value_map']
 
             # Compute loss
-            loss, pred_target = compute_loss(gt_target, value_map, loss_choice, device)
+            loss = compute_loss(gt_target, output, loss_choice, loss_scaling, device)
             val_loss = loss.item()
             raw_losses.append(val_loss)
             epoch_loss += val_loss
             
             # Predict random index for random baseline
             if config.RANDOM_BASELINE:
-                pred_target = get_random_target(value_map, type='center')
+                output = get_random_target(value_map, type='center')
 
             # Compute accuracy
-            accuracy.append(compute_accuracy(gt_target, pred_target))
+            accuracy.append(compute_accuracy(gt_target, output))
             
             # Visualize results
             if config.VISUALIZE:
-                for query, gt_target, value_map, map_path in zip(query, gt_target, value_map, data['map_path']):
+                for query_, gt_target_, value_map_, map_path_ in zip(query, gt_target, value_map, data['map_path']):
                     visualize(
-                        query, 
-                        gt_target, 
-                        value_map, 
-                        map_path, 
+                        query_, 
+                        gt_target_, 
+                        value_map_, 
+                        map_path_, 
                         batch_idx, 
                         name="prediction", 
+                        split="val",
                         use_obstacle_map=config.USE_OBSTACLE_MAP,  # this flag decides if the obstacle map is shown
                         upscale_factor=2.0
                     )
@@ -100,8 +107,8 @@ def validate(
                 break
     
     # Compute average validation normalized loss
-    normalized_losses = dynamic_min_max_normalize(raw_losses) # Use the utility function to normalize the list of raw losses.
-    val_avg_loss = sum(normalized_losses) / len(normalized_losses)
+    loss_norm_val = sum(raw_losses) / len(raw_losses) if loss_norm_val is None else loss_norm_val
+    val_avg_loss = sum(raw_losses) / len(raw_losses) / loss_norm_val
     
     # Calculate average accuracy for the epoch for each th key
     val_avg_acc = {key: sum(d[key] for d in accuracy) / len(accuracy) for key in accuracy[0]}

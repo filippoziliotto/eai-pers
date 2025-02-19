@@ -2,12 +2,12 @@
 # Debugging stuff
 DEBUG = True
 USE_FP16 = False
-USE_GRAD_CHECK = True
+USE_GRAD_CHECK = False
 USE_MIXED_PRECISION = False
 
 # Visualizations 
-VISUALIZE = False
-USE_OBSTACLE_MAP = False
+VISUALIZE = True
+USE_OBSTACLE_MAP = True
 
 # Baseline
 RANDOM_BASELINE = False

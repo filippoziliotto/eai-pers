@@ -1,21 +1,20 @@
-# Importing necessary libraries
+import torch
 import torch.nn as nn
 import torch.utils.checkpoint as checkpoint
-import torch
+import warnings
 
-# Importing custom models
+# Import custom models and configuration
 from models.stages.first_stage import MapAttentionModel
-from models.stages.second_stage import SimilarityMapModel
-
-# Import config
+from models.stages.second_stage import SimilarityMapModel, CoordinatePredictionModel
 import config
 
-# Warnings
-import warnings
+# Suppress specific warnings
 warnings.filterwarnings('ignore', category=UserWarning)
 
+
 class RetrievalMapModel(nn.Module):
-    def __init__(self, embed_dim, num_heads, encoder, pixels_per_meter, use_scale_similarity, device):
+    def __init__(self, embed_dim, num_heads, encoder, pixels_per_meter,
+                 use_scale_similarity, device):
         """
         Initializes the RetrievalMapModel.
 
@@ -23,49 +22,50 @@ class RetrievalMapModel(nn.Module):
             embed_dim (int): The embedding dimension.
             num_heads (int): The number of attention heads.
             encoder (Blip2Encoder): The encoder model.
-            pixels_per_meter (int): The resolution of the map in pixels per meter.
+            pixels_per_meter (int): Map resolution in pixels per meter.
+            use_scale_similarity (bool): Flag for using scale similarity.
+            use_mlp_predictor (bool): Flag to include the MLP coordinate predictor.
+            mlp_embed_dim (int): The embedding dimension for the MLP predictor.
             device (str): The device for model computation.
-            use_vlfm_baseline (bool): Flag to use the VLFM baseline approach.
         """
-        super(RetrievalMapModel, self).__init__()
+        super().__init__()
         print("Initializing Model...")
-        
-        # Initialize first stage and move to device
+
+        # Initialize and move first and second stages to the specified device
         self.first_stage = MapAttentionModel(embed_dim, num_heads, encoder).to(device)
-        # Initialize second stage and move to device
-        self.second_stage = SimilarityMapModel(encoder, pixels_per_meter, use_scale_similarity).to(device)
+        #self.second_stage = SimilarityMapModel(encoder, pixels_per_meter, use_scale_similarity).to(device)
+        self.second_stage = CoordinatePredictionModel(encoder, pixels_per_meter, method="hybrid").to(device)
+        
         print("Model initialized.")
 
-        # If using VLFM baseline, print a message
+        # Display baseline evaluation message if applicable
         if config.VLFM_BASELINE:
             print("Evaluating VLFM Baseline...")
 
     def forward(self, description, map_tensor, query):
         """
+        Performs a forward pass through the model.
+
         Args:
-            description (str): The description of the map.
-            map_tensor: Tensor of shape (w, h, C) - The map tensor.
-            query (str): The query to find in the map.
-            loss_choice (str): The loss function choice.
+            description (str): Description of the map.
+            map_tensor (Tensor): The map tensor of shape (w, h, C).
+            query (str): The query to locate in the map.
 
         Returns:
-            predicted_coords: Tuple (x', y') - Predicted coordinates from the similarity map.
+            Either:
+              - The similarity map result as computed by second_stage if not using MLP predictor.
+              - A tuple of predicted coordinates from the MLP predictor.
         """
-        
-        # If using VLFM baseline, skip the first stage and directly compute similarity
-        # bewteen the original feature map and the query
+        # If VLFM baseline is active, compute similarity directly
         if config.VLFM_BASELINE:
             return self.second_stage(map_tensor, query)
-        
-        # Step 1: Encode the description
+
+        # Encode the map description using the first stage.
         if config.USE_GRAD_CHECK:
-            # Use gradient checkpointing for the heavy first stage.
-            # We use a lambda to "capture" the non-tensor argument `description`.
-            # Create a dummy tensor that requires grad
             dummy = torch.ones(1, device=map_tensor.device, requires_grad=True)
             embed_map = checkpoint.checkpoint(lambda m, d: self.first_stage(m, description), map_tensor, dummy)
         else:
             embed_map = self.first_stage(map_tensor, description)
 
-        # Step 2: Encode the query
+        # Compute the similarity map from the second stage, based on the encoded map.
         return self.second_stage(embed_map, query)

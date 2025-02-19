@@ -3,7 +3,6 @@ import torch
 import torch.nn as nn
 
 # Importing custom models
-from models.encoder import Blip2Encoder
 from models.extractor import Extractor
 
 # Importing utility functions

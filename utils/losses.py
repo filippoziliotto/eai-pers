@@ -1,18 +1,12 @@
 
 # Library imports
-import torch
-import math
-import torch.nn as nn
 from torch.nn import functional as F
-
-# Local imports
-from utils.utils import soft_argmax
 
 """
 Loss Utils
 """
 
-def compute_loss(ground_truth_coords, value_map, loss_choice='L2', device="cuda"):
+def compute_loss(gt_coords, output, loss_choice='L2', scaling = 0.5, device="cuda"):
     """
     Computes the loss between ground truth and predicted coordinates.
     
@@ -25,13 +19,39 @@ def compute_loss(ground_truth_coords, value_map, loss_choice='L2', device="cuda"
         loss (Tensor): Computed loss.
     """
     if loss_choice == 'MSE':  # Euclidean loss
-        return mse_loss(value_map, ground_truth_coords)
+        return regression_loss(gt_coords, output['reg_coords'])
+    elif loss_choice == 'HYBRID':  # Manhattan loss
+        reg_loss = regression_loss(gt_coords, output['reg_coords'])
+        hm_loss = heatmap_loss(gt_coords, output['softmax_coords'])
+        return scaling * reg_loss + (1 - scaling) * hm_loss
     else:
         raise ValueError("Invalid loss_choice. Use only implemented losses.")
 
-def mse_loss(value_map, target):
+
+def regression_loss(pred_coords, gt_coords):
     """
-    Computes the L2 (Euclidean) loss between predictions and targets.
+    Computes Mean Squared Error (MSE) loss between the predicted coordinates 
+    from the global regression branch and the ground truth coordinates.
+    
+    Args:
+        pred_coords (torch.Tensor): Predicted coordinates of shape (b, 2).
+        gt_coords (torch.Tensor): Ground truth coordinates of shape (b, 2).
+        
+    Returns:
+        torch.Tensor: Scalar loss value.
     """
-    predicted_coords = soft_argmax(value_map, beta=10.0)
-    return F.mse_loss(predicted_coords, target.to(torch.float32)), predicted_coords
+    return F.mse_loss(pred_coords, gt_coords)
+
+def heatmap_loss(pred_coords, gt_coords):
+    """
+    Computes Mean Squared Error (MSE) loss between the predicted coordinates 
+    from the soft-argmax heatmap branch and the ground truth coordinates.
+    
+    Args:
+        pred_coords (torch.Tensor): Predicted coordinates of shape (b, 2).
+        gt_coords (torch.Tensor): Ground truth coordinates of shape (b, 2).
+        
+    Returns:
+        torch.Tensor: Scalar loss value.
+    """
+    return F.mse_loss(pred_coords, gt_coords)

@@ -20,6 +20,7 @@ def visualize(
     map_path: str,
     batch_idx: int,
     name: str = "prediction",
+    split: str = "train",
     use_obstacle_map: bool = False,
     upscale_factor: float = 1.0
 ) -> None:
@@ -37,9 +38,9 @@ def visualize(
     
     # Ensure ground truth is a numpy int32 array.
     if hasattr(gt_target, "cpu"):
-        gt_target = gt_target.cpu().numpy().astype(np.int32)
+        gt_target_ = gt_target.cpu().numpy().astype(np.int32)
     else:
-        gt_target = gt_target.astype(np.int32)
+        gt_target_ = gt_target.astype(np.int32)
     
     # Compute the pixel with the maximum value.
     max_pixel = find_index_max_value(value_map)
@@ -47,7 +48,8 @@ def visualize(
     # Convert the value map into an RGB image using the Inferno colormap.
     value_map_img = monochannel_to_inferno_rgb(value_map)
     
-    if use_obstacle_map:
+    # We have to do because of data augmentation in the training process
+    if split in ['val'] and use_obstacle_map:
         # ----- Process obstacle map -----
         obstacle_map_filepath = os.path.join(map_path, "obstacle_map.npy")
         obstacle_map = load_obstacle_map(obstacle_map_filepath)
@@ -73,7 +75,7 @@ def visualize(
         
         # ----- Adjust coordinates and add circles -----
         # Adjust coordinates to the cropped image (subtract crop offsets).
-        adjusted_gt = (gt_target[0] - x_min, gt_target[1] - y_min)
+        adjusted_gt = (gt_target_[0] - x_min, gt_target_[1] - y_min)
         adjusted_max = (max_pixel[0] - x_min, max_pixel[1] - y_min)
         
         # Draw circles on both images.
@@ -95,7 +97,7 @@ def visualize(
         final_image = cv2.resize(final_image, None, fx=upscale_factor, fy=upscale_factor, interpolation=cv2.INTER_CUBIC)
     
     # ----- Save the final image -----
-    save_image_to_disk(final_image, base_path="trainer/visualizations/", name=name, idx_=batch_idx)
+    save_image_to_disk(final_image, base_path=f"trainer/visualizations/{split}", name=name, idx_=batch_idx)
 
 
 def find_index_max_value(value_map: np.ndarray) -> np.ndarray:
@@ -105,7 +107,6 @@ def find_index_max_value(value_map: np.ndarray) -> np.ndarray:
     max_index = np.unravel_index(np.argmax(value_map, axis=None), value_map.shape)
     # Adjust ordering if needed.
     return np.flipud(max_index)
-
 
 def add_circles_on_image(image: np.ndarray, gt_target, max_pixel) -> np.ndarray:
     """
