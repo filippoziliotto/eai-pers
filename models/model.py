@@ -5,7 +5,7 @@ import warnings
 
 # Import custom models and configuration
 from models.stages.first_stage import MapAttentionModel
-from models.stages.second_stage import SimilarityMapModel, CoordinatePredictionModel
+from models.stages.second_stage import CoordinatePredictionModel
 import config
 
 # Suppress specific warnings
@@ -33,7 +33,6 @@ class RetrievalMapModel(nn.Module):
 
         # Initialize and move first and second stages to the specified device
         self.first_stage = MapAttentionModel(embed_dim, num_heads, encoder).to(device)
-        #self.second_stage = SimilarityMapModel(encoder, pixels_per_meter, use_scale_similarity).to(device)
         self.second_stage = CoordinatePredictionModel(encoder, pixels_per_meter, method="hybrid").to(device)
         
         print("Model initialized.")
