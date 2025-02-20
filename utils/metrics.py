@@ -14,7 +14,7 @@ def compute_accuracy(gt_target, pred_target, thresholds=[5, 10, 20]):
     Returns:
         dict: Dictionary containing overall accuracy for each threshold.
     """
-    pred_target = pred_target['reg_coords'].detach().cpu().numpy() 
+    pred_target = pred_target['heatmap_coords'].detach().cpu().numpy() 
     gt_target = gt_target.detach().cpu().numpy()
     
     # Compute distances once and then compute mean accuracy for each threshold

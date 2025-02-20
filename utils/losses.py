@@ -19,10 +19,10 @@ def compute_loss(gt_coords, output, loss_choice='L2', scaling = 0.5, device="cud
         loss (Tensor): Computed loss.
     """
     if loss_choice == 'MSE':  # Euclidean loss
-        return regression_loss(gt_coords, output['reg_coords'])
+        return regression_loss(gt_coords, output['regression_coords'])
     elif loss_choice == 'HYBRID':  # Manhattan loss
-        reg_loss = regression_loss(gt_coords, output['reg_coords'])
-        hm_loss = heatmap_loss(gt_coords, output['softmax_coords'])
+        reg_loss = regression_loss(gt_coords, output['regression_coords'])
+        hm_loss = heatmap_loss(gt_coords, output['heatmap_coords'])
         return scaling * reg_loss + (1 - scaling) * hm_loss
     else:
         raise ValueError("Invalid loss_choice. Use only implemented losses.")

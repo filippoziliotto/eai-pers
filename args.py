@@ -36,8 +36,7 @@ def get_args():
     parser.add_argument("--weight_decay", type=float, default=1e-5, help="Weight decay for regularization")
     parser.add_argument("--num_epochs", type=int, default=10, help="Number of training epochs")
     parser.add_argument("--loss_choice", type=str, default="L2", help="Loss function choice")
-    parser.add_argument("--loss_scaling", type=float, default=0.5, help="Scaling factor for hybrid loss ( scale * l1 + (1-scale) * l2 )")
-    parser.add_argument("--use_scale_similarity", action="store_true", default=False, help="Scale the similarity with learnable vector")
+    parser.add_argument("--loss_scaling", type=float, default=0.3, help="Scaling factor for hybrid loss ( scale * l1 + (1-scale) * l2 )")
     
     # Checkpoints Parameters
     parser.add_argument("--save_checkpoint", action="store_true", default=False, help="Save model checkpoints")

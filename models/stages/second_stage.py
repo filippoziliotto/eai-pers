@@ -1,28 +1,27 @@
-
-# Library imports
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-
 class CoordinatePredictionModel(nn.Module):
-    def __init__(self, encoder, pixels_per_meter, method="global", hidden_dim=128):
+    def __init__(self, encoder, method="global", hidden_dim=128):
         """
         A coordinate prediction model that can operate in two modes:
         
         1. 'global'  - Global Pooling + FC Regression.
         2. 'hybrid'  - Hybrid Multi-Task: regression branch plus heatmap prediction (via soft-argmax).
         
+        The regression branch is designed to predict normalized coordinates in the [0, 1] range,
+        which are then rescaled to pixel coordinates using the spatial dimensions of the input feature map.
+        The heatmap branch directly computes expected pixel coordinates from a softmax over a refined similarity map.
+        
         Args:
             encoder: An encoder with a method get_embeddings(text=..., modality='text') that returns
                      a dict with key 'text' and tensor shape (b, E). It is assumed that encoder.embedding_dim exists.
-            pixels_per_meter (float): Scaling factor from pixel space to physical units (if needed).
-            method (str): Either "global" or "hybrid".
+            method (str): Either "global" or "hybrid". Determines which branches are executed.
             hidden_dim (int): Hidden layer dimension for the regression MLP.
         """
         super(CoordinatePredictionModel, self).__init__()
         self.encoder = encoder
-        self.pixels_per_meter = pixels_per_meter
         self.method = method
         
         # We'll use cosine similarity (over the embedding dimension) for the heatmap branch.
@@ -33,18 +32,19 @@ class CoordinatePredictionModel(nn.Module):
         self.global_pool = nn.AdaptiveAvgPool2d(1)
         # The encoder is assumed to produce embeddings of size encoder.embedding_dim.
         feat_dim = encoder.encoder.itm_head.in_features
-        # We'll concatenate the pooled map feature (shape: (b, feat_dim)) with the query embedding (b, feat_dim)
-        # and then use an MLP to regress (x,y).
+        # We concatenate the pooled map feature (shape: (b, feat_dim)) with the query embedding (b, feat_dim)
+        # and then use an MLP to regress normalized (x,y) coordinates in [0, 1], which are then scaled by (w, h).
         self.regressor = nn.Sequential(
             nn.Linear(2 * feat_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, 2)
+            nn.Linear(hidden_dim, 2),
+            nn.Sigmoid()  # Forces output to [0, 1]
         )
         
         if self.method == "hybrid":
             # --- Heatmap Branch (part of Strategy 5) ---
-            # Start by computing a cosine similarity map between map_features and query.
-            # We add a small conv head (similar to your original scale predictor) to refine this similarity.
+            # Computes a cosine similarity map between map_features and the query embedding.
+            # A small convolutional head is used to refine this similarity map.
             self.heatmap_conv = nn.Sequential(
                 nn.Conv2d(in_channels=1, out_channels=16, kernel_size=3, padding=1),
                 nn.ReLU(),
@@ -59,78 +59,82 @@ class CoordinatePredictionModel(nn.Module):
             query (str): The query to encode.
         
         Returns:
-            dict: Must contain a key 'text' with tensor shape (b, E).
+            dict: Contains a key 'text' with tensor shape (b, E) representing the query embedding.
         """
         return self.encoder.get_embeddings(text=query, modality='text')
     
     def forward(self, map_features, query):
         """
+        Processes the input map features and text query to predict coordinates.
+        
         Args:
-            map_features: Tensor of shape (b, w, h, E) from your multi-head attention (each spatial location is an embedding).
+            map_features: Tensor of shape (b, w, h, E) where each spatial location is an embedding.
             query: A text query.
         
         Returns:
-            If method == "global": 
-                Tensor of shape (b, 2) with the predicted (x,y) coordinates.
-            If method == "hybrid": 
-                dict with keys:
-                    'regression' - coordinate prediction from global pooling branch (b, 2)
-                    'heatmap'    - coordinate prediction from soft-argmax over a predicted heatmap (b, 2)
-                    'heatmap_raw'- the refined (pre-softmax) heatmap (b, w, h)
+            dict: If method == "global":
+                    {
+                        'regression_coords': Tensor of shape (b, 2) with pixel coordinates computed by scaling 
+                                             normalized predictions (in [0,1]) with (w, h).
+                    }
+                  If method == "hybrid":
+                    {
+                        'regression_coords': Tensor of shape (b, 2) from the regression branch (pixel coordinates),
+                        'heatmap_coords':    Tensor of shape (b, 2) from soft-argmax over the heatmap (pixel coordinates),
+                        'value_map':       Tensor of shape (b, w, h) containing the refined similarity map before softmax.
+                    }
+                    
+        Note:
+            - The regression branch outputs normalized coordinates (via a sigmoid) which are then scaled by (w, h).
+              If your ground truth coordinates are defined in the range [0, w-1] and [0, h-1], consider scaling by (w-1, h-1).
+            - The heatmap branch computes expected coordinates directly in pixel space.
         """
-        # We always return a dictionary for consistency
         output = {}
         b, w, h, E = map_features.shape
         
-        # Get the query embedding: assume encoder returns a dict with key 'text' (shape: (b, E))
+        # Get the query embedding; expected to have shape (b, E)
         query_features = self.encode_query(query)['text']
         assert query_features.shape == (b, E), "Query embedding must have shape (b, E)"
         
         # ----- Global Regression Branch (Strategy 1) -----
-        # Permute map_features to (b, E, w, h) for the pooling operation.
+        # Permute map_features to (b, E, w, h) for pooling.
         map_features_perm = map_features.permute(0, 3, 1, 2)  # (b, E, w, h)
         pooled_feat = self.global_pool(map_features_perm).view(b, E)  # (b, E)
         # Concatenate pooled feature with query embedding.
         global_input = torch.cat([pooled_feat, query_features], dim=1)  # (b, 2E)
-        regression_coords = self.regressor(global_input)  # (b, 2)
-        output['reg_coords'] = regression_coords
+        # Predict normalized coordinates in [0, 1]
+        normalized_coords = self.regressor(global_input)  # (b, 2)
+        # Scale normalized coordinates to pixel coordinates.
+        pixel_coords = normalized_coords * torch.tensor([w, h], device=normalized_coords.device, dtype=normalized_coords.dtype)
+        output['regression_coords'] = pixel_coords
         
         if self.method == "global":
             return output
         
         elif self.method == "hybrid":
             # ----- Heatmap Branch (Hybrid Multi-Task Learning) -----
-            # First, compute a cosine similarity map between each spatial vector and the query embedding.
-            # map_features: (b, w, h, E) and query_features: (b, E) => reshape query for broadcasting.
-            x = map_features  # (b, w, h, E)
-            y = query_features.view(b, 1, 1, E)  # (b, 1, 1, E)
-            sim_map = self.cosine_similarity(x, y)  # (b, w, h)
+            # Compute cosine similarity between each spatial vector and the query embedding.
+            sim_map = self.cosine_similarity(map_features, query_features.view(b, 1, 1, E))  # (b, w, h)
             
-            # Refine the similarity map via a small conv head.
-            sim_map_unsq = sim_map.unsqueeze(1)  # (b, 1, w, h)
-            refined_map = self.heatmap_conv(sim_map_unsq).squeeze(1)  # (b, w, h)
+            # Refine the similarity map with a convolutional head.
+            refined_map = self.heatmap_conv(sim_map.unsqueeze(1)).squeeze(1)  # (b, w, h)
             
-            # Apply softmax over the spatial locations (flatten w x h).
-            refined_flat = refined_map.view(b, -1)
-            heatmap_prob = F.softmax(refined_flat, dim=1).view(b, w, h)  # (b, w, h)
+            # Apply softmax over the flattened spatial dimensions.
+            heatmap_prob = F.softmax(refined_map.view(b, -1), dim=1).view(b, w, h)  # (b, w, h)
             
-            # Create coordinate grids.
+            # Create coordinate grids corresponding to pixel indices.
             device = heatmap_prob.device
             grid_x = torch.linspace(0, w - 1, steps=w, device=device)
             grid_y = torch.linspace(0, h - 1, steps=h, device=device)
-            # Meshgrid with indexing such that grid_x corresponds to the w-dimension and grid_y to the h-dimension.
             grid_x, grid_y = torch.meshgrid(grid_x, grid_y, indexing='ij')  # each is (w, h)
-            # Expand to (1, w, h) for broadcasting.
-            grid_x = grid_x.unsqueeze(0)
-            grid_y = grid_y.unsqueeze(0)
+            grid_x = grid_x.unsqueeze(0)  # (1, w, h)
+            grid_y = grid_y.unsqueeze(0)  # (1, w, h)
             
-            # Compute the soft-argmax (i.e. expectation) of the coordinates.
+            # Compute expected pixel coordinates (soft-argmax).
             pred_x = (heatmap_prob * grid_x).view(b, -1).sum(dim=1, keepdim=True)
             pred_y = (heatmap_prob * grid_y).view(b, -1).sum(dim=1, keepdim=True)
             heatmap_coords = torch.cat([pred_x, pred_y], dim=1)  # (b, 2)
             
-            # (Optionally, you could scale the predicted coordinates by pixels_per_meter here.)
-            output['softmax_coords'] = heatmap_coords # From soft-argmax over the heatmap
-            output['value_map'] = refined_map # The raw (refined) heatmap (for visualization or auxiliary losses)
-            return output  
-
+            output['heatmap_coords'] = heatmap_coords
+            output['value_map'] = refined_map  # For visualization or auxiliary losses
+            return output

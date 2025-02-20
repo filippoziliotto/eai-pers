@@ -13,8 +13,7 @@ warnings.filterwarnings('ignore', category=UserWarning)
 
 
 class RetrievalMapModel(nn.Module):
-    def __init__(self, embed_dim, num_heads, encoder, pixels_per_meter,
-                 use_scale_similarity, device):
+    def __init__(self, embed_dim, num_heads, encoder, device):
         """
         Initializes the RetrievalMapModel.
 
@@ -33,7 +32,7 @@ class RetrievalMapModel(nn.Module):
 
         # Initialize and move first and second stages to the specified device
         self.first_stage = MapAttentionModel(embed_dim, num_heads, encoder).to(device)
-        self.second_stage = CoordinatePredictionModel(encoder, pixels_per_meter, method="hybrid").to(device)
+        self.second_stage = CoordinatePredictionModel(encoder, method="hybrid").to(device)
         
         print("Model initialized.")
 

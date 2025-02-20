@@ -180,7 +180,7 @@ def train_and_validate(
             print(f"Train Acc [{key}]: {train_acc[key]:.4f}")
 
         # Determine if validation should be run this epoch
-        if (epoch % validate_every_n_epocs == 0) or (epoch == num_epochs):
+        if (epoch % validate_every_n_epocs == 0) or ((epoch + 1) == num_epochs):
             # Validate the model and get validation metrics
             val_loss, val_acc = validate(model, val_loader, loss_choice, loss_scaling, device, mode=mode)
             
