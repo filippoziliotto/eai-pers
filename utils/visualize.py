@@ -1,14 +1,5 @@
 
 # Internal imports
-import cv2
-import numpy as np
-import os
-
-# External imports
-from dataset.utils import load_obstacle_map
-
-
-    
 import os
 import cv2
 import numpy as np
@@ -48,46 +39,9 @@ def visualize(
     # Convert the value map into an RGB image using the Inferno colormap.
     value_map_img = monochannel_to_inferno_rgb(value_map)
     
-    # We have to do because of data augmentation in the training process
-    if split in ['val'] and use_obstacle_map:
-        # ----- Process obstacle map -----
-        obstacle_map_filepath = os.path.join(map_path, "obstacle_map.npy")
-        obstacle_map = load_obstacle_map(obstacle_map_filepath)
-        
-        # Ensure obstacle map is in a supported uint8 format.
-        if obstacle_map.dtype == np.bool_:
-            obstacle_map_uint8 = obstacle_map.astype(np.uint8) * 255
-        elif obstacle_map.dtype != np.uint8:
-            obstacle_map_uint8 = cv2.convertScaleAbs(obstacle_map)
-        else:
-            obstacle_map_uint8 = obstacle_map
-        
-        # Convert obstacle map to a 3-channel RGB image.
-        obstacle_map_rgb = cv2.cvtColor(obstacle_map_uint8, cv2.COLOR_GRAY2RGB)
-        
-        # ----- Crop both images -----
-        # Compute crop boundaries from the obstacle map (assumed to be similar to value_map).
-        crop_coords = crop_map_borders(obstacle_map_rgb)
-        x_min, x_max, y_min, y_max = crop_coords
-        
-        value_map_img_cropped = crop_image(value_map_img, crop_coords)
-        obstacle_map_rgb_cropped = crop_image(obstacle_map_rgb, crop_coords)
-        
-        # ----- Adjust coordinates and add circles -----
-        # Adjust coordinates to the cropped image (subtract crop offsets).
-        adjusted_gt = (gt_target_[0] - x_min, gt_target_[1] - y_min)
-        adjusted_max = (max_pixel[0] - x_min, max_pixel[1] - y_min)
-        
-        # Draw circles on both images.
-        value_map_img_cropped = add_circles_on_image(value_map_img_cropped, adjusted_gt, adjusted_max)
-        obstacle_map_rgb_cropped = add_circles_on_image(obstacle_map_rgb_cropped, adjusted_gt, adjusted_max)
-        
-        # Concatenate the annotated images side-by-side.
-        combined_image = np.concatenate((value_map_img_cropped, obstacle_map_rgb_cropped), axis=1)
-    else:
-        # If no obstacle map is used, add circles on the value map.
-        value_map_img = add_circles_on_image(value_map_img, gt_target, max_pixel)
-        combined_image = value_map_img
+    # add circles on the value map.
+    value_map_img = add_circles_on_image(value_map_img, gt_target, max_pixel)
+    combined_image = value_map_img
 
     # ----- Add top margin for query text -----
     final_image = add_top_margin(combined_image, margin_height=15, query_text=query, font_scale=0.3, thickness=1)
@@ -145,13 +99,6 @@ def monochannel_to_inferno_rgb(image: np.ndarray) -> np.ndarray:
         normalized = ((image - min_val) / (max_val - min_val) * 255).astype(np.uint8)
     colored = cv2.applyColorMap(normalized, cv2.COLORMAP_INFERNO)
     return colored
-
-
-def load_obstacle_map(filepath: str) -> np.ndarray:
-    """
-    Load the obstacle map from a .npy file.
-    """
-    return np.load(filepath)
 
 
 def crop_map_borders(image: np.ndarray) -> tuple:

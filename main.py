@@ -49,11 +49,10 @@ def main(args):
     kwargs = vars(args)
     train_loader, val_loader = get_dataloader(
         data_dir=args.data_dir,
-        data_split=args.data_split,
+        split_dir=args.data_split,
         batch_size=args.batch_size,
         num_workers=args.num_workers,
         collate_fn=custom_collate,
-        increase_dataset_size=args.increase_dataset_size,
         kwargs=kwargs
     )
 
@@ -98,7 +97,6 @@ def main(args):
             validate_every_n_epocs=args.validate_after_n_epochs
         )
     elif args.mode in ['eval']:
-        assert args.data_split in ['train+val'], "Data split must be 'train+val' for evaluation."
         assert args.load_checkpoint, "Checkpoint path must be provided for evaluation."
         validate(
             model=model,

@@ -11,9 +11,8 @@ def get_args():
     
     # Data path Parameters
     parser.add_argument("--data_dir", type=str, default="data", help="Path to the data directory")
-    parser.add_argument("--data_split", type=str, default="train+val", choices=["train+val", "val"], help="Data split to use")
-    parser.add_argument("--increase_dataset_size", action="store_true", default=False, help="Increase dataset size by two times")
-    
+    parser.add_argument("--data_split", type=str, default="object_unseen", choices=["object_unseen", "scene_unseen"], help="Evaluation setting to use")
+
     # Mode Parameters
     parser.add_argument("--mode", type=str, default="train", choices=["train", "eval"], help="Mode to run the script")
     parser.add_argument("--validate_after_n_epochs", type=int, default=1, help="Validate the model after every n epochs")

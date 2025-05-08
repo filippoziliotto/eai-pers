@@ -1,80 +1,12 @@
 # Library imports
 from typing import List, Tuple, Dict
 import math
-import re
-import numpy as np
-import random
 
 # Torch imports
 import torch
 import torch.nn.functional as F
 import torchvision.transforms.functional as TF
 
-# Local imports
-from dataset.maps.base_map import BaseMap
-
-# Geometry utilities imports
-from utils.geometry_utils import quaternion_from_coeff, quaternion_rotate_vector
-
-   
-"""
-MAP UTILITIES
-"""
-
-def map_to_xyz(episode: Dict, map: BaseMap) -> List[float]:
-    """
-    Converts 2D map coordinates (x, y) into global habitat coordinates (x, y, z).
-
-    Returns:
-        List[float]: The [x, y, z] coordinates in the global frame.
-    """
-    pos_origin = episode['robot_xyz']
-    rotation_world_start = quaternion_from_coeff(episode['robot_rot'])
-
-    # Convert pixel position to local map coordinates and flip y-axis
-    local_coords = map._px_to_xy(pos_origin.reshape(1, 2))[0]
-    local_coords = np.array([local_coords[0], -local_coords[1]])
-
-    # Create a local vector, rotate it to world coordinates, and translate by the origin
-    local_vec = np.array([local_coords[1], 0.0, -local_coords[0]], dtype=np.float32)
-    world_vec = quaternion_rotate_vector(rotation_world_start, local_vec)
-    return world_vec + pos_origin
-    
-def xyz_to_map(episode: Dict, map: BaseMap) -> List[float]:
-    """
-    Converts target coordinates from the global frame (x, y, z) to 2D map frame coordinates (x, y).
-
-    Returns:
-        List[float]: The [x, y] coordinates in the map frame.
-    """
-    # Get rotation from robot heading
-    rotation_world_start = quaternion_from_coeff(episode['robot_rot'])
-
-    # Ensure robot_xyz is a NumPy array
-    robot_xyz = episode['robot_xyz'] if isinstance(episode['robot_xyz'], np.ndarray) else np.array(episode['robot_xyz'])
-
-    # Rotate target position into the robot's frame of reference
-    target_pos = quaternion_rotate_vector(
-        rotation_world_start.inverse(), episode['object_pos'] - robot_xyz
-    )
-
-    # Convert rotated position to map coordinates (ignoring z and flipping axes)
-    target_map = np.array([-target_pos[2], -target_pos[0]], dtype=np.float32)
-
-    # Convert to pixel coordinates on the map
-    return map._xy_to_px(target_map.reshape(1, 2))[0]
-
-def load_obstacle_map(path: str) -> np.ndarray:
-    """
-    Load an obstacle map from a given path.
-
-    Args:
-        path (str): The path to the obstacle map file.
-
-    Returns:
-        np.ndarray: The obstacle map as a NumPy array.
-    """
-    return np.load(path).astype(np.int8)
 
 """
 BATCHING UTILITIES
@@ -89,10 +21,9 @@ def custom_collate(batch):
     maximum height and width found in the batch.
     """
     # Extract descriptions, queries, targets, and map paths.
-    descriptions = [item["description"] for item in batch]
+    summaries = [item["summary"] for item in batch]
     queries = [item["query"] for item in batch]
     targets = torch.stack([torch.tensor(item["target"]) for item in batch])
-    map_paths = [item["map_path"] for item in batch]
 
     # Get the list of feature maps from the batch.
     feature_maps = [item["feature_map"] for item in batch]
@@ -128,11 +59,10 @@ def custom_collate(batch):
         feature_maps = torch.stack(feature_maps)
 
     return {
-        "description": descriptions,
+        "description": summaries,
         "query": queries,
         "target": targets,
         "feature_map": feature_maps,
-        "map_path": map_paths
     }
 
 """
@@ -239,64 +169,3 @@ def random_rotate_preserving_target(feature_map, xy_coords, angle_range=(-15, 15
         rotated_feature_map = rotated_fm.permute(1, 2, 0)
         return rotated_feature_map, [new_x, new_y]
 
-"""
-Dataset Augmentation Utils
-"""
-
-def augment_episodes(extracted_episodes: list, persons: set, x: int = 2):
-    """
-    Augment episodes by replicating provided episodes x times.
-    For each episode, if the person is not "common", it replaces the person with an alternative name from 'persons'
-    that is different from the current name.
-    
-    Parameters:
-        extracted_episodes (list): List of episode dictionaries.
-        persons (set): Set of all unique person names.
-        x (int): Augmentation factor.
-    
-    Returns:
-        list: A list of augmented episodes.
-    """
-    augmented_episodes = []
-    # Pre-generate a list of random indices (one per episode).
-    # This list has as many elements as extracted_episodes and each index is in the range [0, 4].
-    random_indices = [random.randint(0, 4) for _ in range(len(extracted_episodes))]
-    
-    # Repeat augmentation x-1 times
-    for _ in range(1, x):
-        for idx, entry in enumerate(extracted_episodes):
-            current_name = entry.get("person")
-            if current_name != "common":
-                # Create a list of alternative names, ensuring it always has 5 elements.
-                # (Assuming that persons - {current_name} always yields 5 alternatives.)
-                alternative_names = sorted(persons - {current_name})
-                if alternative_names:
-                    # Use the pre-generated random index for this episode.
-                    new_name = alternative_names[random_indices[idx]]
-                    augmented_episodes.append(update_person(entry, new_name))
-    return augmented_episodes
-             
-def update_person(entry: Dict, new_name: str) -> Dict:
-    """
-    Update the person's name in the entry while preserving the text's capitalization.
-
-    Parameters:
-        entry (Dict): A dictionary containing text fields and a 'person' key.
-        new_name (str): The new person name to apply.
-
-    Returns:
-        Dict: The updated entry.
-    """
-    old_name = entry["person"]
-
-    def replace_preserve(match: re.Match) -> str:
-        matched_text = match.group()
-        return new_name.capitalize() if matched_text[0].isupper() else new_name
-
-    pattern = re.compile(re.escape(old_name), re.IGNORECASE)
-    
-    for field in ["summary", "summary_extraction", "query"]:
-        entry[field] = pattern.sub(replace_preserve, entry[field])
-        
-    entry["person"] = new_name
-    return entry
