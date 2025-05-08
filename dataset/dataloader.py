@@ -4,6 +4,7 @@ import numpy as np
 from torch.utils.data import Dataset, DataLoader
 from torch.utils.data.dataset import Subset
 import os
+import json
 
 # Add base path to PYTHONPATH
 import sys
@@ -11,9 +12,8 @@ base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.append(base_path)
     
 # Local imports
-from dataset.load_maps import load_episodes, load_extracted_episodes
-from dataset.utils import xyz_to_map
-from dataset.maps.base_map import BaseMap
+from dataset.load_episodes import load_episodes, convert_floor_ep, ID_TO_FLOOR
+from dataset.maps.base_map import HabtoGrid
 from dataset.transform import MapTransform
 
 # Config
@@ -24,59 +24,77 @@ class RetMapsDataset(Dataset):
     Dataset class for retrieving maps and their corresponding descriptions.
     Load everything in memory to train/eval
     """
-    map = BaseMap(size=500, pixels_per_meter=10)
-    
-    def __init__(self, data_dir="data", data_split="val", increase_dataset_size=False, transform=None):
+    # Load map class
+    map = HabtoGrid(embeds_dir = "data/v2/maps")
+    base_dir = "data/v2/maps"
+
+    def __init__(self, data_dir="data", data_split="train", transform=None):
         
-        if config.USE_EXTRACTOR:
-            self.episodes = load_extracted_episodes(data_dir, data_split, increase_dataset_size)
-        else:
-            self.episodes = load_episodes(data_dir, data_split)
+        self.episodes = load_episodes(data_dir, data_split)
         self.episodes_dir = os.path.join(data_dir, data_split)
         
         self.transform = transform
-        self.use_fp16 = config.USE_FP16
 
     def __len__(self):
         return len(self.episodes)
 
     def __getitem__(self, idx):
-        
-        # Get episode data
+        """
+        Retrieves and processes a single episode sample.
+
+        Args:
+            idx (int): Index of the episode.
+
+        Returns:
+            dict: Dictionary containing processed feature map, target, query, and description.
+        """
+        # Retrieve episode data
         episode = self.episodes[idx]
-        
-        # Get episode Description
-        description = episode["summary_extraction"]
+        scene_name = episode["scene_id"].split("/")[-1].split(".")[0]
+
+        # Extract episode information
+        ext_summary = episode["extracted_summary"]
+        # TODO: add possibility to load only the summary
+        summary = episode["summary"]
         query = episode["query"]
-        
-        # Uncompress the feature map (.npz)
-        npz_file = np.load(episode["feature_map_path"])
-        feature_map = torch.tensor(npz_file["arr_0"])
-        
-        if config.USE_FP16:
-            feature_map = feature_map.half()
-        
-        # Path to obstacle_map
-        map_path = episode["feature_map_path"].split("feature_map.npz")[0]
+        floor_id = episode["floor_id"]
+        target_pos_hab = np.array(episode["position"])
 
-        # This is the gt position of the object in map frame
-        target = xyz_to_map(episode, self.map)
+        # Load the corresponding map embeddings
+        self.map.load_embed_init(
+            scene_name=scene_name,
+            base_dir=self.base_dir,
+            episode_id=convert_floor_ep(ID_TO_FLOOR, scene_name, floor_id),
+        )
 
-        # Transform the data, used only for convert to tensor or augmentations
+        # Load the feature map for the current episode
+        feature_map = self.map.load_embed_np_arr(visualize=False)
+
+        # Convert the target position from habitat coordinates to map frame
+        target = self.map.hab_to_px(target_pos_hab[:, [0, 2]])
+        target = self.map.px_to_arr(
+            target,
+            (self.map.init_dict['map_shape'] // self.map.grid_size) // 2
+        )
+
+        # Apply optional transformations (e.g., tensor conversion, augmentations)
         if self.transform:
-            feature_map, target, description = self.transform(feature_map, target, description)
-            
-        # Return as a dictionary
+            feature_map, target, ext_summary = self.transform(feature_map, target, ext_summary)
+
+        # Package and return the sample as a dictionary
         return {
-            "description": description,
+            "summary": ext_summary,
             "target": target,
             "query": query,
             "feature_map": feature_map,
-            "map_path": map_path
         }
 
-def get_dataloader(data_dir, data_split="train+val", batch_size=32, num_workers=4, 
-                   collate_fn=None, increase_dataset_size=False, kwargs={}):
+def get_dataloader(data_dir, 
+                   data_split="object_unseen", 
+                   batch_size=32, 
+                   num_workers=4, 
+                   collate_fn=None,
+                   kwargs={}):
     """
     Returns DataLoaders based on the specified data_split.
     
@@ -102,50 +120,13 @@ def get_dataloader(data_dir, data_split="train+val", batch_size=32, num_workers=
     """
     print("Initializing DataLoader...")
     
-    if data_split == "val":
-        print("Using validation dataset only. Splitting into training and validation subsets.")
-               
-        # --- Determine the split indices ---
-        # Load a temporary dataset without any transformation to get the full list of episodes.
-        temp_dataset = RetMapsDataset(data_dir, "val", increase_dataset_size, transform=None)
-        total_samples = len(temp_dataset)
-        train_size = int(0.8 * total_samples)
-        indices = list(range(total_samples))
-        train_indices = indices[:train_size]
-        val_indices = indices[train_size:]
-        
-        # --- Prepare transform parameters ---
-        # For the training subset, honor the provided use_aug flag (defaulting to True).
-        kwargs_train = kwargs.copy()
-        kwargs_train["use_aug"] = kwargs.get("use_aug", True)
-        
-        # For the validation subset, always disable augmentation.
-        kwargs_val = kwargs.copy()
-        kwargs_val["use_aug"] = False
-        
-        # --- Create two separate dataset instances with different transforms ---
-        train_dataset_full = RetMapsDataset(data_dir, "val", transform=MapTransform(**kwargs_train))
-        val_dataset_full   = RetMapsDataset(data_dir, "val", transform=MapTransform(**kwargs_val))
-        
-        # Use the same indices split for both datasets.
-        train_dataset = Subset(train_dataset_full, train_indices)
-        val_dataset   = Subset(val_dataset_full, val_indices)
-        
-        # --- Create DataLoaders ---
-        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True,
-                                  num_workers=num_workers, collate_fn=collate_fn)
-        val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False,
-                                num_workers=num_workers, collate_fn=collate_fn)
-        
-        print("DataLoader initialized.")
-        return train_loader, val_loader
-    
-    elif data_split == "train+val":
+    if data_split == "object_unseen":
+        print("Setting: Object Unseen")
         print("Using both training and validation datasets.")
         # --- Training dataset from the "train" folder ---
         kwargs_train = kwargs.copy()
         kwargs_train["use_aug"] = kwargs.get("use_aug", True)
-        train_dataset = RetMapsDataset(data_dir, "train", increase_dataset_size, transform=MapTransform(**kwargs_train))
+        train_dataset = RetMapsDataset(data_dir, "train", transform=MapTransform(**kwargs_train))
         
         # --- Validation dataset from the "val" folder (always no augmentation) ---
         kwargs_val = kwargs.copy()
@@ -160,10 +141,28 @@ def get_dataloader(data_dir, data_split="train+val", batch_size=32, num_workers=
         print("DataLoader initialized.")
         return train_loader, val_loader
     
-    else:
-        raise ValueError(f"Invalid data_split: {data_split}. Use 'val' or 'train+val'.")
+    elif data_split == "scene_unseen":
+        print("Setting: Scene Unseen")
+        print("Using both training and validation datasets.")
+        # --- Training dataset from the "train" folder ---
+        kwargs_train = kwargs.copy()
+        kwargs_train["use_aug"] = kwargs.get("use_aug", True)
+        train_dataset = RetMapsDataset(data_dir, "train", transform=MapTransform(**kwargs_train))
+        
+        # --- Validation dataset from the "val" folder (always no augmentation) ---
+        kwargs_val = kwargs.copy()
+        kwargs_val["use_aug"] = False
+        val_dataset = RetMapsDataset(data_dir, "val", False, transform=MapTransform(**kwargs_val))
+        
+        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True,
+                                  num_workers=num_workers, collate_fn=collate_fn)
+        val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False,
+                                num_workers=num_workers, collate_fn=collate_fn)
+        
+        print("DataLoader initialized.")
+        return train_loader, val_loader
     
-    
+
 if __name__ == "__main__":
     # Test the dataloader
     dataloader = get_dataloader("data", data_split="val", batch_size=2, shuffle=True, num_workers=4)
