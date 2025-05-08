@@ -53,10 +53,7 @@ class MapTransform:
         
         # Change in description order (2x more likely)
         if self.use_desc_aug and torch.rand(1) < self.prob*2:
-            # Randomly change the order of the single desciptions
-            # Ideally this is a "free" augmentation, as the order of the descriptions should not matter
-            desc_list = description.split(".")
-            random.shuffle(desc_list)
-            description = ". ".join(desc_list)
+            # Randomly change the order of the elements in the list
+            random.shuffle(description)
         
         return feature_map, xy_coords, description

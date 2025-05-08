@@ -60,7 +60,6 @@ class HabtoGrid:
 
         if dict_type == "embed": 
             dict_dir = os.path.join(dict_dir, f'{self.scene_name}')
-            dict_dir = os.path.join(base_dir, dict_dir) if base_dir else dict_dir
             file_name = f'{dict_type}_dict_model_{self.model_name}_scene_{self.scene_name}_episode_{self.episode_id}.npz'
 
             valid_files = [f for f in os.listdir(dict_dir) if f.__contains__(file_name)]
@@ -70,9 +69,7 @@ class HabtoGrid:
             file_name = f'{dict_type}_dict_model_{self.model_name}_scene_{self.scene_name}_episode_{self.episode_id}.npz'
             dict_path = os.path.join(dict_dir, file_name)
 
-        dict_path = os.path.join(base_dir, dict_path) if base_dir else dict_path
         dict_file = np.load(dict_path, allow_pickle=True)
-
         if dict_type == 'embed':
             return {eval(k) : v.squeeze(0) for k, v in dict_file.items()}
         

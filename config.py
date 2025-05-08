@@ -1,7 +1,6 @@
 
 # Debugging stuff
 DEBUG = True
-USE_FP16 = False
 USE_GRAD_CHECK = False
 USE_MIXED_PRECISION = False
 

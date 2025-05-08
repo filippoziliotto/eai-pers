@@ -49,7 +49,7 @@ def main(args):
     kwargs = vars(args)
     train_loader, val_loader = get_dataloader(
         data_dir=args.data_dir,
-        data_split=args.data_split,
+        split_dir=args.data_split,
         batch_size=args.batch_size,
         num_workers=args.num_workers,
         collate_fn=custom_collate,

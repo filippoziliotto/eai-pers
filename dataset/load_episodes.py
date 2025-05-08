@@ -13,9 +13,11 @@ def convert_floor_ep(data, scene_name, floor_id):
     Given the data, scene_name, and floor_id, return the corresponding episode_id.
     """
     for entry in data.get(scene_name, []):
-        if entry["floor_id"] == floor_id:
+        if entry["floor_id"] == int(floor_id):
             return entry["episode_id"]
-    return None
+    
+    assert False, f"Episode not found for scene {scene_name} and floor_id {floor_id}"
+
 
 def load_episodes(
     base_dir: str = "data/v2/splits",
@@ -23,34 +25,25 @@ def load_episodes(
     split: str = "train",
     ) -> List[Dict]:
     """
-    Reads all 'episodes.json' files from subdirectories in base_dir and merges them into a single list.
-
-    Parameters:
-        base_dir (str): The base directory containing subfolders with 'episodes.json' files.
-        split_dir (str): The subdirectory containing the split data. (default: "objects_unseen")
-        split (str): The specific split to load (e.g., "train", "val"). (default: "train")
-
-    Returns:
-        list[dict]: A combined list of all episodes from all subfolders.
+    Reads all 'episodes.json' files from subdirectories of base_dir/split_dir/split 
+    and merges them into a single list.
     """
     episodes = []
-    base_dir = os.path.join(base_dir, split_dir, split)
+    full_base_path = os.path.join(base_dir, "splits", split_dir, split)
 
-    # Traverse through each subdirectory
-    for root, _, files in os.walk(base_dir):
-        # Check if 'episodes.json' exists in the current directory
-        assert os.path.exists(root), f"Directory {root} does not exist!"
-        assert "episodes.json" in files, f"episodes.json not found in {root}!"
-        
-        # Read the 'episodes.json' file
-        file_path = os.path.join(root, "episodes.json")
-        with open(file_path, "r") as f:
-            ep = json.load(f)
-            episodes.extend(ep)  # Append all episodes to the list
-    
+    # List all immediate subdirectories
+    for subdir in os.listdir(full_base_path):
+        subdir_path = os.path.join(full_base_path, subdir)
+        if os.path.isdir(subdir_path):
+            episode_file = os.path.join(subdir_path, "episodes.json")
+            assert os.path.exists(episode_file), f"'episodes.json' not found in {subdir_path}"
+            
+            with open(episode_file, "r") as f:
+                ep = json.load(f)
+                episodes.extend(ep)
+
     assert len(episodes) > 0, "No episodes found!"
     return episodes
-
 
 if __name__ == "__main__":
     base_path = "data/v2/splits"
