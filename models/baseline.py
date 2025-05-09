@@ -1,6 +1,4 @@
-import torch
 import torch.nn as nn
-import torch.utils.checkpoint as checkpoint
 import warnings
 
 # Import custom models and configuration
@@ -12,8 +10,8 @@ import config
 warnings.filterwarnings('ignore', category=UserWarning)
 
 
-class RetrievalMapModel(nn.Module):
-    def __init__(self, embed_dim, num_heads, encoder, device):
+class BaselineModel(nn.Module):
+    def __init__(self, encoder, device):
         """
         Initializes the RetrievalMapModel.
 
@@ -28,15 +26,20 @@ class RetrievalMapModel(nn.Module):
             device (str): The device for model computation.
         """
         super().__init__()
-        print("Initializing Model...")
+        print("Initializing Baseline...")
+        
+        #TODO: add different baselines
+        self.baseline_type = None
 
         # Initialize and move first and second stages to the specified device
-        self.first_stage = MapAttentionModel(embed_dim, num_heads, encoder).to(device)
         self.second_stage = CoordinatePredictionModel(encoder, method="hybrid").to(device)
+        print("Baseline initialized.")
         
-        print("Model initialized.")
+        if self.baseline_type:
+            print(f"Using {self.baseline_type} baseline.")
 
-    def forward(self, description, map_tensor, query):
+
+    def forward(self, map_tensor, query):
         """
         Performs a forward pass through the model.
 
@@ -50,9 +53,4 @@ class RetrievalMapModel(nn.Module):
               - The similarity map result as computed by second_stage if not using MLP predictor.
               - A tuple of predicted coordinates from the MLP predictor.
         """
-
-        # Encode the map description using the first stage.
-        embed_map = self.first_stage(map_tensor, description)
-
-        # Compute the similarity map from the second stage, based on the encoded map.
-        return self.second_stage(embed_map, query)
+        return self.second_stage(map_tensor, query)

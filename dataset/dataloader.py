@@ -68,6 +68,8 @@ class RetMapsDataset(Dataset):
         # Load the feature map for the current episode
         feature_map = self.map.load_embed_np_arr(visualize=False)
         feature_map = torch.from_numpy(feature_map)
+        
+        # TODO: here we create the graph
 
         # Convert the target position from habitat coordinates to map frame
         target = self.map.hab_to_px(target_pos_hab[:, [0, 2]])

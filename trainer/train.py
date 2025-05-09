@@ -52,11 +52,6 @@ def train_one_epoch(
     train_acc = []
     raw_losses = []  # Store raw loss values for normalization.
 
-    # Mixed Precision Training setup
-    if config.USE_MIXED_PRECISION:
-        assert device == 'cuda', "Mixed precision training is only supported on CUDA devices."
-        scaler = torch.cuda.amp.GradScaler(device)
-
     for batch_idx, data in tqdm(enumerate(data_loader), total=len(data_loader), desc="Batch", leave=False):
         description = data['description']
         query = data['query']
@@ -68,16 +63,9 @@ def train_one_epoch(
         value_map = output['value_map']
 
         # Compute loss and perform backpropagation
-        if config.USE_MIXED_PRECISION:
-            with torch.cuda.amp.autocast(device):
-                loss = compute_loss(gt_target, output, loss_choice, loss_scaling, device)
-            scaler.scale(loss).backward()
-            scaler.step(optimizer)
-            scaler.update()
-        else:
-            loss = compute_loss(gt_target, output, loss_choice, loss_scaling, device)
-            loss.backward()
-            optimizer.step()
+        loss = compute_loss(gt_target, output, loss_choice, loss_scaling, device)
+        loss.backward()
+        optimizer.step()
         optimizer.zero_grad()
 
         # Append raw losses

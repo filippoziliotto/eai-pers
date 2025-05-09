@@ -1,10 +1,8 @@
 
 # Debugging stuff
 DEBUG = True
-USE_GRAD_CHECK = False
-USE_MIXED_PRECISION = False
 
-# Visualizations 
+# Visualizations #TODO: fix or remove
 VISUALIZE = True
 USE_OBSTACLE_MAP = True
 

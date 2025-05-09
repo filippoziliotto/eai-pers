@@ -11,6 +11,7 @@ from dataset.utils import custom_collate
 
 # Importing argument parsing function
 from args import get_args
+import config
 
 # Dataloader
 from dataset.dataloader import get_dataloader
@@ -25,6 +26,7 @@ try:
 except ImportError:
     print("Blip2Encoder cannot be imported, check your salesforce-lavis dependencies!!!")
 from models.model import RetrievalMapModel  
+from models.baseline import BaselineModel
 
 
 def main(args):
@@ -56,13 +58,19 @@ def main(args):
         kwargs=kwargs
     )
 
-    # Model Initialization
-    model = RetrievalMapModel(
-        embed_dim=args.embed_dim,
-        num_heads=args.num_heads,
-        encoder=encoder,
-        device=args.device,
-    )
+    # Model Initialization & Baseline Initialization
+    if config.BASELINE:
+        model = BaselineModel(
+            encoder=encoder,
+            device=args.device,
+        )
+    else:
+        model = RetrievalMapModel(
+            embed_dim=args.embed_dim,
+            num_heads=args.num_heads,
+            encoder=encoder,
+            device=args.device,
+        )
     print("N° of Model parameters: ", sum(p.numel() for p in model.parameters() if p.requires_grad))
 
     # Optimizer (and scheduler) initialization using **kwargs for scheduler parameters.

@@ -2,8 +2,8 @@ from setuptools import setup, find_packages
 
 setup(
     name="EAI-Pers",
-    version="0.1.0",  # Initial version
-    description="Personalized robotic navigation via querable online maps",  # Short description
+    version="0.1.1",  # Initial version
+    description="Personalized robotic navigation via queryable online maps",  # Short description
     long_description=open("README.md").read(),  # Use README.md as the long description
     long_description_content_type="text/markdown",  # Specify markdown for the long description
     author="Filippo Ziliotto",
