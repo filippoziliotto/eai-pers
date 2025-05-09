@@ -3,14 +3,14 @@ import warnings
 
 # Import custom models and configuration
 from models.stages.first_stage import MapAttentionModel
-from models.stages.second_stage import CoordinatePredictionModel
+from models.stages.second_stage import PersonalizedFeatureMapper
 
 # Suppress specific warnings
 warnings.filterwarnings('ignore', category=UserWarning)
 
 
 class RetrievalMapModel(nn.Module):
-    def __init__(self, embed_dim, num_heads, encoder, device):
+    def __init__(self, embed_dim, num_heads, encoder, type, tau, device):
         """
         Initializes the RetrievalMapModel.
 
@@ -18,18 +18,27 @@ class RetrievalMapModel(nn.Module):
             embed_dim (int): The embedding dimension.
             num_heads (int): The number of attention heads.
             encoder (Blip2Encoder): The encoder model.
-            pixels_per_meter (int): Map resolution in pixels per meter.
-            use_scale_similarity (bool): Flag for using scale similarity.
-            use_mlp_predictor (bool): Flag to include the MLP coordinate predictor.
-            mlp_embed_dim (int): The embedding dimension for the MLP predictor.
             device (str): The device for model computation.
         """
         super().__init__()
         print("Initializing Model...")
+        
+        self.embed_dim = embed_dim
+        self.num_heads = num_heads
+        self.device = device
+        self.process_type = type
+        self.tau = tau
 
         # Initialize and move first and second stages to the specified device
-        self.first_stage = MapAttentionModel(embed_dim, num_heads, encoder).to(device)
-        self.second_stage = CoordinatePredictionModel(encoder, method="hybrid").to(device)
+        self.first_stage = MapAttentionModel(self.embed_dim, 
+                                             self.num_heads, 
+                                             encoder
+                                             ).to(self.device)
+        self.second_stage = PersonalizedFeatureMapper(encoder, 
+                                                      process_type=self.process_type, 
+                                                      embed_dim=self.embed_dim, 
+                                                      tau=self.tau
+                                                      ).to(self.device)
         
         print("Model initialized.")
 

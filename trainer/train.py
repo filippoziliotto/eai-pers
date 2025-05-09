@@ -21,8 +21,7 @@ def train_one_epoch(
     model: torch.nn.Module,
     data_loader: DataLoader,
     optimizer: torch.optim.Optimizer,
-    loss_choice: str = 'NCE',
-    loss_scaling: float = 0.5,
+    loss_choice: str = 'L2',
     use_wandb: bool = False,
     config: Optional[Dict] = None,
     device: str = 'cpu',
@@ -61,7 +60,7 @@ def train_one_epoch(
         value_map = output['value_map']
 
         # Compute loss and perform backpropagation
-        loss = compute_loss(gt_target, output, loss_choice, loss_scaling, device)
+        loss = compute_loss(gt_target, output, loss_choice)
         loss.backward()
         optimizer.step()
         optimizer.zero_grad()
@@ -113,7 +112,6 @@ def train_and_validate(
     scheduler: Optional[torch.optim.lr_scheduler._LRScheduler] = None,
     num_epochs: int = 10,
     loss_choice: str = 'L2',
-    loss_scaling: float = 0.5,
     device: str = 'cpu',
     use_wandb: bool = False,
     mode: str = 'train',
@@ -159,7 +157,7 @@ def train_and_validate(
 
     for epoch in tqdm(range(num_epochs), desc="Epochs"):
         # Train for one epoch and get training metrics
-        train_loss, train_acc = train_one_epoch(model, train_loader, optimizer, loss_choice, loss_scaling, use_wandb, config, device)
+        train_loss, train_acc = train_one_epoch(model, train_loader, optimizer, loss_choice, use_wandb, config, device)
         
         # Always print training metrics
         print(f"\nEpoch {epoch}/{num_epochs} - Train Loss: {train_loss:.4f}")
@@ -169,7 +167,7 @@ def train_and_validate(
         # Determine if validation should be run this epoch
         if (epoch % validate_every_n_epocs == 0) or ((epoch + 1) == num_epochs):
             # Validate the model and get validation metrics
-            val_loss, val_acc = validate(model, val_loader, loss_choice, loss_scaling, device, mode=mode)
+            val_loss, val_acc = validate(model, val_loader, loss_choice, device, mode=mode)
             
             # Log both training and validation metrics to W&B if enabled
             if use_wandb:

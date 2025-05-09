@@ -1,9 +1,7 @@
 # Importing necessary libraries
 import torch
 import torch.nn as nn
-
-# Importing custom models
-from models.extractor import Extractor
+from torch.nn.utils.rnn import pad_sequence
 
 # Importing utility functions
 from utils.attention import MultiHeadAttention
@@ -21,47 +19,38 @@ class MapAttentionModel(nn.Module):
         """
         super(MapAttentionModel, self).__init__()
         self.encoder = encoder
-        self.extractor = Extractor()
         self.mh_attention = MultiHeadAttention(embed_dim=embed_dim, num_heads=num_heads)
 
-    def encode_descriptions(self, description):
+    def encode_descriptions(self, descriptions):
         """
-        Encodes a given description into embeddings.
-
-        Args:
-            description (str): The description to encode. (b, k)
+        descriptions: List[List[str]] of shape (batch_size, variable_lengths)
 
         Returns:
-            torch.Tensor: The concatenated embeddings of the descriptions.
+            Tensor of shape (batch_size, max_seq_len, embedding_dim)
         """
-            
-        descriptions = self.extractor.separate(description)
-        encoded_descriptions = [self.encoder.get_embeddings(text=desc, modality='text') for desc in descriptions]
+        # 1) Encode each list of strings into a tensor of shape (seq_len_i, E)
+        embedding_tensors = []
+        for desc_list in descriptions:
+            emb_dict = self.encoder.get_embeddings(text=desc_list, modality='text')
+            # emb_dict['text'] is (seq_len_i, E)
+            embedding_tensors.append(emb_dict['text'])
 
-        # Extract the 'text' tensors from each dictionary and concatenate them
-        text_tensors = [desc['text'].unsqueeze(0) for desc in encoded_descriptions]
-        # Attach embeddings as a batch (b, k, E), where k is batched to the longest element
-        attached_embs = torch.cat(text_tensors, dim=0)
-        return attached_embs
+        # 2) Pad them into a single tensor of shape (batch, max_seq, E), zero‐padding shorter ones
+        #    pad_sequence defaults to padding with zeros.
+        padded: torch.Tensor = pad_sequence(
+            embedding_tensors,
+            batch_first=True,  # → (batch, max_seq_len, E)
+            padding_value=0.0
+        )
 
-    def map_shaping(self, map_tensor):
-        """
-        Reshapes the map tensor.
-
-        Args:
-            map_tensor (torch.Tensor): The map tensor to reshape.
-
-        Returns:
-            torch.Tensor: The reshaped map tensor.
-        """
-        return reshape_map(map_tensor)
-
-    def forward(self, map_tensor, description):
+        return padded
+    
+    def forward(self, feature_map, description):
         """
         Forward pass of the model.
 
         Args:
-            map_tensor (torch.Tensor): The map tensor.
+            feature_map (torch.Tensor): The map tensor.
             description (str): The description to encode.
 
         Returns:
@@ -72,7 +61,7 @@ class MapAttentionModel(nn.Module):
         desc_embeds = self.encode_descriptions(description)
         
         # Get reshaped map tensor (b, h*w, E)
-        reshaped_map = self.map_shaping(map_tensor)
+        reshaped_map = reshape_map(feature_map)
         
         output = self.mh_attention(reshaped_map, desc_embeds, desc_embeds)
-        return output.view(*map_tensor.shape[:3], -1)
+        return output.view(*feature_map.shape[:3], -1)

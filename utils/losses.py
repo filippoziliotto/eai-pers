@@ -6,7 +6,7 @@ from torch.nn import functional as F
 Loss Utils
 """
 
-def compute_loss(gt_coords, output, loss_choice='L2', scaling = 0.5, device="cuda"):
+def compute_loss(gt_coords, output, loss_choice='L2'):
     """
     Computes the loss between ground truth and predicted coordinates.
     
@@ -18,19 +18,19 @@ def compute_loss(gt_coords, output, loss_choice='L2', scaling = 0.5, device="cud
     Returns:
         loss (Tensor): Computed loss.
     """
-    if loss_choice == 'MSE':  # Euclidean loss
-        return regression_loss(gt_coords, output['regression_coords'])
-    elif loss_choice == 'HYBRID':  # Manhattan loss
-        reg_loss = regression_loss(gt_coords, output['regression_coords'])
-        hm_loss = heatmap_loss(gt_coords, output['heatmap_coords'])
-        return scaling * reg_loss + (1 - scaling) * hm_loss
+    if loss_choice == 'L1':
+        loss = L1_loss(output["pred_coords"], gt_coords)
+    elif loss_choice == 'L2':
+        loss = L2_loss(output["pred_coords"], gt_coords)
     else:
-        raise ValueError("Invalid loss_choice. Use only implemented losses.")
-
-
-def regression_loss(pred_coords, gt_coords):
+        raise ValueError(f"Unknown loss choice: {loss_choice}. Use 'L1' or 'L2'.")
+    
+    return loss
+    
+    
+def L1_loss(pred_coords, gt_coords):
     """
-    Computes Mean Squared Error (MSE) loss between the predicted coordinates 
+    Computes Mean Absolute Error (L1) loss between the predicted coordinates 
     from the global regression branch and the ground truth coordinates.
     
     Args:
@@ -40,12 +40,12 @@ def regression_loss(pred_coords, gt_coords):
     Returns:
         torch.Tensor: Scalar loss value.
     """
-    return F.mse_loss(pred_coords, gt_coords)
+    return F.l1_loss(pred_coords, gt_coords)
 
-def heatmap_loss(pred_coords, gt_coords):
+def L2_loss(pred_coords, gt_coords):
     """
-    Computes Mean Squared Error (MSE) loss between the predicted coordinates 
-    from the soft-argmax heatmap branch and the ground truth coordinates.
+    Computes Mean Squared Error (L2) loss between the predicted coordinates 
+    from the global regression branch and the ground truth coordinates.
     
     Args:
         pred_coords (torch.Tensor): Predicted coordinates of shape (b, 2).
