@@ -1,13 +1,84 @@
-# Debugging stuff
-debug: True
+# -------------------------------------------------------------------
+# default.yaml
+# All the “factory” defaults for your project
+# -------------------------------------------------------------------
 
-# Visualizations #TODO: fix or remove
-visualize: True
-use_obstacle_map: True
+# Data
+data:
+  data_dir: "data"
+  data_split: "object_unseen"
+
+# Seed for reproducibility
+seed: 2025
+
+# Augmentations
+augmentations:
+  use_aug: false
+  aug_prob: 0.5
+  use_horizontal_flip: false
+  use_vertical_flip: false
+  use_random_crop: false
+  use_random_rotate: false
+  use_desc_aug: false
+
+# Model & Training
+training:
+  batch_size: 4
+  num_epochs: 10
+  validate_after_n_epochs: 1
+  loss:
+    choice: "L2"
+    scaling: 0.3
+
+# Attention
+attention:
+  embed_dim: 512
+  num_heads: 8
+
+encoder:
+  freeze: True
+
+# Map parameters
+map:
+  size: 50
+  embedding_size: 768
+
+# Optimizer & Scheduler
+optimizer:
+  type: "adam"
+  lr: 0.001
+  weight_decay: 1e-5
+
+scheduler:
+  type: "none"
+  step_size: 5
+  gamma: 0.1
+  patience: 10
+
+# Checkpoints
+checkpoint:
+  save: false
+  path: "model/checkpoints/model.pth"
+  load: false
+
+# Device & performance
+device:
+  type: "cpu"
+  num_workers: 4
+
+# Logging
+logging:
+  use_wandb: false
+  run_name: "none"
+
+# Debug / Visualization
+debug: false
+visualize: false
+use_obstacle_map: false
 
 # Baseline
-use_baseline:
-  type: "random" # "center", "random", "vlfm"
+baseline:
+  use_baseline: false
+  type: "random"
 
-# Extractor
-use_extractor: True
+use_extractor: true

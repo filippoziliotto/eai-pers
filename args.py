@@ -10,10 +10,10 @@ def get_args():
     parser = argparse.ArgumentParser(description="Training & Eval script for Eai-Pers repo")
     
     # Configuration file
-    parser.add_argument("--config", type=str, default="default.yaml", help="Path to the configuration file")
+    parser.add_argument("--config", type=str, default="eai_pers.yaml", help="Path to the configuration file")
     
     # Data path Parameters
-    parser.add_argument("--data_dir", type=str, default="data", help="Path to the data directory")
+    parser.add_argument("--data_dir", type=str, default="data/v2", help="Path to the data directory")
     parser.add_argument("--data_split", type=str, default="object_unseen", choices=["object_unseen", "scene_unseen"], help="Evaluation setting to use")
 
     # Mode Parameters

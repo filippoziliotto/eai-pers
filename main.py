@@ -59,10 +59,10 @@ def main(args):
     )
 
     # Model Initialization & Baseline Initialization
-    if cfg.baseline:
+    if cfg.baseline.use_baseline:
         model = BaselineModel(
             encoder=encoder,
-            type=cfg.use_baseline,
+            type=cfg.baseline,
             device=args.device,
         )
     else:

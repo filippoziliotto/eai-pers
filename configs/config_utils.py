@@ -1,31 +1,44 @@
 from omegaconf import OmegaConf
 import os
 
-def load_config(config_path="default.yaml", base_path="configs", verbose=True):
+import os
+from omegaconf import OmegaConf, DictConfig
+
+def load_config(
+    config_path: str = "eai_pers.yaml",
+    base_path: str = "configs",
+    verbose: bool = True,
+) -> DictConfig:
     """
-    Load and optionally merge a base default.yaml with the specified config.
-    
+    Load and merge the base 'default.yaml' with an experiment-specific config.
+
     Args:
-        config_path (str): YAML config to load (e.g., "experiment1.yaml").
-        base_path (str): Path to the config directory.
-        verbose (bool): Whether to print the loaded config.
+        config_path: Name of the experiment config in 'configs/experiment/'.
+        base_path: Root directory for configs (contains 'default.yaml' and 'experiment/').
+        verbose: If True, print loaded configs.
 
     Returns:
-        OmegaConf.DictConfig: Merged configuration object.
+        OmegaConf.DictConfig: The merged configuration.
     """
-    conf_path = os.path.join(base_path, config_path)
+    default_file = os.path.join(base_path, "default.yaml")
+    exp_file     = os.path.join(base_path, "experiments", config_path)
 
-    # Load base default config
-    default_cfg = OmegaConf.load(conf_path) if os.path.exists(conf_path) else OmegaConf.create()
+    if not os.path.isfile(default_file):
+        raise FileNotFoundError(f"Default config not found: {default_file}")
+    default_cfg = OmegaConf.load(default_file)
 
-    # Merge them (experiment overrides default)
-    config = OmegaConf.merge(default_cfg)
+    exp_cfg = OmegaConf.load(exp_file) if os.path.isfile(exp_file) else OmegaConf.create()
 
     if verbose:
-        print(f"\nLoaded config from '{config}'...\n")
-        print(OmegaConf.to_yaml(config, resolve=True))
+        print(f"Loaded default config from '{default_file}'")
+        print(OmegaConf.to_yaml(default_cfg, resolve=True))
+        if exp_cfg:
+            print(f"\nLoaded experiment config from '{exp_file}'")
+            print(OmegaConf.to_yaml(exp_cfg, resolve=True))
 
-    return config
+    merged = OmegaConf.merge(default_cfg, exp_cfg)
+    return merged
+
 
 
 def save_config(config, config_path):
