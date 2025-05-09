@@ -49,52 +49,6 @@ class Extractor:
         else:
             raise ValueError(f"Invalid description type: {type}")
         
-    def rule_simplification(self, description: str) -> list:
-        """
-        Simplifies the description using rule-based methods.
-
-        Args:
-            description (str): The text to be simplified.
-
-        Returns:
-            list: A list of simplified descriptions.
-
-        Note:
-            This method is not yet implemented.
-        """
-        raise NotImplementedError("Rule-based simplification is not yet implemented.")
-    
-    def nme_simplification(self, description: str, dict_size: str = 'sm') -> list:
-        """
-        Simplifies the description using Named Entity Recognition (NER) and syntactic dependencies.
-
-        Args:
-            description (str): The text to be simplified.
-            dict_size (str): The size of the spaCy model to use ('sm', 'md', 'lg').
-
-        Returns:
-            list: A list of simplified descriptions.
-
-        Raises:
-            AssertionError: If an invalid dictionary size is provided.
-        """
-        assert dict_size in ("sm", "md", "lg"), f"Invalid dictionary size: {dict_size}"
-        nlp = spacy.load(f"en_core_web_{dict_size}")
-        doc = nlp(description)
-        
-        descriptions = []
-        
-        for sent in doc.sents:
-            entities = [(ent.text, ent.label_) for ent in sent.ents]
-            tokens = [token for token in sent if token.dep_ in ("nsubj", "ROOT", "prep", "pobj")]
-            
-            # Simplify sentence based on subject, object, and relationships
-            simplified = " ".join([token.text for token in tokens])
-            descriptions.append(simplified)
-        
-        return descriptions
-        
-        
 if __name__ == "__main__":
     
     # Test the extractor

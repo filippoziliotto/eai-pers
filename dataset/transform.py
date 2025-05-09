@@ -1,7 +1,6 @@
 
 # Custom Transform
 import torch
-import args
 import random
 
 # Import utility functions

@@ -26,15 +26,13 @@ class HabtoGrid:
     def load_embed_init(self,
                         scene_name: str,
                         episode_id: str = None,
-                        base_dir: str = None):
-        r"Loads the model (if not loaded), transformation matrix, embedding and init dicts"
+                        base_dir: str = None
+                        ):
         
         self.scene_name = scene_name     
         self.episode_id = episode_id
         self.init_dict = self.load_dict('init', base_dir)
         self.embed_dict = self.load_dict('embed', base_dir)
-
-        print(f"Loaded Embed and Init dicts for Scene: {self.scene_name} and Episode: {self.episode_id}")
 
         #Tranformation matrix from habitat to agent coordinates
         hab_init_pose = self.init_dict['init_pose'].item()
@@ -51,7 +49,6 @@ class HabtoGrid:
                   dict_type: str,
                   base_dir: str = None,
                   ):
-        r"Loads embed or init dict from the embeds_dir corresponding to the current scene and model name"
         
         assert dict_type in ['embed', 'init']
         assert self.model_name in ['BLIP2']
@@ -76,7 +73,6 @@ class HabtoGrid:
         return dict(dict_file)
         
     def load_tf_hab_to_agent(self, init_pose):
-        r"Transforms Habitat coordinates to Agent coordinates"
 
         #Get x, y coords
         x, y = np.array(init_pose['init_pos_abs'])[[0, 2]]
@@ -182,7 +178,6 @@ class HabtoGrid:
         embed_dim = next(iter(self.embed_dict.values())).shape[0]
 
         embed_arr = np.zeros((arr_shape[0], arr_shape[1], embed_dim))
-        print(f'Loading array of shape: {embed_arr.shape}')
         
         px_to_arr_pos = {px : self.px_to_arr(np.array([px]), arr_origin)[0] \
                          for px in self.embed_dict.keys()}
@@ -197,143 +192,3 @@ class HabtoGrid:
             plt.imshow(vis_arr)
         
         return embed_arr
-
-    def visualize(self, save_dir = None, plot_pts = None, 
-                  plot_grid: bool = True, plot_reorient: bool = False,
-                  point_size: int = 10):
-
-        assert len(self.sim_dict) > 0, 'Please load the sim dict first'
-
-
-        fig, ax = plt.subplots(figsize = (8, 8))
-
-        top_pts = self.top_k_sims(k = 4)
-        if plot_reorient: top_pts = self.rot_pts(top_pts)
-
-        ax.scatter(top_pts[:, 0], top_pts[:, 1], 
-                        facecolors='white', edgecolors='black', 
-                        s=150, linewidths=2.5)
-            
-        self.plot_scores_in_grid(ax = ax, fig = fig, 
-                                    plot_grid = plot_grid,
-                                    plot_reorient=plot_reorient,
-                                    point_size=point_size)
-
-        if plot_pts is not None:
-            if plot_reorient: plot_pts = self.rot_pts(plot_pts)
-            ax.scatter(plot_pts[:, 0], plot_pts[:, 1], 
-                        facecolors='white', edgecolors='green', 
-                        s=150)
-            ax.scatter(plot_pts[:, 0], plot_pts[:, 1], color = 'black')
-
-
-
-        text_add = f'Prompt Mode: Multi_Modal\nText Prompt: {self.text}' if self.prompt_mode == "multi" \
-                    else f'Prompt Mode: Text\nText Prompt: {self.text}' if self.prompt_mode == "text" \
-                    else f'Prompt Mode: Image'
-        
-        fig.suptitle(f'Scene: {self.scene_name}, Model: {self.model_name}, {text_add}\n', 
-                     fontstyle='italic', fontsize = 15)
-        fig.tight_layout()
-
-        if save_dir is not None:
-            if not save_dir.endswith('png'):
-                save_dir = os.path.join(save_dir, f'scene_{self.scene_name}_model_{self.model_name}.png')
-            fig.savefig(save_dir)
-
-            plt.close(fig)
-        
-        else: plt.show()
-
-    def plot_img(self, ax: plt.Axes, title: str = 'Image Prompt'):
-        ax.imshow(self.img)
-        ax.set_xticks([])
-        ax.set_yticks([])
-        ax.set_title(title)
-        
-    def plot_scores_in_grid(self, ax: plt.Axes, fig: plt.figure, 
-                            plot_grid: bool = False, plot_reorient: bool = False,
-                            point_size: int = 10):
-
-        #Get grid points and corresponding similarity scores
-        grid_pts = np.array(list(self.sim_dict[0].keys()))
-        sim_scores = np.array(list(self.sim_dict[0].values()))
-
-        if plot_reorient:
-
-            plot_grid = False
-            
-            # quat = self.init_dict['init_pose'].item()['init_rot_abs']
-            # quat = [quat[0], quat[2], quat[1], quat[3]]
-
-            # rot_vec = R.from_quat(quat).as_rotvec(degrees = False)
-            # rot_vec[2] = rot_vec[2] + (np.pi/2)
-            # rot_mat = R.from_rotvec(rot_vec).as_matrix()[:2, :2]
-
-            # grid_pts = grid_pts @ rot_mat
-
-            grid_pts = self.rot_pts(grid_pts)
-        
-        score_min, score_max = sim_scores.min(), sim_scores.max()
-        score_lims = (score_min, score_max)
-
-
-        x_min, y_min = grid_pts.min(axis = 0) - self.grid_size
-        x_max, y_max = grid_pts.max(axis = 0) + 2 * self.grid_size
-        x_lims = (x_min, x_max)
-        y_lims = (y_min, y_max)
-
-        #Plotting Grid with Similarity Scores
-        if plot_grid:
-
-            eu.plot_grid_lims(ax, 
-                        x_lims = x_lims,
-                        y_lims = y_lims,
-                        grid_size = self.grid_size,
-                        plot_all_centers = False)
-        
-        else:
-
-            ax.set_xlim(x_lims[0], x_lims[1])
-            ax.set_ylim(y_lims[0], y_lims[1])
-        
-        # Define a colormap
-        cmap = cm.coolwarm_r
-        norm = colors.Normalize(vmin = score_lims[0], vmax = score_lims[1])
-        
-        score_colors = cmap(norm(sim_scores))
-        score_colors = np.array(score_colors).squeeze(axis = 1)
-        
-        # Add colorbar (legend for colormap)
-        cbar = fig.colorbar(cm.ScalarMappable(cmap=cmap, norm=norm), ax=ax, orientation = "vertical")
-        cbar.set_label("Embedding Similarity", labelpad=10)  # Label for the color legend
-        cbar.ax.yaxis.set_label_position('right')
-
-        # cbar.ax.set_yticks([val for val in np.linspace(score_lims[0], score_lims[1], 6)])
-        # cbar.ax.set_yticklabels([np.round(val, 2) for val in np.linspace(score_lims[0], score_lims[1], 5)])
-
-        cbar.set_ticks([val for val in np.linspace(score_lims[0], score_lims[1], 5)])
-        cbar.set_ticklabels([np.round(val, 2) for val in np.linspace(score_lims[0], score_lims[1], 5)])
-
-        #Plot grid point and corresponding color
-        ax.scatter(grid_pts[:, 0], grid_pts[:, 1], color = score_colors, s = point_size)
-        
-        ax.set_title(f'Embedding Similarity Grid')
-        ax.set_xlabel('')
-        ax.set_ylabel('')
-        ax.set_xticks([])
-        ax.set_yticks([])
-
-    def rot_pts(self, pts):
-
-        quat = self.init_dict['init_pose'].item()['init_rot_abs']
-        quat = [quat[0], quat[2], quat[1], quat[3]]
-
-        rot_vec = R.from_quat(quat).as_rotvec(degrees = False)
-        #rot_vec[2] = rot_vec[2] + (np.pi/2)
-        rot_mat = R.from_rotvec(rot_vec).as_matrix()[:2, :2]
-
-        pts = pts @ rot_mat
-
-        return pts
-

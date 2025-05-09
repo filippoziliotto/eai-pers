@@ -8,6 +8,7 @@ from trainer.validate import validate
 # Importing utility functions
 from utils.utils import get_optimizer, set_seed, args_logger, generate_wandb_run_name
 from dataset.utils import custom_collate
+from config import load_config
 
 # Importing argument parsing function
 from args import get_args
@@ -25,7 +26,7 @@ try:
 except ImportError:
     print("Blip2Encoder cannot be imported, check your salesforce-lavis dependencies!!!")
 from models.model import RetrievalMapModel  
-
+from models.baseline import BaselineModel
 
 def main(args):
     
@@ -40,7 +41,9 @@ def main(args):
     # Log args and set seed
     args_logger(args)
     set_seed(args.seed)
-        
+    # Log other config parameters
+    config = load_config(config_path=args.config)
+    
     # Get Freezed text encoder and initialize
     encoder = Blip2Encoder(device=args.device, freeze_encoder=args.freeze_encoder)
     encoder.initialize()
@@ -56,13 +59,19 @@ def main(args):
         kwargs=kwargs
     )
 
-    # Model Initialization
-    model = RetrievalMapModel(
-        embed_dim=args.embed_dim,
-        num_heads=args.num_heads,
-        encoder=encoder,
-        device=args.device,
-    )
+    # Model Initialization & Baseline Initialization
+    if config.BASELINE:
+        model = BaselineModel(
+            encoder=encoder,
+            device=args.device,
+        )
+    else:
+        model = RetrievalMapModel(
+            embed_dim=args.embed_dim,
+            num_heads=args.num_heads,
+            encoder=encoder,
+            device=args.device,
+        )
     print("N° of Model parameters: ", sum(p.numel() for p in model.parameters() if p.requires_grad))
 
     # Optimizer (and scheduler) initialization using **kwargs for scheduler parameters.
@@ -94,7 +103,8 @@ def main(args):
             load_checkpoint=args.load_checkpoint,
             save_checkpoint=args.save_checkpoint,
             checkpoint_path=args.checkpoint_path,
-            validate_every_n_epocs=args.validate_after_n_epochs
+            validate_every_n_epocs=args.validate_after_n_epochs,
+            config=config,
         )
     elif args.mode in ['eval']:
         assert args.load_checkpoint, "Checkpoint path must be provided for evaluation."
@@ -107,7 +117,8 @@ def main(args):
             use_wandb=args.use_wandb,
             load_checkpoint=args.load_checkpoint,
             checkpoint_path=args.checkpoint_path,
-            mode=args.mode
+            mode=args.mode,
+            config=config,
         )
         
     # Finish run

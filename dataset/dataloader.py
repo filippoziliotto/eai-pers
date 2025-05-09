@@ -2,9 +2,7 @@
 import torch
 import numpy as np
 from torch.utils.data import Dataset, DataLoader
-from torch.utils.data.dataset import Subset
 import os
-import json
 
 # Add base path to PYTHONPATH
 import sys
@@ -15,9 +13,6 @@ sys.path.append(base_path)
 from dataset.load_episodes import load_episodes, convert_floor_ep, ID_TO_FLOOR
 from dataset.maps.base_map import HabtoGrid
 from dataset.transform import MapTransform
-
-# Config
-import config
 
 class RetMapsDataset(Dataset):
     """
@@ -68,6 +63,8 @@ class RetMapsDataset(Dataset):
         # Load the feature map for the current episode
         feature_map = self.map.load_embed_np_arr(visualize=False)
         feature_map = torch.from_numpy(feature_map)
+        
+        # TODO: here we create the graph
 
         # Convert the target position from habitat coordinates to map frame
         target = self.map.hab_to_px(target_pos_hab[:, [0, 2]])

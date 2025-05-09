@@ -9,6 +9,9 @@ def get_args():
     """
     parser = argparse.ArgumentParser(description="Training script for coordinate regression")
     
+    # Configuration file
+    parser.add_argument("--config", type=str, default="default.yaml", help="Path to the configuration file")
+    
     # Data path Parameters
     parser.add_argument("--data_dir", type=str, default="data", help="Path to the data directory")
     parser.add_argument("--data_split", type=str, default="object_unseen", choices=["object_unseen", "scene_unseen"], help="Evaluation setting to use")
