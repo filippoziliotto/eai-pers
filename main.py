@@ -70,6 +70,8 @@ def main(args):
             embed_dim=args.embed_dim,
             num_heads=args.num_heads,
             encoder=encoder,
+            type=cfg.model.process_type,
+            tau=cfg.model.tau,
             device=args.device,
         )
     print("N° of Model parameters: ", sum(p.numel() for p in model.parameters() if p.requires_grad))
