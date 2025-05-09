@@ -19,7 +19,6 @@ def validate(
     model, 
     data_loader, 
     loss_choice='L2',
-    loss_scaling=0.5,
     device='cpu',
     use_wandb=False,
     load_checkpoint=False,
@@ -76,14 +75,10 @@ def validate(
             value_map = output['value_map']
 
             # Compute loss
-            loss = compute_loss(gt_target, output, loss_choice, loss_scaling, device)
+            loss = compute_loss(gt_target, output, loss_choice, device)
             val_loss = loss.item()
             raw_losses.append(val_loss)
             epoch_loss += val_loss
-            
-            # Predict random index for random baseline
-            if config.random_baseline:
-                output = get_random_target(value_map, type='center')
 
             # Compute accuracy
             accuracy.append(compute_accuracy(gt_target, output))
@@ -127,7 +122,7 @@ def validate(
     return val_avg_loss, val_avg_acc
 
 
-# TODO: Sicne there is already a log_epoch_metrics function in utils/utils.py
+# TODO: Since there is already a log_epoch_metrics function in utils/utils.py
 # We can remove this function and make it cleaner
 def log_epoch_metrics(val_loss, val_acc):
     metrics = {

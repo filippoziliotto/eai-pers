@@ -70,6 +70,8 @@ def main(args):
             embed_dim=args.embed_dim,
             num_heads=args.num_heads,
             encoder=encoder,
+            type=cfg.model.process_type,
+            tau=cfg.model.tau,
             device=args.device,
         )
     print("N° of Model parameters: ", sum(p.numel() for p in model.parameters() if p.requires_grad))
@@ -96,7 +98,6 @@ def main(args):
             scheduler=scheduler,
             num_epochs=args.num_epochs,
             loss_choice=args.loss_choice,
-            loss_scaling=args.loss_scaling,
             device=args.device,
             use_wandb=args.use_wandb,
             mode=args.mode,
@@ -112,7 +113,6 @@ def main(args):
             model=model,
             data_loader=val_loader,
             loss_choice=args.loss_choice,
-            loss_scaling=args.loss_scaling,
             device=args.device,
             use_wandb=args.use_wandb,
             load_checkpoint=args.load_checkpoint,
