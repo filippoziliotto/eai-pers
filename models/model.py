@@ -1,12 +1,9 @@
-import torch
 import torch.nn as nn
-import torch.utils.checkpoint as checkpoint
 import warnings
 
 # Import custom models and configuration
 from models.stages.first_stage import MapAttentionModel
 from models.stages.second_stage import CoordinatePredictionModel
-import config
 
 # Suppress specific warnings
 warnings.filterwarnings('ignore', category=UserWarning)

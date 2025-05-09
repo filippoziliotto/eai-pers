@@ -8,8 +8,7 @@ import os
 from utils.losses import compute_loss
 from utils.metrics import compute_accuracy
 
-# Config & Utils imports
-import config
+# Utils imports
 from utils.visualize import visualize
 from utils.utils import get_random_target
 
@@ -26,6 +25,7 @@ def validate(
     load_checkpoint=False,
     checkpoint_path=None,
     mode:str='eval',
+    config=None,
     ):
     
     """
@@ -82,14 +82,14 @@ def validate(
             epoch_loss += val_loss
             
             # Predict random index for random baseline
-            if config.RANDOM_BASELINE:
+            if config.random_baseline:
                 output = get_random_target(value_map, type='center')
 
             # Compute accuracy
             accuracy.append(compute_accuracy(gt_target, output))
             
             # Visualize results
-            if config.VISUALIZE:
+            if config.visualize:
                 for query_, gt_target_, value_map_, map_path_ in zip(query, gt_target, value_map, data['map_path']):
                     visualize(
                         query_, 
@@ -99,11 +99,11 @@ def validate(
                         batch_idx, 
                         name="prediction", 
                         split="val",
-                        use_obstacle_map=config.USE_OBSTACLE_MAP,  # this flag decides if the obstacle map is shown
+                        use_obstacle_map=config.use_obstacle_map,
                         upscale_factor=2.0
                     )
         
-            if config.DEBUG and batch_idx == 2:
+            if config.debug and batch_idx == 2:
                 break
     
     # Compute average validation normalized loss

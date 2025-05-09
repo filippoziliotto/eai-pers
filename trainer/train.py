@@ -1,5 +1,6 @@
 
 # Local imports
+from typing import Optional, Dict
 import torch
 from torch.utils.data import DataLoader
 import wandb
@@ -13,10 +14,6 @@ from trainer.validate import validate
 from utils.utils import log_lr_scheduler, log_epoch_metrics
 from utils.visualize import visualize
 
-# Config file
-import config
-from typing import Optional, Dict
-
 # Get the normalization constant for the loss
 loss_norm = None
 
@@ -27,6 +24,7 @@ def train_one_epoch(
     loss_choice: str = 'NCE',
     loss_scaling: float = 0.5,
     use_wandb: bool = False,
+    config: Optional[Dict] = None,
     device: str = 'cpu',
 ):
     """
@@ -81,7 +79,7 @@ def train_one_epoch(
             wandb.log({"Batch Train Loss": train_loss / len(query), "Batch": batch_idx})
             
         # Visualize predictions if enabled
-        if config.VISUALIZE:
+        if config.visualize:
             for query_, gt_target_, value_map_, map_path_ in zip(query, gt_target, value_map, data['map_path']):
                 visualize(
                     query_, 
@@ -91,11 +89,11 @@ def train_one_epoch(
                     batch_idx, 
                     name="prediction", 
                     split="train",
-                    use_obstacle_map=config.USE_OBSTACLE_MAP,
+                    use_obstacle_map=config.use_obstacle_map,
                     upscale_factor=2.0
                 )
         
-        if config.DEBUG and batch_idx == 1:
+        if config.debug and batch_idx == 1:
             break
 
     # Normalize the epoch loss using the new baseline normalization.
@@ -122,7 +120,8 @@ def train_and_validate(
     load_checkpoint: bool = False,
     save_checkpoint: bool = False,
     checkpoint_path: Optional[str] = None,
-    validate_every_n_epocs: int = 5
+    validate_every_n_epocs: int = 5,
+    config: Optional[Dict] = None,
 ):
     """
     Full training loop that trains and validates the model for multiple epochs.
@@ -160,7 +159,7 @@ def train_and_validate(
 
     for epoch in tqdm(range(num_epochs), desc="Epochs"):
         # Train for one epoch and get training metrics
-        train_loss, train_acc = train_one_epoch(model, train_loader, optimizer, loss_choice, loss_scaling, use_wandb, device)
+        train_loss, train_acc = train_one_epoch(model, train_loader, optimizer, loss_choice, loss_scaling, use_wandb, config, device)
         
         # Always print training metrics
         print(f"\nEpoch {epoch}/{num_epochs} - Train Loss: {train_loss:.4f}")
