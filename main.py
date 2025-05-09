@@ -8,7 +8,7 @@ from trainer.validate import validate
 # Importing utility functions
 from utils.utils import get_optimizer, set_seed, args_logger, generate_wandb_run_name
 from dataset.utils import custom_collate
-from config import load_config
+from configs.config_utils import load_config, flatten_config
 
 # Importing argument parsing function
 from args import get_args
@@ -33,16 +33,15 @@ def main(args):
     # Print all the args
     print("Starting run...")
     
+    # Log args set seed and config
+    args_logger(args)
+    set_seed(args.seed)
+    cfg = load_config(config_path=args.config)
+    
     # Initialize W&B
     if args.use_wandb:
         run_name = generate_wandb_run_name(args)
-        wandb.init(project="EAI-Pers", name=run_name)
-    
-    # Log args and set seed
-    args_logger(args)
-    set_seed(args.seed)
-    # Log other config parameters
-    config = load_config(config_path=args.config)
+        wandb.init(project="EAI-Pers", name=run_name, config=flatten_config(cfg))
     
     # Get Freezed text encoder and initialize
     encoder = Blip2Encoder(device=args.device, freeze_encoder=args.freeze_encoder)
@@ -60,7 +59,7 @@ def main(args):
     )
 
     # Model Initialization & Baseline Initialization
-    if config.BASELINE:
+    if cfg.baseline:
         model = BaselineModel(
             encoder=encoder,
             device=args.device,
@@ -104,7 +103,7 @@ def main(args):
             save_checkpoint=args.save_checkpoint,
             checkpoint_path=args.checkpoint_path,
             validate_every_n_epocs=args.validate_after_n_epochs,
-            config=config,
+            config=cfg,
         )
     elif args.mode in ['eval']:
         assert args.load_checkpoint, "Checkpoint path must be provided for evaluation."
@@ -118,7 +117,7 @@ def main(args):
             load_checkpoint=args.load_checkpoint,
             checkpoint_path=args.checkpoint_path,
             mode=args.mode,
-            config=config,
+            config=cfg,
         )
         
     # Finish run
