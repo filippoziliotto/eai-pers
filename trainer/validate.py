@@ -25,7 +25,7 @@ def validate(
     load_checkpoint=False,
     checkpoint_path=None,
     mode:str='eval',
-    config=None,
+    config: dict=None,
     ):
     
     """
