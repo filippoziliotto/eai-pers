@@ -6,7 +6,6 @@ import warnings
 # Suppress specific warnings
 warnings.filterwarnings('ignore', category=UserWarning)
 
-
 class BaselineModel(nn.Module):
     def __init__(self, encoder, type, device):
         """
@@ -20,13 +19,13 @@ class BaselineModel(nn.Module):
         super().__init__()
         print("Initializing Baseline...")
         
+        self.encoder = encoder
+        self.device = device
+        
         # Which baseline to use
         self.baseline_type = type
         if self.baseline_type:
             print(f"Using {self.baseline_type} baseline.")
-            
-        self.encoder = encoder
-        self.device = device
 
         print("Baseline initialized.")
 
@@ -51,14 +50,14 @@ class BaselineModel(nn.Module):
             # For random baseline, just return a random index
             output["value_map"] = torch.rand((b, w, h, 1))
             output["max_value"] = torch.rand((b, 1))
-            output["max_index"] = torch.randint(0, w * h, (b,)).view(b, w, h)
+            output["coords"] = torch.randint(0, w * h, (b,)).view(b, w, h)
             return output
             
         elif self.baseline_type in ["center"]:
             # For center baseline, just return the center of the feature map
             output["value_map"] = torch.rand((b, w, h, 1))
             output["max_value"] = torch.rand((b, 1))
-            output["max_index"] = torch.tensor([w // 2, h // 2]).expand(b, -1)
+            output["coords"] = torch.tensor([w // 2, h // 2]).expand(b, -1)
             return output
         
         elif self.baseline_type in ["vlfm"]:
@@ -76,7 +75,7 @@ class BaselineModel(nn.Module):
             # Get max element in the value map for each batch
             max_value_map, max_index = value_map.view(b, -1).max(dim=-1)
             output["max_value"] = max_value_map
-            output["max_index"] = max_index.view(b, w, h)  
+            output["coords"] = max_index.view(b, w, h)  
             return output
         
         else:

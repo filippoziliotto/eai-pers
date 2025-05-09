@@ -223,7 +223,6 @@ def generate_wandb_run_name(args):
         "opt": args.optimizer,
         "sched": args.scheduler,
         "aug": "yes" if args.use_aug else "no",
-        "dsetx2": "yes" if args.increase_dataset_size else "no",
     }
 
     # Sort the keys to ensure consistent ordering.
@@ -239,43 +238,41 @@ def get_loss(loss_choice):
     else:
         return nn.MSELoss()
 
+
 """
-Random Baseline
+SoftMax Utils
 """
-def get_random_target(value_map: torch.Tensor, type='random') -> torch.Tensor:
+def soft_argmax_coords(value_map: torch.Tensor, tau: float = 1.0) -> torch.Tensor:
     """
-    For each sample in the batch, returns a random (x, y) coordinate
-    where the value in the value_map is non-zero.
-    If no non-zero value exists for a sample, a random coordinate is selected.
-    
-    Args:
-        value_map (torch.Tensor): Tensor of shape (batch, width, height)
+    value_map: Tensor of shape (b, h, w, 1) containing unnormalized scores.
+    tau:       Temperature for softmax; lower = sharper peak.
     
     Returns:
-        torch.Tensor: A tensor of shape (batch, 2) with the selected (x, y) coordinates.
+        coords: Tensor of shape (b, 2), where coords[i] = (x_i, y_i) are the
+                expected height- and width-indices respectively.
     """
-    output = {}
-    b, w, h = value_map.shape
-    pred_target = []
-
-    if type in ['random']:
-        for i in range(b):
-            # Get indices of non-zero values for sample i.
-            nonzero_idx = (value_map[i] != 0).nonzero(as_tuple=False)
-            if nonzero_idx.numel() == 0:
-                # If no non-zero value is present, select a random coordinate.
-                rand_x = torch.randint(0, w, (1,), device=value_map.device).item()
-                rand_y = torch.randint(0, h, (1,), device=value_map.device).item()
-                pred_target.append(torch.tensor([rand_x, rand_y], device=value_map.device))
-            else:
-                # Select a random index among the non-zero indices.
-                idx = torch.randint(0, nonzero_idx.size(0), (1,)).item()
-                pred_target.append(nonzero_idx[idx])
-    elif type in ['center']:
-        for i in range(b):
-            pred_target.append(torch.tensor([w//2, h//2], device=value_map.device))
-    else:
-        raise ValueError(f"Unsupported type: {type}")
+    b, h, w, _ = value_map.shape
+    # squeeze the last dim
+    scores = value_map.view(b, h, w)
     
-    output['reg_coords'] = torch.stack(pred_target, dim=0)
-    return output
+    # flatten spatial dims and apply softmax
+    flat = scores.view(b, -1)               # (b, h*w)
+    probs = F.softmax(flat / tau, dim=-1)   # (b, h*w)
+    
+    # build coordinate grids
+    # grid_h[i,j] = i in [0..h-1], grid_w[i,j] = j in [0..w-1]
+    grid_h, grid_w = torch.meshgrid(
+        torch.arange(h, device=value_map.device, dtype=torch.float),
+        torch.arange(w, device=value_map.device, dtype=torch.float),
+        indexing='ij'
+    )                                        # both (h, w)
+    grid_h = grid_h.reshape(-1)              # (h*w,)
+    grid_w = grid_w.reshape(-1)              # (h*w,)
+    
+    # compute expected coords
+    exp_h = (probs * grid_h).sum(dim=-1)     # (b,)
+    exp_w = (probs * grid_w).sum(dim=-1)     # (b,)
+    
+    # stack into (b, 2)
+    coords = torch.stack([exp_h, exp_w], dim=-1)
+    return coords
