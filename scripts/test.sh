@@ -3,8 +3,9 @@
 # filepath: /eai-pers/scripts/evaluate.sh
 
 python main.py \
+    --config "default.yaml" \
     --data_dir "data" \
-    --data_split "val" \
+    --data_split "object_unseen" \
     --mode "eval" \
     --seed 2025 \
     --batch_size 2 \

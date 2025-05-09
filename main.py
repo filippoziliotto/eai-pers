@@ -62,6 +62,7 @@ def main(args):
     if cfg.baseline:
         model = BaselineModel(
             encoder=encoder,
+            type=cfg.use_baseline,
             device=args.device,
         )
     else:

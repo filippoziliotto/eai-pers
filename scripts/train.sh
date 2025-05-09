@@ -3,8 +3,9 @@
 # filepath: /eai-pers/scripts/evaluate.sh
 
 python main.py \
+    --config "default.yaml" \
     --data_dir "data" \
-    --data_split "train+val" \
+    --data_split "object_unseen" \
     --mode "train" \
     --increase_dataset_size \
     --validate_after_n_epochs 1 \

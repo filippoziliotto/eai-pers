@@ -7,7 +7,7 @@ def get_args():
     Returns:
         argparse.Namespace: Parsed arguments as a namespace.
     """
-    parser = argparse.ArgumentParser(description="Training script for coordinate regression")
+    parser = argparse.ArgumentParser(description="Training & Eval script for Eai-Pers repo")
     
     # Configuration file
     parser.add_argument("--config", type=str, default="default.yaml", help="Path to the configuration file")
