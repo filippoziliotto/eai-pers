@@ -35,6 +35,10 @@ attention:
   embed_dim: 512
   num_heads: 8
 
+model:
+  type: "base"
+  tau: 0.8
+
 encoder:
   freeze: True
 
