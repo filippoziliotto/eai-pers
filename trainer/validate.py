@@ -10,7 +10,6 @@ from utils.metrics import compute_accuracy
 
 # Utils imports
 from utils.visualize import visualize
-from utils.utils import get_random_target
 
 # Get the normalization constant for the loss
 loss_norm_val = None
@@ -65,14 +64,13 @@ def validate(
         for batch_idx, data in tqdm(enumerate(data_loader), total=len(data_loader), desc="Batch", leave=False):
             
             # Get data and move to device
-            description = data['description']
-            query = data['query']
-            gt_target = data['target'].to(torch.float32).to(device)
-            feature_map = data['feature_map'].to(device)
+            description, query = data['summary'], data['query']
+            gt_target, feature_map = data['target'], data['feature_map']
+            # Move target and feature map to device
+            gt_target, feature_map = gt_target.to(device), feature_map.to(device)
 
             # Forward pass
             output = model(description=description, map_tensor=feature_map, query=query)
-            value_map = output['value_map']
 
             # Compute loss
             loss = compute_loss(gt_target, output, loss_choice, device)
@@ -85,7 +83,7 @@ def validate(
             
             # Visualize results
             if config.visualize:
-                for query_, gt_target_, value_map_, map_path_ in zip(query, gt_target, value_map, data['map_path']):
+                for query_, gt_target_, value_map_, map_path_ in zip(query, gt_target, output['value_map'], data['map_path']):
                     visualize(
                         query_, 
                         gt_target_, 
