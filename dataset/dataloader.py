@@ -13,6 +13,7 @@ sys.path.append(base_path)
 from dataset.load_episodes import load_episodes, convert_floor_ep, ID_TO_FLOOR
 from dataset.maps.base_map import HabtoGrid
 from dataset.transform import MapTransform
+from dataset.naming import NameSelector
 
 class RetMapsDataset(Dataset):
     """
@@ -20,9 +21,9 @@ class RetMapsDataset(Dataset):
     Load everything in memory to train/eval
     """
     # Load map class
-    map = HabtoGrid(embeds_dir = "data/v2/maps")
     base_dir = "data/v2/maps"
-
+    map = HabtoGrid(embeds_dir = base_dir)
+    
     def __init__(self, data_dir="data/v2/", split_dir="object_unseen", data_split="train", transform=None):
         
         self.episodes = load_episodes(data_dir, split_dir, data_split)        
@@ -45,9 +46,13 @@ class RetMapsDataset(Dataset):
         episode = self.episodes[idx]
         scene_name = episode["scene_id"].split("/")[-1].split(".")[0]
 
+        # TODO: Move this part in the augmentations???
+        # Add real names
+        selector = NameSelector()
+        episode = selector.apply_names(episode)
+
         # Extract episode information
         ext_summary = episode["extracted_summary"]
-        # TODO: add possibility to load only the summary
         summary = episode["summary"]
         query = episode["query"]
         floor_id = episode["floor_id"]
@@ -79,6 +84,9 @@ class RetMapsDataset(Dataset):
 
         # Package and return the sample as a dictionary
         return {
+            "scene_name": scene_name,
+            "floor_id": floor_id,
+            "t_summary": summary,
             "summary": ext_summary,
             "target": target,
             "query": query,
@@ -152,19 +160,3 @@ def get_dataloader(data_dir,
         
         print("DataLoader initialized.")
         return train_loader, val_loader
-    
-
-if __name__ == "__main__":
-    # Test the dataloader
-    dataloader = get_dataloader("data", data_split="val", batch_size=2, shuffle=True, num_workers=4)
-    
-    for i, episode in enumerate(dataloader):
-        print(f"Batch {i}")
-        print(f"Query: {episode['query']}")
-        print(f"Description: {episode['description']}")
-        print(f"Feature Map: {episode['feature_map'].shape}")
-        print(f"XY Target: {episode['target']}")
-        print()
-        
-        if i == 0:
-            break

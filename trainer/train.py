@@ -50,14 +50,13 @@ def train_one_epoch(
     raw_losses = []  # Store raw loss values for normalization.
 
     for batch_idx, data in tqdm(enumerate(data_loader), total=len(data_loader), desc="Batch", leave=False):
-        description = data['description']
-        query = data['query']
-        gt_target = data['target'].to(torch.float32).to(device)
-        feature_map = data['feature_map'].to(device)
+        description, query = data['summary'], data['query']
+        gt_target, feature_map = data['target'], data['feature_map']
+        # Move data to the specified device
+        description, query = description.to(device), query.to(device)
 
         # Forward pass
         output = model(description=description, map_tensor=feature_map, query=query)  # e.g., output dict contains 'value_map'
-        value_map = output['value_map']
 
         # Compute loss and perform backpropagation
         loss = compute_loss(gt_target, output, loss_choice)
@@ -79,7 +78,7 @@ def train_one_epoch(
             
         # Visualize predictions if enabled
         if config.visualize:
-            for query_, gt_target_, value_map_, map_path_ in zip(query, gt_target, value_map, data['map_path']):
+            for query_, gt_target_, value_map_, map_path_ in zip(query, gt_target, output['value_map'], data['map_path']):
                 visualize(
                     query_, 
                     gt_target_, 
@@ -206,12 +205,3 @@ def train_and_validate(
                 log_lr_scheduler(optimizer)
 
     print("Training complete...")
-    
-
-# Example usage (replace with actual dataset, model, optimizer, and scheduler)
-if __name__ == '__main__':
-    model = ...  # Define your model
-    train_loader = DataLoader(...)  # Define your training DataLoader
-    val_loader = DataLoader(...)  # Define your validation DataLoader
-    
-    train_and_validate(model, train_loader, val_loader, ...)

@@ -109,3 +109,6 @@ scripts/keys.sh
 
 # Ignore all files in trainer/visualizations
 trainer/visualizations/*
+
+# Ignore all .pth files
+*.pth
