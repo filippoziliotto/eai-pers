@@ -4,6 +4,8 @@ from typing import Union
 import numpy as np
 import wandb
 import random
+import os
+import sys
 
 # Torch imports
 import torch
@@ -276,3 +278,35 @@ def soft_argmax_coords(value_map: torch.Tensor, tau: float = 1.0) -> torch.Tenso
     # stack into (b, 2)
     coords = torch.stack([exp_h, exp_w], dim=-1)
     return coords
+
+"""
+Logger utils
+"""
+class CustomLogger:
+    def __init__(self, default_dir="outputs", output_name="run.log"):
+        # ensure outputs/ exists
+        os.makedirs(default_dir, exist_ok=True)
+        self.log_file = open(os.path.join(default_dir, output_name), "a")
+        self.terminal = sys.__stdout__  # Always keep the real stdout
+
+    def write(self, message):
+        # write to console
+        self.terminal.write(message)
+        # write to file
+        self.log_file.write(message)
+
+    def flush(self):
+        # make sure both targets are flushed
+        self.terminal.flush()
+        self.log_file.flush()
+        
+    def isatty(self):
+        return self.terminal.isatty()
+
+    @property
+    def encoding(self):
+        return self.terminal.encoding
+
+    def close(self):
+        self.log_file.close()
+        super().close()

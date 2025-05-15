@@ -6,8 +6,9 @@ visualize: True
 use_obstacle_map: True
 
 # Baseline
-use_baseline:
-  type: "random" # "center", "random", "vlfm"
+baseline:
+  use_baseline: false
+  type: "random"
 
 # Extractor
 use_extractor: True
