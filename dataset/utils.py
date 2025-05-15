@@ -168,4 +168,3 @@ def random_rotate_preserving_target(feature_map, xy_coords, angle_range=(-15, 15
         rotated_fm = TF.rotate(fm_perm, angle, expand=False, center=center)
         rotated_feature_map = rotated_fm.permute(1, 2, 0)
         return rotated_feature_map, [new_x, new_y]
-

@@ -23,6 +23,7 @@ class RetMapsDataset(Dataset):
     # Load map class
     base_dir = "data/v2/maps"
     map = HabtoGrid(embeds_dir = base_dir)
+    selector = NameSelector()
     
     def __init__(self, data_dir="data/v2/", split_dir="object_unseen", data_split="train", transform=None):
         
@@ -48,8 +49,7 @@ class RetMapsDataset(Dataset):
 
         # TODO: Move this part in the augmentations???
         # Add real names
-        selector = NameSelector()
-        episode = selector.apply_names(episode)
+        episode = self.selector.apply_names(episode)
 
         # Extract episode information
         ext_summary = episode["extracted_summary"]
@@ -128,9 +128,7 @@ def get_dataloader(data_dir,
         train_dataset = RetMapsDataset(data_dir, split_dir, "train" , transform=MapTransform(**kwargs_train))
         
         # --- Validation dataset from the "val" folder (always no augmentation) ---
-        kwargs_val = kwargs.copy()
-        kwargs_val["use_aug"] = False
-        val_dataset = RetMapsDataset(data_dir, split_dir, "train", transform=MapTransform(**kwargs_val))
+        val_dataset = RetMapsDataset(data_dir, split_dir, "train", transform=None)
         
         train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True,
                                   num_workers=num_workers, collate_fn=collate_fn)
