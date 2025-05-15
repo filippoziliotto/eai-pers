@@ -231,6 +231,20 @@ def generate_wandb_run_name(args):
     run_name_parts = [f"{key}_{important_args[key]}" for key in sorted(important_args)]
     return "-".join(run_name_parts)
 
+def read_wandb_api_key():
+    """
+    You have to make sure your wandb API key is stored in a file called "scripts/keys.sh"
+    Make sure the key is saved as WANDB_API_KEY="your_key_here"
+    """
+    try:
+        with open("scripts/keys.sh", "r") as file:
+            for line in file:
+                if "WANDB_API_KEY" in line:
+                    return eval(line.split("=")[1].strip())
+    except FileNotFoundError:
+        print("scripts.keys.sh file not found.")
+    return None
+
 """
 Loss Utils
 """
