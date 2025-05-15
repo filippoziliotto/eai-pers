@@ -1,13 +1,13 @@
 # Importing necessary libraries
 import wandb
-import sys
+import os
 
 # Importing training and validation functions
 from trainer.train import train_and_validate
 from trainer.validate import validate
 
 # Importing utility functions
-from utils.utils import get_optimizer, set_seed, args_logger, generate_wandb_run_name
+from utils.utils import get_optimizer, set_seed, args_logger, generate_wandb_run_name, read_wandb_api_key
 from dataset.utils import custom_collate
 from configs.config_utils import load_config, flatten_config
 
@@ -20,6 +20,9 @@ from dataset.dataloader import get_dataloader
 # Avoid LAVIS (useless) FutureWarnings ;)
 import warnings
 warnings.filterwarnings('ignore', category=FutureWarning)
+
+# Safely import the wandb API key
+os.environ["WANDB_API_KEY"] = read_wandb_api_key()
 
 # Importing custom models
 try:
@@ -41,7 +44,7 @@ def main(args):
     
     # Initialize W&B
     if args.use_wandb:
-        wandb.init(project="EAI-Pers", name=cfg.wandb.run_name, config=flatten_config(cfg))
+        wandb.init(project="EAI-Pers", name=cfg.logging.wandb.run_name, config=flatten_config(cfg))
     
     # Get Freezed text encoder and initialize
     encoder = Blip2Encoder(device=args.device, freeze_encoder=args.freeze_encoder)
