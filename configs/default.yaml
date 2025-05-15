@@ -1,6 +1,6 @@
 # -------------------------------------------------------------------
 # default.yaml
-# All the “factory” defaults for your project
+# All the “factory” defaults for the project
 # -------------------------------------------------------------------
 
 # Data
@@ -72,8 +72,9 @@ device:
 
 # Logging
 logging:
-  use_wandb: false
-  run_name: "none"
+  wandb:
+    use_wandb: false
+    run_name: "none"
 
 # Debug / Visualization
 debug: false

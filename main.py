@@ -1,5 +1,6 @@
 # Importing necessary libraries
 import wandb
+import sys
 
 # Importing training and validation functions
 from trainer.train import train_and_validate
@@ -40,8 +41,7 @@ def main(args):
     
     # Initialize W&B
     if args.use_wandb:
-        run_name = generate_wandb_run_name(args)
-        wandb.init(project="EAI-Pers", name=run_name, config=flatten_config(cfg))
+        wandb.init(project="EAI-Pers", name=cfg.wandb.run_name, config=flatten_config(cfg))
     
     # Get Freezed text encoder and initialize
     encoder = Blip2Encoder(device=args.device, freeze_encoder=args.freeze_encoder)
