@@ -19,6 +19,7 @@ class AugmentationsConfig:
     use_vertical_flip: bool = False
     use_random_crop: bool = False
     use_random_rotate: bool = False
+    rotate_angle: int = 0
     use_desc_aug: bool = False
 
 @dataclass
