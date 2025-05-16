@@ -1,6 +1,3 @@
-from omegaconf import OmegaConf
-import os
-
 import os
 from omegaconf import OmegaConf, DictConfig
 # Import the structured DefaultConfig dataclass
@@ -67,6 +64,7 @@ def override_config(config: DictConfig, overrides: dict) -> DictConfig:
 def flatten_config(config: DictConfig, parent_key: str = '', sep: str = '.') -> dict:
     """
     Flatten a nested config into a single dictionary with dot-separated keys.
+    Useful for logging or exporting configs in WandB or other platforms.
     """
     items = []
     for k, v in config.items():

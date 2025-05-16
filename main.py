@@ -7,7 +7,7 @@ from trainer.train import train_and_validate
 from trainer.validate import validate
 
 # Importing utility functions
-from utils.utils import get_optimizer, set_seed, args_logger, generate_wandb_run_name, read_wandb_api_key
+from utils.utils import get_optimizer, set_seed, args_logger, read_wandb_api_key
 from dataset.utils import custom_collate
 from configs.config_utils import load_config, flatten_config
 
@@ -22,7 +22,7 @@ import warnings
 warnings.filterwarnings('ignore', category=FutureWarning)
 
 # Safely import the wandb API key
-os.environ["WANDB_API_KEY"] = read_wandb_api_key()
+os.environ["WANDB_API_KEY"] = read_wandb_api_key("scripts/keys.sh")
 
 # Importing custom models
 try:
@@ -47,18 +47,18 @@ def main(args):
         wandb.init(project="EAI-Pers", name=cfg.logging.wandb.run_name, config=flatten_config(cfg))
     
     # Get Freezed text encoder and initialize
-    encoder = Blip2Encoder(device=args.device, freeze_encoder=args.freeze_encoder)
-    encoder.initialize()
+    #encoder = Blip2Encoder(device=args.device, freeze_encoder=args.freeze_encoder)
+    #encoder.initialize()
         
     # Create the initial Dataset and DataLoader
-    kwargs = vars(args)
+    #kwargs = vars(args)
     train_loader, val_loader = get_dataloader(
         data_dir=args.data_dir,
         split_dir=args.data_split,
         batch_size=args.batch_size,
         num_workers=args.num_workers,
         collate_fn=custom_collate,
-        kwargs=kwargs
+        augmentation=cfg.augmentations,
     )
 
     # Model Initialization & Baseline Initialization

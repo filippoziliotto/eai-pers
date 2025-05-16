@@ -98,7 +98,7 @@ def get_dataloader(data_dir,
                    batch_size=32, 
                    num_workers=4, 
                    collate_fn=None,
-                   kwargs={}):
+                   augmentation=None,):
     """
     Returns DataLoaders based on the specified data_split.
     
@@ -123,9 +123,8 @@ def get_dataloader(data_dir,
         print("Setting: Object Unseen")
         print("Using both training and validation datasets.")
         # --- Training dataset from the "train" folder ---
-        kwargs_train = kwargs.copy()
-        kwargs_train["use_aug"] = kwargs.get("use_aug", True)
-        train_dataset = RetMapsDataset(data_dir, split_dir, "train" , transform=MapTransform(**kwargs_train))
+        aug_train = MapTransform(augmentation) if augmentation["use_aug"] else None
+        train_dataset = RetMapsDataset(data_dir, split_dir, "train" , transform=aug_train)
         
         # --- Validation dataset from the "val" folder (always no augmentation) ---
         val_dataset = RetMapsDataset(data_dir, split_dir, "train", transform=None)
@@ -142,14 +141,11 @@ def get_dataloader(data_dir,
         print("Setting: Scene Unseen")
         print("Using both training and validation datasets.")
         # --- Training dataset from the "train" folder ---
-        kwargs_train = kwargs.copy()
-        kwargs_train["use_aug"] = kwargs.get("use_aug", True)
-        train_dataset = RetMapsDataset(data_dir, split_dir, "train", transform=MapTransform(**kwargs_train))
+        aug_train = MapTransform(augmentation) if augmentation["use_aug"] else None
+        train_dataset = RetMapsDataset(data_dir, split_dir, "train", transform=MapTransform(aug_train))
         
         # --- Validation dataset from the "val" folder (always no augmentation) ---
-        kwargs_val = kwargs.copy()
-        kwargs_val["use_aug"] = False
-        val_dataset = RetMapsDataset(data_dir, split_dir, "val", transform=MapTransform(**kwargs_val))
+        val_dataset = RetMapsDataset(data_dir, split_dir, "val", transform=None)
         
         train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True,
                                   num_workers=num_workers, collate_fn=collate_fn)
