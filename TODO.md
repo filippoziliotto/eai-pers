@@ -36,3 +36,4 @@
 ### Future Work
 - [ ] Extend dataset to multi-target per episode (e.g. “find one of Julia’s jackets”)
 - [ ] Add support for “shared” objects (e.g. “the jacket belongs to both Julia and Mark”)
+- [ ] Negation? "the couch belongs to filippo and NOT to tommaso", "belongs to everyone except to filippo"
