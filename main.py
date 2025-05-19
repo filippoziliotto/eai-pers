@@ -47,8 +47,8 @@ def main(args):
         wandb.init(project="EAI-Pers", name=cfg.logging.wandb.run_name, config=flatten_config(cfg))
     
     # Get Freezed text encoder and initialize
-    #encoder = Blip2Encoder(device=args.device, freeze_encoder=args.freeze_encoder)
-    #encoder.initialize()
+    encoder = Blip2Encoder(device=args.device, freeze_encoder=args.freeze_encoder)
+    encoder.initialize()
         
     # Create the initial Dataset and DataLoader
     #kwargs = vars(args)
