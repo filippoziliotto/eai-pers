@@ -100,7 +100,7 @@ data
 /outputs/
 
 # Ignoring md files
-TODO.md
+# TODO.md
 TROUBLESHOOTING.md
 DATASETS.md
 DETAILS.md
