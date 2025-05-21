@@ -5,7 +5,6 @@ import torch
 from torch.utils.data import DataLoader
 import wandb
 from tqdm import tqdm
-import os
 
 # Other imports
 from utils.losses import compute_loss
@@ -141,12 +140,15 @@ def train_and_validate(
         load_checkpoint (bool): If True, load model weights from checkpoint_path before training.
         save_checkpoint (bool): If True, save model weights to checkpoint_path after training (when improved).
         checkpoint_path (str): Path to the checkpoint file.
+        resume_training (bool): If True, resume training from the last checkpoint.
         validate_every_n_epocs (int): Run validation (and log validation metrics) every n epochs.
+        config: Configuration dictionary for additional settings.
     """
     # Move model to device if not already on it
     if device == 'cuda' and not next(model.parameters()).is_cuda:
         model.to(device)
 
+    # Initialize training variablesx
     start_epoch = 0
     best_val_loss = float('inf')
         
@@ -163,7 +165,7 @@ def train_and_validate(
         print("Starting training from scratch...")
     
     # Training loop
-    for epoch in tqdm(range(num_epochs), desc="Epochs"):
+    for epoch in tqdm(range(start_epoch, num_epochs), desc="Epochs"):
         # Train for one epoch and get training metrics
         train_loss, train_acc = train_one_epoch(model, train_loader, optimizer, loss_choice, use_wandb, config, device)
         
@@ -204,7 +206,6 @@ def train_and_validate(
             print('-' * 20)
             
         else:
-
             # For epochs without validation, update scheduler if it doesn't depend on validation loss
             if scheduler and not isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
                 scheduler.step()
