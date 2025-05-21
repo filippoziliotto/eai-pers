@@ -34,6 +34,7 @@ def get_args():
     parser.add_argument("--save_checkpoint", action="store_true", default=False, help="Save model checkpoints")
     parser.add_argument("--checkpoint_path", type=str, default="model/checkpoints/model.pth", help="Path to save model checkpoints")
     parser.add_argument("--load_checkpoint", action="store_true", default=False, help="Load model checkpoints")
+    parser.add_argument("--resume_training", action="store_true", default=False, help="Resume training from checkpoint")
     
     # Attention parameters
     parser.add_argument("--embed_dim", type=int, default=512, help="Embedding dimension for attention")
