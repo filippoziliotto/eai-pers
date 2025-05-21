@@ -107,6 +107,7 @@ def main(args):
             load_checkpoint=args.load_checkpoint,
             save_checkpoint=args.save_checkpoint,
             checkpoint_path=args.checkpoint_path,
+            resume_training=args.resume_training,
             validate_every_n_epocs=args.validate_after_n_epochs,
             config=cfg,
         )

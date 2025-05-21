@@ -117,6 +117,7 @@ def train_and_validate(
     load_checkpoint: bool = False,
     save_checkpoint: bool = False,
     checkpoint_path: Optional[str] = None,
+    resume_training: Optional[bool] = False,
     validate_every_n_epocs: int = 5,
     config: Optional[Dict] = None,
 ):
@@ -142,18 +143,26 @@ def train_and_validate(
     # Move model to device if not already on it
     if device == 'cuda' and not next(model.parameters()).is_cuda:
         model.to(device)
+
+    start_epoch = 0
+    best_val_loss = float('inf')
         
     # Optionally load model weights from checkpoint
     if load_checkpoint:
         assert os.path.exists(checkpoint_path), f"Checkpoint path {checkpoint_path} does not exist."
-        model.load_state_dict(torch.load(checkpoint_path, map_location=device))
-        print(f"Loaded checkpoint from {checkpoint_path}...")
+        ckpt = torch.load(checkpoint_path, map_location=device)
+        model.load_state_dict(ckpt['model_state_dict'])
+        if resume_training:
+            optimizer.load_state_dict(ckpt['optimizer_state_dict'])
+            if scheduler and ckpt.get('scheduler_state_dict') is not None:
+                scheduler.load_state_dict(ckpt['scheduler_state_dict'])
+                start_epoch = ckpt['epoch'] + 1
+                best_val_loss = ckpt.get('best_val_loss', best_val_loss)
+                print(f"Resuming from epoch {ckpt['epoch']} (next will be {start_epoch}).")
     else:
         print("Starting training from scratch...")
     
-    print("Starting training...")
-    best_val_loss = float('inf')
-
+    # Training loop
     for epoch in tqdm(range(num_epochs), desc="Epochs"):
         # Train for one epoch and get training metrics
         train_loss, train_acc = train_one_epoch(model, train_loader, optimizer, loss_choice, use_wandb, config, device)
@@ -183,10 +192,15 @@ def train_and_validate(
             # Optionally save the model if validation loss improves
             if save_checkpoint and (val_loss < best_val_loss):
                 best_val_loss = val_loss
-                checkpoint_dir = os.path.dirname(checkpoint_path)
-                assert os.path.exists(checkpoint_dir), f"Checkpoint directory {checkpoint_dir} does not exist."
-                torch.save(model.state_dict(), checkpoint_path)
-                print(f"Saved checkpoint to {checkpoint_path} with improved validation loss: {val_loss:.4f}")
+                ckpt = {
+                    'epoch': epoch,
+                    'best_val_loss': best_val_loss,
+                    'model_state_dict': model.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict(),
+                    'scheduler_state_dict': scheduler.state_dict() if scheduler else None,
+                }
+                torch.save(ckpt, checkpoint_path)
+                print(f"Saved checkpoint to {checkpoint_path} (epoch {epoch}, val_loss {val_loss:.4f})")
                 
             # Print epoch summary with both training and validation metrics
             print(f"Epoch {epoch}/{num_epochs} - Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}")
