@@ -1,6 +1,7 @@
 # Library imports
 from typing import List, Tuple, Dict
 import math
+import re
 
 # Torch imports
 import torch
@@ -168,3 +169,22 @@ def random_rotate_preserving_target(feature_map, xy_coords, angle_range=(-15, 15
         rotated_fm = TF.rotate(fm_perm, angle, expand=False, center=center)
         rotated_feature_map = rotated_fm.permute(1, 2, 0)
         return rotated_feature_map, [new_x, new_y]
+
+
+"""
+Naming utils
+"""
+def count_unique_people(strings: List[str]) -> int:
+    """
+    Given a list of strings each containing exactly one "<person{number}>",
+    returns the count of distinct person IDs.
+    """
+    pattern = re.compile(r'<person(\d+)>')
+    seen = set()
+
+    for s in strings:
+        m = pattern.search(s)
+        if m:
+            seen.add(int(m.group(1)))
+
+    return len(seen)

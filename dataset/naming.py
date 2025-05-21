@@ -1,4 +1,8 @@
+# Library imports
 import random
+
+# Local imports
+from dataset.utils import count_unique_people
 
 NAMES = set([
     "Liam", "Noah", "Oliver", "Elijah", "James", "William", "Benjamin", "Lucas", "Henry", "Theodore",
@@ -38,38 +42,52 @@ NAMES = set([
 class NameSelector:
     def __init__(self):
         self.names = NAMES
+        self.rng = random.Random(2025)  # local RNG instance with seed
 
     def choose_names(self, current_episode):
         """
         Randomly selects a name from the set of names, for
         every person in the current episode.
         """
-        n_people = len(current_episode["extracted_summary"])
-        selected_names = random.sample(self.names, n_people)
+        n_people = count_unique_people(current_episode["extracted_summary"])
+        selected_names = self.rng.sample(self.names, n_people)
         return selected_names
         
-    def apply_names(self, current_episode):
-        """
-        Applies randomly selected names to replace <person1>, <person2>, etc.,
-        and selects one random query per person.
-        """
-        selected_names = self.choose_names(current_episode)
-        
-        # Replace <person1>, <person2>, ... in text fields
-        for i, name in enumerate(selected_names):
-            placeholder = f"<person{i+1}>"
+    def apply_names(self, current_episode, deterministic=True):
+            """
+            Applies randomly selected names to replace <person1>, <person2>, etc.,
+            and selects one random query per person.
+            """
+            curr_episode = current_episode.copy()
+            selected_names = self.choose_names(curr_episode)
             
-            # Replace placeholder in all relevant fields
-            current_episode["owner"] = name  # optional: could remove if multiple owners
-            current_episode["summary"] = current_episode["summary"].replace(placeholder, name)
-            current_episode["extracted_summary"] = [
-                s.replace(placeholder, name) for s in current_episode["extracted_summary"]
-            ]
-            # Replace all and then keep only one random query for that person
-            person_queries = [
-                q.replace(placeholder, name) for q in current_episode["query"]
-            ]
-            if person_queries:
-                current_episode["query"] = random.choice(person_queries)
-    
-        return current_episode
+            # Replace <person1>, <person2>, ... in text fields with selected names
+            # Note: Assuming the placeholders are in the format <person{i}>
+            for i, name in enumerate(selected_names):
+                placeholder = f"<person{i+1}>"
+                
+                # Replace placeholder in text fields
+                curr_episode["owner"] = name  # optional, depending on your logic
+                curr_episode["summary"] = curr_episode["summary"].replace(placeholder, name)
+                curr_episode["extracted_summary"] = [
+                    s.replace(placeholder, name) for s in curr_episode["extracted_summary"]
+                ]
+            
+                # For queries: replace placeholder in all queries, then pick one at random or use all
+                replaced_queries = [q.replace(placeholder, name) for q in curr_episode["query"]]
+
+                # If you want to keep all queries replaced, assign replaced_queries to query:
+                # curr_episode["query"] = replaced_queries
+                
+            if deterministic:
+                # If you want to pick one random query from the replaced queries:
+                # Note: This is a local RNG instance with seed 42 for reproducibility
+                # You can also use random.choice(replaced_queries) directly if you want.
+                rng = random.Random(42)
+                curr_episode["query"] = rng.choice(replaced_queries)
+
+            else:
+                # Otherwise, if you want to keep all replaced queries, do:
+                curr_episode["query"] = replaced_queries
+        
+            return curr_episode
