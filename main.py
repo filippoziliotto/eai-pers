@@ -73,7 +73,7 @@ def main(args):
             embed_dim=args.embed_dim,
             num_heads=args.num_heads,
             encoder=encoder,
-            type=cfg.model.process_type,
+            type=cfg.model.type,
             tau=cfg.model.tau,
             device=args.device,
         )
