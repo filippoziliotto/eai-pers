@@ -68,7 +68,7 @@ checkpoint:
 
 # Device & performance
 device:
-  type: "cpu"
+  type: "mps"
   num_workers: 4
 
 # Logging

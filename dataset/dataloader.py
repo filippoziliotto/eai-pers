@@ -47,8 +47,7 @@ class RetMapsDataset(Dataset):
         episode = self.episodes[idx]
         scene_name = episode["scene_id"].split("/")[-1].split(".")[0]
 
-        # TODO: Move this part in the augmentations???
-        # Add real names
+        # Apply realistic names to the episode
         episode = self.selector.apply_names(episode)
 
         # Extract episode information
@@ -127,7 +126,7 @@ def get_dataloader(data_dir,
         train_dataset = RetMapsDataset(data_dir, split_dir, "train" , transform=aug_train)
         
         # --- Validation dataset from the "val" folder (always no augmentation) ---
-        val_dataset = RetMapsDataset(data_dir, split_dir, "train", transform=None)
+        val_dataset = RetMapsDataset(data_dir, split_dir, "val", transform=None)
         
         train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True,
                                   num_workers=num_workers, collate_fn=collate_fn)
