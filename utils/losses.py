@@ -19,9 +19,9 @@ def compute_loss(gt_coords, output, loss_choice='L2'):
         loss (Tensor): Computed loss.
     """
     if loss_choice == 'L1':
-        loss = L1_loss(output["pred_coords"], gt_coords)
+        loss = L1_loss(output["coords"], gt_coords)
     elif loss_choice == 'L2':
-        loss = L2_loss(output["pred_coords"], gt_coords)
+        loss = L2_loss(output["coords"], gt_coords)
     else:
         raise ValueError(f"Unknown loss choice: {loss_choice}. Use 'L1' or 'L2'.")
     

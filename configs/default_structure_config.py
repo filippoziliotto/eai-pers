@@ -120,6 +120,7 @@ class CheckpointConfig:
     save: bool = False  # Whether to save model checkpoints
     path: str = "model/checkpoints/model.pth"  # Checkpoint file path
     load: bool = False  # Whether to load from an existing checkpoint
+    resume_training: bool = False
 
 @dataclass
 class DeviceConfig:
