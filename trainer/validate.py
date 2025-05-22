@@ -102,7 +102,7 @@ def validate(
                 break
     
     # Compute mean batch-sum loss for this epoch
-    val_avg_loss = epoch_loss / num_batches
+    epoch_loss /= num_batches
     
     # Calculate average accuracy for the epoch for each th key
     val_avg_metric = {key: sum(d[key] for d in metrics) / len(metrics) for key in metrics[0]}
@@ -110,8 +110,9 @@ def validate(
     # If evaluation mode log the results
     if mode in ['eval']:
         print(f"Val Loss: {val_avg_loss:.4f}")
+        print("Val metrics:")
         for key in val_avg_metric:
-            print(f"\nVal Acc [{key}]: {val_avg_metric[key]:.4f}")
+            print(f"{key}: {val_avg_metric[key]:.4f}")
         print('-' * 20)
         
         # Log metrics to W&B if in evaluation mode

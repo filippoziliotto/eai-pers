@@ -2,7 +2,7 @@
 debug: True
 
 # Visualizations #TODO: fix or remove
-visualize: True
+visualize: False
 use_obstacle_map: True
 
 # Baseline
