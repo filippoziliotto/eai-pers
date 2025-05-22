@@ -111,8 +111,7 @@ def get_dataloader(data_dir,
       batch_size (int): Batch size.
       num_workers (int): Number of DataLoader workers.
       collate_fn (callable): Custom collate function.
-      kwargs (dict): Additional keyword arguments for MapTransform.
-      
+      augmentation (dict): Augmentation configuration.      
     Returns:
       Tuple (train_loader, val_loader)
     """
