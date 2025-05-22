@@ -57,7 +57,7 @@ def validate(
     model.eval()
     epoch_loss = 0.0
     accuracy = []
-    raw_losses = []  # List to store raw loss values from each batch.
+    num_batches = 0
     
     # Iterate over the data loader
     with torch.no_grad():
@@ -66,17 +66,19 @@ def validate(
             # Get data and move to device
             description, query = data['summary'], data['query']
             gt_target, feature_map = data['target'], data['feature_map']
-            # Move target and feature map to device
-            gt_target, feature_map = gt_target.to(device), feature_map.to(device)
-
+            
+            # Move data to the specified device
+            # Convert to float32 for Speedup
+            gt_target, feature_map = gt_target.to(torch.float32).to(device), feature_map.to(torch.float32).to(device)
+            
             # Forward pass
             output = model(description=description, map_tensor=feature_map, query=query)
 
             # Compute loss
             loss = compute_loss(gt_target, output, loss_choice, device)
             val_loss = loss.item()
-            raw_losses.append(val_loss)
             epoch_loss += val_loss
+            num_batches += 1
 
             # Compute accuracy
             accuracy.append(compute_accuracy(gt_target, output))
@@ -99,9 +101,8 @@ def validate(
             if config.debug and batch_idx == 2:
                 break
     
-    # Compute average validation normalized loss
-    loss_norm_val = sum(raw_losses) / len(raw_losses) if loss_norm_val is None else loss_norm_val
-    val_avg_loss = sum(raw_losses) / len(raw_losses) / loss_norm_val
+    # Compute mean batch-sum loss for this epoch
+    val_avg_loss = epoch_loss / num_batches
     
     # Calculate average accuracy for the epoch for each th key
     val_avg_acc = {key: sum(d[key] for d in accuracy) / len(accuracy) for key in accuracy[0]}

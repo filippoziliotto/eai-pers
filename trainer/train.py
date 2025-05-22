@@ -48,8 +48,8 @@ def train_one_epoch(
     
     model.train()
     epoch_loss = 0.0
+    num_batches = 0
     train_acc = []
-    raw_losses = []  # Store raw loss values for normalization.
 
     for batch_idx, data in tqdm(enumerate(data_loader), total=len(data_loader), desc="Batch", leave=False):
         description, query = data['summary'], data['query']
@@ -70,8 +70,8 @@ def train_one_epoch(
 
         # Append raw losses
         train_loss = loss.item()
-        raw_losses.append(train_loss)
         epoch_loss += train_loss
+        num_batches += 1
         
         # Compute accuracy for the batch
         train_acc.append(compute_accuracy(gt_target, output))
@@ -98,9 +98,8 @@ def train_one_epoch(
         if config.debug and batch_idx == 1:
             break
 
-    # Normalize the epoch loss using the new baseline normalization.
-    loss_norm = sum(raw_losses) / len(raw_losses) if loss_norm is None else loss_norm
-    train_avg_loss = sum(raw_losses) / len(raw_losses) / loss_norm
+    # Compute raw mean batch-sum loss for this epoch
+    train_avg_loss /= num_batches
     
     # Calculate average accuracy for the epoch.
     train_avg_acc = {key: sum(d[key] for d in train_acc) / len(train_acc) for key in train_acc[0]}
@@ -153,6 +152,7 @@ def train_and_validate(
     # Initialize training variablesx
     start_epoch = 0
     best_val_loss = float('inf')
+    first_epoch_loss = None
         
     # Optionally load model weights from checkpoint
     if load_checkpoint_:
@@ -170,9 +170,15 @@ def train_and_validate(
     for epoch in tqdm(range(start_epoch, num_epochs), desc="Epochs"):
         # Train for one epoch and get training metrics
         train_loss, train_acc = train_one_epoch(model, train_loader, optimizer, loss_choice, use_wandb, config, device)
-        
+
+        # Store the first epoch's loss as normalization baseline
+        if first_epoch_loss is None: first_epoch_loss = train_loss
+            
+        # Normalize the training loss
+        norm_train_loss = train_loss / first_epoch_loss
+
         # Always print training metrics
-        print(f"\nEpoch {epoch}/{num_epochs} - Train Loss: {train_loss:.4f}")
+        print(f"\nEpoch {epoch}/{num_epochs} - Train Loss: {norm_train_loss:.4f}")
         for key in train_acc:
             print(f"Train Acc [{key}]: {train_acc[key]:.4f}")
 
