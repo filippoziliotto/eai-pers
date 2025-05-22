@@ -47,11 +47,11 @@ def main(args):
         wandb.init(project="EAI-Pers", name=cfg.logging.wandb.run_name, config=flatten_config(cfg))
     
     # Get Freezed text encoder and initialize
+    # TODO: add fake encoder for debugging
     encoder = Blip2Encoder(device=args.device, freeze_encoder=args.freeze_encoder)
     encoder.initialize()
         
     # Create the initial Dataset and DataLoader
-    #kwargs = vars(args)
     train_loader, val_loader = get_dataloader(
         data_dir=args.data_dir,
         split_dir=args.data_split,
