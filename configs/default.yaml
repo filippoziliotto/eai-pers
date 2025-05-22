@@ -14,18 +14,26 @@ seed: 2025
 # Augmentations
 augmentations:
   use_aug: true
-  aug_prob: 0.5
-  use_horizontal_flip: false
-  use_vertical_flip: false
-  use_random_crop: false
-  use_random_rotate: false
-  rotate_angle: 90
-  use_desc_aug: false
+  default_prob: 0.5
+  flip:
+    use_horizontal_flip: true
+    use_vertical_flip: true
+    prob: 0.5
+  crop:
+    use_crop: true
+    max_crop_fraction: 0.3
+    prob: 0.5
+  rotation:
+    use_rotation: true
+    angle_range: 90
+    prob: 0.5
+  desc:
+    use_desc: true
+    prob: 0.5
 
 # Model & Training
 training:
-  batch_size: 4
-  num_epochs: 10
+  batch_size: 2
   validate_after_n_epochs: 1
   loss:
     choice: "L2"

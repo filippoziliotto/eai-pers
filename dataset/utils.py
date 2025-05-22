@@ -1,7 +1,8 @@
 # Library imports
-from typing import List, Tuple, Dict
 import math
 import re
+from copy import deepcopy
+from typing import Any, List, Set, Dict
 
 # Torch imports
 import torch
@@ -174,6 +175,9 @@ def random_rotate_preserving_target(feature_map, xy_coords, angle_range=(-15, 15
 """
 Naming utils
 """
+# compile once at module load
+PLACEHOLDER_PATTERN = re.compile(r"<person(\d+)>")
+
 def count_unique_people(strings: List[str]) -> int:
     """
     Given a list of strings each containing exactly one "<person{number}>",
@@ -188,3 +192,46 @@ def count_unique_people(strings: List[str]) -> int:
             seen.add(int(m.group(1)))
 
     return len(seen)
+
+def collect_placeholders(value: Any, found: Set[str]) -> None:
+    """
+    Recursively scan `value` (which may be a string or list) 
+    for all occurrences of <personN> and add "personN" to `found`.
+    """
+    if isinstance(value, str):
+        for m in PLACEHOLDER_PATTERN.finditer(value):
+            found.add(f"person{m.group(1)}")
+    elif isinstance(value, list):
+        for v in value:
+            collect_placeholders(v, found)
+    # other types are ignored
+
+def replace_in_value(
+    value: Any,
+    placeholder_to_name: Dict[str, str]
+) -> Any:
+    """
+    Recursively replace all occurrences of <personN> in `value`
+    with the corresponding name from placeholder_to_name.
+    """
+    if isinstance(value, str):
+        def _repl(m):
+            key = f"person{m.group(1)}"
+            return placeholder_to_name.get(key, m.group(0))
+        return PLACEHOLDER_PATTERN.sub(_repl, value)
+
+    elif isinstance(value, list):
+        return [replace_in_value(v, placeholder_to_name) for v in value]
+
+    else:
+        return value
+
+def find_sorted_placeholders(episode: dict) -> List[str]:
+    """
+    Return a numerically-sorted list of unique placeholder keys
+    (e.g. ["person1", "person2", ...]) found anywhere in the episode.
+    """
+    found: Set[str] = set()
+    for v in episode.values():
+        collect_placeholders(v, found)
+    return sorted(found, key=lambda p: int(p.replace("person", "")))

@@ -7,7 +7,7 @@ data:
   data_split: "scene_unseen"
 
 training:
-  batch_size: 8
+  batch_size: 2
   num_epochs: 20
 
 optimizer:
@@ -16,11 +16,6 @@ optimizer:
 
 scheduler:
   type: "cosine_annealing"
-
-augmentations:
-  use_aug: true
-  use_random_crop: true
-  use_random_rotate: true
 
 logging:
   wandb:

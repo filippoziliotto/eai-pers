@@ -1,8 +1,13 @@
 # Library imports
 import random
+from copy import deepcopy
+from typing import List
 
 # Local imports
-from dataset.utils import count_unique_people
+from dataset.utils import (
+    count_unique_people,
+    replace_in_value, find_sorted_placeholders
+)
 
 NAMES = set([
     "Liam", "Noah", "Oliver", "Elijah", "James", "William", "Benjamin", "Lucas", "Henry", "Theodore",
@@ -40,54 +45,50 @@ NAMES = set([
     "Adelaide", "Ophelia", "Fatima", "Talia", "Zuri", "Aliza", "Lexi"])
 
 class NameSelector:
-    def __init__(self):
+    def __init__(self, seed: int = 2025):
         self.names = NAMES
-        self.rng = random.Random(2025)  # local RNG instance with seed
+        self.rng = random.Random(seed)
 
-    def choose_names(self, current_episode):
+    def choose_names(self, current_episode: dict) -> List[str]:
         """
-        Randomly selects a name from the set of names, for
-        every person in the current episode.
+        Randomly select as many names as there are unique persons
+        in the episode's extracted_summary.
         """
         n_people = count_unique_people(current_episode["extracted_summary"])
-        selected_names = self.rng.sample(self.names, n_people)
-        return selected_names
+        return self.rng.sample(self.names, n_people)
         
-    def apply_names(self, current_episode, deterministic=True):
-            """
-            Applies randomly selected names to replace <person1>, <person2>, etc.,
-            and selects one random query per person.
-            """
-            curr_episode = current_episode.copy()
-            selected_names = self.choose_names(curr_episode)
-            
-            # Replace <person1>, <person2>, ... in text fields with selected names
-            # Note: Assuming the placeholders are in the format <person{i}>
-            for i, name in enumerate(selected_names):
-                placeholder = f"<person{i+1}>"
-                
-                # Replace placeholder in text fields
-                curr_episode["owner"] = name  # optional, depending on your logic
-                curr_episode["summary"] = curr_episode["summary"].replace(placeholder, name)
-                curr_episode["extracted_summary"] = [
-                    s.replace(placeholder, name) for s in curr_episode["extracted_summary"]
-                ]
-            
-                # For queries: replace placeholder in all queries, then pick one at random or use all
-                replaced_queries = [q.replace(placeholder, name) for q in curr_episode["query"]]
+    def apply_names(
+        self,
+        current_episode: dict,
+        deterministic: bool = True
+    ) -> dict:
+        ep = deepcopy(current_episode)
+        selected_names = self.choose_names(current_episode)
 
-                # If you want to keep all queries replaced, assign replaced_queries to query:
-                # curr_episode["query"] = replaced_queries
-                
+        # Discover and sort placeholders
+        sorted_placeholders = find_sorted_placeholders(ep)
+        assert len(sorted_placeholders) == len(selected_names), (
+            f"Found {len(sorted_placeholders)} placeholders but "
+            f"selected {len(selected_names)} names."
+        )
+
+        # Build mapping
+        placeholder_to_name = {
+            sorted_placeholders[i]: selected_names[i]
+            for i in range(len(selected_names))
+        }
+
+        # Replace placeholders everywhere
+        for key, val in ep.items():
+            ep[key] = replace_in_value(val, placeholder_to_name)
+
+        # Now ep["query"] is still a list; pick exactly one element
+        if isinstance(ep.get("query"), list) and ep["query"]:
             if deterministic:
-                # If you want to pick one random query from the replaced queries:
-                # Note: This is a local RNG instance with seed 42 for reproducibility
-                # You can also use random.choice(replaced_queries) directly if you want.
-                rng = random.Random(42)
-                curr_episode["query"] = rng.choice(replaced_queries)
-
+                # use the seeded RNG for a reproducible choice
+                ep["query"] = self.rng.choice(ep["query"])
             else:
-                # Otherwise, if you want to keep all replaced queries, do:
-                curr_episode["query"] = replaced_queries
-        
-            return curr_episode
+                # random choice based on global state
+                ep["query"] = random.choice(ep["query"])
+
+        return ep
