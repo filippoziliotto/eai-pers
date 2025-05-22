@@ -199,11 +199,11 @@ def log_epoch_metrics(epoch, optimizer, train_loss, train_acc, val_loss=None, va
         "Learning Rate": optimizer.param_groups[0]['lr'],
         "Train Loss": train_loss,
     }
-    metrics.update({f"Train Acc [{k}]": v for k, v in train_acc.items()})
+    metrics.update({f"Train [{k}]": v for k, v in train_acc.items()})
     
     if val_loss is not None and val_acc is not None:
         metrics["Val Loss"] = val_loss
-        metrics.update({f"Val Acc [{k}]": v for k, v in val_acc.items()})
+        metrics.update({f"Val [{k}]": v for k, v in val_acc.items()})
         
     wandb.log(metrics)
     return

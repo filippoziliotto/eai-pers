@@ -56,7 +56,7 @@ def validate(
     # Set model to evaluation mode
     model.eval()
     epoch_loss = 0.0
-    accuracy = []
+    metrics = []
     num_batches = 0
     
     # Iterate over the data loader
@@ -81,7 +81,7 @@ def validate(
             num_batches += 1
 
             # Compute accuracy
-            accuracy.append(compute_accuracy(gt_target, output))
+            metrics.append(compute_accuracy(gt_target, output))
             
             # Visualize results
             if config.visualize:
@@ -105,20 +105,20 @@ def validate(
     val_avg_loss = epoch_loss / num_batches
     
     # Calculate average accuracy for the epoch for each th key
-    val_avg_acc = {key: sum(d[key] for d in accuracy) / len(accuracy) for key in accuracy[0]}
-        
+    val_avg_metric = {key: sum(d[key] for d in metrics) / len(metrics) for key in metrics[0]}
+    
     # If evaluation mode log the results
     if mode in ['eval']:
         print(f"Val Loss: {val_avg_loss:.4f}")
-        for key in val_avg_acc:
-            print(f"\nVal Acc [{key}]: {val_avg_acc[key]:.4f}")
+        for key in val_avg_metric:
+            print(f"\nVal Acc [{key}]: {val_avg_metric[key]:.4f}")
         print('-' * 20)
         
         # Log metrics to W&B if in evaluation mode
         if use_wandb:
-            log_epoch_metrics(val_avg_loss, val_avg_acc)
+            log_epoch_metrics(val_avg_loss, val_avg_metric)
 
-    return val_avg_loss, val_avg_acc
+    return val_avg_loss, val_avg_metric
 
 
 # TODO: Since there is already a log_epoch_metrics function in utils/utils.py
@@ -127,6 +127,6 @@ def log_epoch_metrics(val_loss, val_acc):
     metrics = {
         "Val Loss": val_loss,
     }
-    metrics.update({f"Val Acc [{k}]": v for k, v in val_acc.items()})
+    metrics.update({f"Val [{k}]": v for k, v in val_acc.items()})
     wandb.log(metrics)
     return

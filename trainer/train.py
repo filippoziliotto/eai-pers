@@ -49,7 +49,7 @@ def train_one_epoch(
     model.train()
     epoch_loss = 0.0
     num_batches = 0
-    train_acc = []
+    metrics = []
 
     for batch_idx, data in tqdm(enumerate(data_loader), total=len(data_loader), desc="Batch", leave=False):
         description, query = data['summary'], data['query']
@@ -74,7 +74,7 @@ def train_one_epoch(
         num_batches += 1
         
         # Compute accuracy for the batch
-        train_acc.append(compute_accuracy(gt_target, output))
+        metrics.append(compute_accuracy(gt_target, output))
         
         # Optionally log batch loss to W&B
         if use_wandb:
@@ -102,9 +102,9 @@ def train_one_epoch(
     train_avg_loss /= num_batches
     
     # Calculate average accuracy for the epoch.
-    train_avg_acc = {key: sum(d[key] for d in train_acc) / len(train_acc) for key in train_acc[0]}
+    train_avg_metric = {key: sum(d[key] for d in metrics) / len(metrics) for key in metrics[0]}
     
-    return train_avg_loss, train_avg_acc
+    return train_avg_loss, train_avg_metric
 
 def train_and_validate(
     model, 
@@ -180,7 +180,7 @@ def train_and_validate(
         # Always print training metrics
         print(f"\nEpoch {epoch}/{num_epochs} - Train Loss: {norm_train_loss:.4f}")
         for key in train_acc:
-            print(f"Train Acc [{key}]: {train_acc[key]:.4f}")
+            print(f"Train Metrics \n [{key}]: {train_acc[key]:.4f}")
 
         # Determine if validation should be run this epoch
         if (epoch % validate_every_n_epocs == 0) or ((epoch + 1) == num_epochs):
@@ -208,9 +208,9 @@ def train_and_validate(
                 )
                 
             # Print epoch summary with both training and validation metrics
-            print(f"Epoch {epoch}/{num_epochs} - Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}")
-            for key in train_acc:
-                print(f"Train Acc [{key}]: {train_acc[key]:.4f} | Val Acc [{key}]: {val_acc.get(key, 0):.4f}")
+            print(f"Epoch {epoch}/{num_epochs}, Val Loss: {val_loss:.4f}")
+            for key in val_acc:
+                print(f"Val Acc [{key}]: {val_acc.get(key, 0):.4f}")
             print('-' * 20)
             
         else:
