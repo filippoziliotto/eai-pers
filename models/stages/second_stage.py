@@ -45,16 +45,22 @@ class PersonalizedFeatureMapper(nn.Module):
         
         # Encode the query
         query = self.encode_query(query)
+        query = query["text"]
         assert query.shape == (b, E), "Query embedding must have shape (b, E)"
         
         # Process with simple cosine similarity
         if self.process_type in ["base"]:
+
+            # Expand query to match the spatial dimensions
+            query_expanded = query.unsqueeze(1).unsqueeze(2)  # (b, 1, 1, E)
+            query_expanded = query_expanded.expand(-1, h, w, -1)  # (b, h, w, E)            
+
             # Calculate cosine similarity
             value_map = self.cosine_similarity(
                 feature_map, 
-                query
-            ) # b x w x h
-            output["value_map"] = value_map.view(b, w, h, 1)
+                query_expanded
+            ).view(b, w, h, 1) # b x w x h x 1
+            output["value_map"] = value_map
             
             # compute soft-argmax coords
             coords = soft_argmax_coords(value_map, self.tau)

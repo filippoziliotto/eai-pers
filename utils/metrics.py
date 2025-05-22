@@ -2,26 +2,32 @@
 import numpy as np
 import torch
 
-def compute_accuracy(gt_target, pred_target, thresholds=[5, 10, 20]):
+def compute_accuracy(gt_target, pred_target):
     """
-    Computes accuracy, mean squared error, and success rate at different thresholds.
+    Computes per‐sample Euclidean distance error and success rates at 1 m, 2 m and 3 m.
 
     Args:
-        gt_target (list of tuples): List of ground truth coordinates [(x1, y1), (x2, y2), ...].
-        pred_target (Dictionary): List of predicted coordinates [(x1, y1), (x2, y2), ...].
-        thresholds (list of int): List of distance thresholds to compute success rates (default: [5, 10, 20]).
+        gt_target (Tensor): Ground‐truth coordinates, shape (N, 2) in grid indices (each index = 1 m).
+        pred_target (dict): Dictionary with key 'coords' containing predicted coordinates, shape (N, 2), floats.
 
     Returns:
-        dict: Dictionary containing overall accuracy for each threshold.
+        dict: {
+            "distance": list of float,   # Euclidean error (in meters)
+            "success_1": float,          # % within 1 m
+            "success_2": float,          # % within 2 m
+            "success_3": float,          # % within 3 m
+        }
     """
-    pred_target = pred_target['heatmap_coords'].detach().cpu().numpy() 
-    gt_target = gt_target.detach().cpu().numpy()
-    
-    # Compute distances once and then compute mean accuracy for each threshold
-    distances = [np.linalg.norm(gt - pred) for gt, pred in zip(gt_target, pred_target)]
-    accuracy = {
-        threshold: np.mean([int(dist < threshold) for dist in distances])
-        for threshold in thresholds
-    }
+    # pull out NumPy arrays
+    pred = pred_target['coords'].detach().cpu().numpy()  # (N,2), floats in meters
+    gt   = gt_target.detach().cpu().numpy()             # (N,2), can be floats or ints
 
-    return accuracy
+    # 1) compute Euclidean distances (in meters)
+    distances = np.linalg.norm(pred - gt, axis=1)  # shape (N,)
+
+    # 2) success rates at 1m, 2m, 3m
+    metrics = {"distance": distances.mean().tolist()}
+    for r in (1, 2, 3):
+        metrics[f"success_{r}"] = np.mean([float(distances[i] <= r) for i in range(len(distances))])
+
+    return metrics

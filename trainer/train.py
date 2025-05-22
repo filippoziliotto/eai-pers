@@ -48,15 +48,17 @@ def train_one_epoch(
     
     model.train()
     epoch_loss = 0.0
-    train_acc = []
-    raw_losses = []  # Store raw loss values for normalization.
+    num_batches = 0
+    metrics = []
 
     for batch_idx, data in tqdm(enumerate(data_loader), total=len(data_loader), desc="Batch", leave=False):
         description, query = data['summary'], data['query']
         gt_target, feature_map = data['target'], data['feature_map']
+        
         # Move data to the specified device
-        description, query = description.to(device), query.to(device)
-
+        # Convert to float32 for Speedup
+        gt_target, feature_map = gt_target.to(torch.float32).to(device), feature_map.to(torch.float32).to(device)
+        
         # Forward pass
         output = model(description=description, map_tensor=feature_map, query=query)  # e.g., output dict contains 'value_map'
 
@@ -68,11 +70,11 @@ def train_one_epoch(
 
         # Append raw losses
         train_loss = loss.item()
-        raw_losses.append(train_loss)
         epoch_loss += train_loss
+        num_batches += 1
         
         # Compute accuracy for the batch
-        train_acc.append(compute_accuracy(gt_target, output))
+        metrics.append(compute_accuracy(gt_target, output))
         
         # Optionally log batch loss to W&B
         if use_wandb:
@@ -96,14 +98,13 @@ def train_one_epoch(
         if config.debug and batch_idx == 1:
             break
 
-    # Normalize the epoch loss using the new baseline normalization.
-    loss_norm = sum(raw_losses) / len(raw_losses) if loss_norm is None else loss_norm
-    train_avg_loss = sum(raw_losses) / len(raw_losses) / loss_norm
+    # Compute raw mean batch-sum loss for this epoch
+    train_loss /= num_batches
     
     # Calculate average accuracy for the epoch.
-    train_avg_acc = {key: sum(d[key] for d in train_acc) / len(train_acc) for key in train_acc[0]}
+    train_avg_metric = {key: sum(d[key] for d in metrics) / len(metrics) for key in metrics[0]}
     
-    return train_avg_loss, train_avg_acc
+    return train_loss, train_avg_metric
 
 def train_and_validate(
     model, 
@@ -151,6 +152,7 @@ def train_and_validate(
     # Initialize training variablesx
     start_epoch = 0
     best_val_loss = float('inf')
+    first_epoch_loss = None
         
     # Optionally load model weights from checkpoint
     if load_checkpoint_:
@@ -168,16 +170,23 @@ def train_and_validate(
     for epoch in tqdm(range(start_epoch, num_epochs), desc="Epochs"):
         # Train for one epoch and get training metrics
         train_loss, train_acc = train_one_epoch(model, train_loader, optimizer, loss_choice, use_wandb, config, device)
-        
+
+        # Store the first epoch's loss as normalization baseline
+        if first_epoch_loss is None: first_epoch_loss = train_loss
+            
+        # Normalize the training loss
+        norm_train_loss = train_loss / first_epoch_loss
+
         # Always print training metrics
-        print(f"\nEpoch {epoch}/{num_epochs} - Train Loss: {train_loss:.4f}")
+        print(f"\nEpoch {epoch}/{num_epochs} - Train Loss: {norm_train_loss:.4f}")
+        print("Train Metrics:")
         for key in train_acc:
-            print(f"Train Acc [{key}]: {train_acc[key]:.4f}")
+            print(f"{key}: {train_acc[key]:.4f}")
 
         # Determine if validation should be run this epoch
         if (epoch % validate_every_n_epocs == 0) or ((epoch + 1) == num_epochs):
             # Validate the model and get validation metrics
-            val_loss, val_acc = validate(model, val_loader, loss_choice, device, mode=mode)
+            val_loss, val_acc = validate(model, val_loader, loss_choice, device, mode=mode, config=config)
             
             # Scheduler step (pass validation loss if ReduceLROnPlateau)
             if scheduler:
@@ -200,9 +209,10 @@ def train_and_validate(
                 )
                 
             # Print epoch summary with both training and validation metrics
-            print(f"Epoch {epoch}/{num_epochs} - Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}")
-            for key in train_acc:
-                print(f"Train Acc [{key}]: {train_acc[key]:.4f} | Val Acc [{key}]: {val_acc.get(key, 0):.4f}")
+            print(f"Epoch {epoch}/{num_epochs}, Val Loss: {val_loss:.4f}")
+            print("Val Metrics:")
+            for key in val_acc:
+                print(f"{key}: {val_acc.get(key, 0):.4f}")
             print('-' * 20)
             
         else:

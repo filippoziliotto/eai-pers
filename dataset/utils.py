@@ -61,7 +61,7 @@ def custom_collate(batch):
         feature_maps = torch.stack(feature_maps)
 
     return {
-        "description": summaries,
+        "summary": summaries,
         "query": queries,
         "target": targets,
         "feature_map": feature_maps,

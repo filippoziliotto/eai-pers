@@ -1,98 +1,149 @@
 # -------------------------------------------------------------------
 # default.yaml
-# All the “factory” defaults for the project
+# Project-wide default configuration values
 # -------------------------------------------------------------------
 
-# Data
+# -------------------------------------------------------------------
+# DATA CONFIGURATION
+# -------------------------------------------------------------------
 data:
-  data_dir: "data"
-  data_split: "object_unseen"
+  data_dir: "data"                  # Path to dataset root directory
+  data_split: "object_unseen"      # Which data split to use (e.g., seen, unseen)
 
-# Seed for reproducibility
+# Random seed for reproducibility
 seed: 2025
 
-# Augmentations
+
+# -------------------------------------------------------------------
+# AUGMENTATION SETTINGS
+# Enables or disables different types of input augmentation
+# -------------------------------------------------------------------
 augmentations:
-  use_aug: true
-  default_prob: 0.5
+  use_aug: true                    # Global switch to enable augmentations
+  default_prob: 0.5               # Default probability applied across augmentations
+
   flip:
-    use_horizontal_flip: true
-    use_vertical_flip: true
-    prob: 0.5
+    use_horizontal_flip: true     # Enable horizontal flip
+    use_vertical_flip: true       # Enable vertical flip
+    prob: 0.5                      # Probability of applying flip
+
   crop:
-    use_crop: true
-    max_crop_fraction: 0.3
-    prob: 0.5
+    use_crop: true                # Enable random cropping
+    max_crop_fraction: 0.3        # Maximum allowed crop size (fraction of image)
+    prob: 0.5                      # Probability of applying crop
+
   rotation:
-    use_rotation: true
-    angle_range: 90
-    prob: 0.5
+    use_rotation: true            # Enable image rotation
+    angle_range: 90               # Maximum angle (degrees) for random rotation
+    prob: 0.5                      # Probability of applying rotation
+
   desc:
-    use_desc: true
-    prob: 0.5
+    use_desc: true                # Enable description/textual augmentation
+    prob: 0.5                      # Probability of applying description augmentation
 
-# Model & Training
+
+# -------------------------------------------------------------------
+# MODEL & TRAINING CONFIGURATION
+# Model architecture, loss, training schedule, etc.
+# -------------------------------------------------------------------
 training:
-  batch_size: 2
-  validate_after_n_epochs: 1
-  loss:
-    choice: "L2"
-    scaling: 0.3
+  batch_size: 4                    # Number of samples per training batch
+  validate_after_n_epochs: 1      # Frequency of validation (in epochs)
 
-# Attention
+  loss:
+    choice: "L2"                   # Loss type: L2, L1, etc.
+    scaling: 0.3                   # Loss scaling factor
+
+
+# -------------------------------------------------------------------
+# MODEL ARCHITECTURE DETAILS
+# Includes attention mechanism, encoder freezing, and model head
+# -------------------------------------------------------------------
 attention:
-  embed_dim: 512
-  num_heads: 8
+  embed_dim: 512                   # Dimension of attention embeddings
+  num_heads: 8                     # Number of attention heads
 
 model:
-  type: "base"
-  tau: 0.8
+  type: "base"                     # Model architecture variant
+  tau: 0.8                         # Softmax/contrastive temperature
 
 encoder:
-  freeze: True
+  freeze: true                     # Freeze encoder weights during training
 
-# Map parameters
+
+# -------------------------------------------------------------------
+# MAP MODULE CONFIGURATION
+# Spatial representation parameters
+# -------------------------------------------------------------------
 map:
-  size: 50
-  embedding_size: 768
+  size: 50                         # Spatial resolution (e.g., 50x50 grid)
+  embedding_size: 768              # Size of spatial embedding vectors
 
-# Optimizer & Scheduler
+
+# -------------------------------------------------------------------
+# OPTIMIZATION PARAMETERS
+# Optimizer choice and learning rate scheduling
+# -------------------------------------------------------------------
 optimizer:
-  type: "adam"
-  lr: 0.001
-  weight_decay: 1e-5
+  type: "adam"                     # Optimizer type
+  lr: 0.001                        # Learning rate
+  weight_decay: 1e-5               # Weight decay (L2 regularization)
 
 scheduler:
-  type: "none"
-  step_size: 5
-  gamma: 0.1
-  patience: 10
+  type: "none"                     # Learning rate scheduler (e.g., 'step', 'plateau')
+  step_size: 5                     # Step size (used if type is 'step')
+  gamma: 0.1                       # Decay factor for scheduler
+  patience: 10                     # Patience for ReduceLROnPlateau
 
-# Checkpoints
+
+# -------------------------------------------------------------------
+# CHECKPOINT MANAGEMENT
+# Saving/loading model weights
+# -------------------------------------------------------------------
 checkpoint:
-  save: false
-  path: "model/checkpoints/model.pth"
-  load: false
+  save: false                      # Whether to save checkpoints
+  path: "model/checkpoints/model.pth"  # Path to save/load model checkpoint
+  load: false                      # Whether to load from checkpoint
+  resume_training: false           # Resume whole training from checkpoint
 
-# Device & performance
+
+# -------------------------------------------------------------------
+# SYSTEM AND DEVICE CONFIGURATION
+# -------------------------------------------------------------------
 device:
-  type: "mps"
-  num_workers: 4
+  type: "mps"                      # Device type: 'cpu', 'cuda', 'mps', etc.
+  num_workers: 4                   # Number of data loading workers
 
-# Logging
+
+# -------------------------------------------------------------------
+# LOGGING CONFIGURATION
+# External logging (e.g., Weights & Biases)
+# -------------------------------------------------------------------
 logging:
   wandb:
-    use_wandb: false
-    run_name: "none"
+    use_wandb: false               # Enable wandb logging
+    run_name: "none"              # Name of the wandb run
 
-# Debug / Visualization
-debug: false
-visualize: false
-use_obstacle_map: false
 
-# Baseline
+# -------------------------------------------------------------------
+# DEBUGGING & VISUALIZATION FLAGS
+# Toggle visual/debugging features
+# -------------------------------------------------------------------
+debug: false                       # Enable debugging outputs
+visualize: false                   # Enable visualizations
+use_obstacle_map: false           # Use binary obstacle maps in planning
+
+
+# -------------------------------------------------------------------
+# BASELINE CONFIGURATION
+# Toggle and specify baseline models for comparison
+# -------------------------------------------------------------------
 baseline:
-  use_baseline: false
-  type: "random"
+  use_baseline: false             # Enable baseline comparisons
+  type: "random"                  # Baseline policy type
 
-use_extractor: true
+
+# -------------------------------------------------------------------
+# EXTERNAL FEATURE EXTRACTOR USAGE
+# -------------------------------------------------------------------
+use_extractor: true               # Use pretrained feature extractor (e.g., CLIP, RN50)
