@@ -24,7 +24,7 @@ def get_args():
     parser.add_argument("--seed", type=int, default=2025, help="Random seed for reproducibility")
 
     # Model and Training Parameters
-    parser.add_argument("--batch_size", type=int, default=1, help="Batch size for training")
+    parser.add_argument("--batch_size", type=int, default=4, help="Batch size for training")
     parser.add_argument("--lr", type=float, default=0.001, help="Learning rate for the optimizer")
     parser.add_argument("--weight_decay", type=float, default=1e-5, help="Weight decay for regularization")
     parser.add_argument("--num_epochs", type=int, default=10, help="Number of training epochs")
@@ -37,14 +37,14 @@ def get_args():
     parser.add_argument("--resume_training", action="store_true", default=False, help="Resume training from checkpoint")
     
     # Attention parameters
-    parser.add_argument("--embed_dim", type=int, default=512, help="Embedding dimension for attention")
+    parser.add_argument("--embed_dim", type=int, default=768, help="Embedding dimension for attention")
     parser.add_argument("--num_heads", type=int, default=8, help="Number of attention heads")
     
     # Encoder parameters
     parser.add_argument("--freeze_encoder", action="store_true", default=True, help="Freeze the encoder parameters")
     
     # Map parameters
-    parser.add_argument("--map_size", type=int, default=500, help="Size of the map (e.g., 500x500)")
+    parser.add_argument("--map_size", type=int, default=50, help="Size of the map (e.g., 500x500)")
     parser.add_argument("--pixels_per_meter", type=int, default=10, help="Pixels per meter for map scaling")
 
     # Optimizer Parameters
@@ -58,7 +58,7 @@ def get_args():
 
     # Device
     parser.add_argument("--num_workers", type=int, default=4, help="Number of workers for data loading")
-    parser.add_argument("--device", type=str, default="cpu", choices=["cpu", "cuda", "mps"], help="Device to train on")
+    parser.add_argument("--device", type=str, default="mps", choices=["cpu", "cuda", "mps"], help="Device to train on")
     
     # Wandb
     parser.add_argument("--use_wandb", action="store_true", default=False, help="Use wandb for logging")
