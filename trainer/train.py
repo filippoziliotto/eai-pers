@@ -99,12 +99,12 @@ def train_one_epoch(
             break
 
     # Compute raw mean batch-sum loss for this epoch
-    train_avg_loss /= num_batches
+    train_loss /= num_batches
     
     # Calculate average accuracy for the epoch.
     train_avg_metric = {key: sum(d[key] for d in metrics) / len(metrics) for key in metrics[0]}
     
-    return train_avg_loss, train_avg_metric
+    return train_loss, train_avg_metric
 
 def train_and_validate(
     model, 
@@ -179,13 +179,14 @@ def train_and_validate(
 
         # Always print training metrics
         print(f"\nEpoch {epoch}/{num_epochs} - Train Loss: {norm_train_loss:.4f}")
+        print("Train Metrics:")
         for key in train_acc:
-            print(f"Train Metrics \n [{key}]: {train_acc[key]:.4f}")
+            print(f"{key}: {train_acc[key]:.4f}")
 
         # Determine if validation should be run this epoch
         if (epoch % validate_every_n_epocs == 0) or ((epoch + 1) == num_epochs):
             # Validate the model and get validation metrics
-            val_loss, val_acc = validate(model, val_loader, loss_choice, device, mode=mode)
+            val_loss, val_acc = validate(model, val_loader, loss_choice, device, mode=mode, config=config)
             
             # Scheduler step (pass validation loss if ReduceLROnPlateau)
             if scheduler:
@@ -209,8 +210,9 @@ def train_and_validate(
                 
             # Print epoch summary with both training and validation metrics
             print(f"Epoch {epoch}/{num_epochs}, Val Loss: {val_loss:.4f}")
+            print("Val Metrics:")
             for key in val_acc:
-                print(f"Val Acc [{key}]: {val_acc.get(key, 0):.4f}")
+                print(f"{key}: {val_acc.get(key, 0):.4f}")
             print('-' * 20)
             
         else:

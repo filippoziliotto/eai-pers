@@ -26,8 +26,8 @@ def compute_accuracy(gt_target, pred_target):
     distances = np.linalg.norm(pred - gt, axis=1)  # shape (N,)
 
     # 2) success rates at 1m, 2m, 3m
-    metrics = {"distance": distances.tolist()}
+    metrics = {"distance": distances.mean().tolist()}
     for r in (1, 2, 3):
-        metrics[f"success_{r}"] = float((distances <= r).mean())
+        metrics[f"success_{r}"] = np.mean([float(distances[i] <= r) for i in range(len(distances))])
 
     return metrics
