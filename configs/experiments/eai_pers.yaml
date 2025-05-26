@@ -1,14 +1,8 @@
 # Debugging stuff
-debug: True
-
-# Visualizations #TODO: fix or remove
-visualize: False
-use_obstacle_map: True
+debugger:
+  debug: true
 
 # Baseline
 baseline:
   use_baseline: false
   type: "random"
-
-# Extractor
-use_extractor: True

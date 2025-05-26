@@ -47,6 +47,7 @@ augmentations:
 # Model architecture, loss, training schedule, etc.
 # -------------------------------------------------------------------
 training:
+  mode: "train"                  # Training mode: 'train', 'eval', etc.
   batch_size: 4                    # Number of samples per training batch
   validate_after_n_epochs: 1      # Frequency of validation (in epochs)
 
@@ -129,9 +130,10 @@ logging:
 # DEBUGGING & VISUALIZATION FLAGS
 # Toggle visual/debugging features
 # -------------------------------------------------------------------
-debug: false                       # Enable debugging outputs
-visualize: false                   # Enable visualizations
-use_obstacle_map: false           # Use binary obstacle maps in planning
+debugger:
+  debug: false                       # Enable debugging outputs
+  visualize: false                   # Enable visualizations
+  use_obstacle_map: false           # Use binary obstacle maps in planning
 
 
 # -------------------------------------------------------------------
