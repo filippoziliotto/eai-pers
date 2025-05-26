@@ -187,7 +187,7 @@ def train_and_validate(
         # Determine if validation should be run this epoch
         if (epoch % validate_every_n_epocs == 0) or ((epoch + 1) == num_epochs):
             # Validate the model and get validation metrics
-            val_loss, val_acc = validate(model, val_loader, loss_choice, device, mode=mode, config=config)
+            val_loss, val_acc = validate(model, val_loader, loss_choice, device, mode=mode, use_wandb=use_wandb, config=config)
             
             # Scheduler step (pass validation loss if ReduceLROnPlateau)
             if scheduler:
@@ -224,6 +224,6 @@ def train_and_validate(
                 
         # Log Metrics to W&B
         if use_wandb:
-            log_epoch_metrics(epoch, optimizer, train_loss, train_acc, val_loss if val_loss else None, val_acc if val_acc else None)
+            log_epoch_metrics(epoch, optimizer, norm_train_loss, train_acc, val_loss if val_loss else None, val_acc if val_acc else None)
 
     print("Training complete...")
