@@ -86,6 +86,7 @@ class LossConfig:
 
 @dataclass
 class TrainingConfig:
+    mode: str = "train"  # Mode: train, eval
     batch_size: int = 4  # Mini-batch size
     num_epochs: int = 10  # Number of training epochs
     validate_after_n_epochs: int = 1  # Frequency of validation (in epochs)
@@ -141,6 +142,11 @@ class WandbConfig:
 class LoggingConfig:
     wandb: WandbConfig = WandbConfig()  # Encapsulated wandb config
 
+@dataclass
+class DebugConfig:
+    debug: bool = False
+    visualize: bool = False
+    use_obstacle_map: bool = False  # Use obstacle map in visualizations
 
 # -------------------------------------------------------------------
 # BASELINE & VISUALIZATION CONFIGURATION
@@ -192,9 +198,7 @@ class DefaultConfig:
     logging: LoggingConfig = LoggingConfig()
 
     # Debug and visualization
-    debug: bool = False
-    visualize: bool = False
-    use_obstacle_map: bool = False
+    debugger: DebugConfig = DebugConfig()
 
     # Baseline
     baseline: BaselineConfig = BaselineConfig()

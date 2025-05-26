@@ -38,7 +38,6 @@ def main(args):
     print("Starting run...")
     
     # Log args set seed and config
-    args_logger(args)
     set_seed(args.seed)
     cfg = load_config(config_path=args.config)
     

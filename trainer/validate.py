@@ -11,9 +11,6 @@ from utils.metrics import compute_accuracy
 # Utils imports
 from utils.visualize import visualize
 
-# Get the normalization constant for the loss
-loss_norm_val = None
-
 def validate(
     model, 
     data_loader, 
@@ -41,7 +38,6 @@ def validate(
         val_avg_loss: Average validation loss.
         val_avg_acc: Average validation accuracy for each threshold.
     """
-    global loss_norm_val
     
     # Move model to device if not already on it
     if device == 'cuda' and not next(model.parameters()).is_cuda:
@@ -75,7 +71,7 @@ def validate(
             output = model(description=description, map_tensor=feature_map, query=query)
 
             # Compute loss
-            loss = compute_loss(gt_target, output, loss_choice, device)
+            loss = compute_loss(gt_target, output, loss_choice)
             val_loss = loss.item()
             epoch_loss += val_loss
             num_batches += 1
@@ -84,7 +80,7 @@ def validate(
             metrics.append(compute_accuracy(gt_target, output))
             
             # Visualize results
-            if config.visualize:
+            if config.debugger.visualize:
                 for query_, gt_target_, value_map_, map_path_ in zip(query, gt_target, output['value_map'], data['map_path']):
                     visualize(
                         query_, 
@@ -98,7 +94,7 @@ def validate(
                         upscale_factor=2.0
                     )
         
-            if config.debug and batch_idx == 2:
+            if config.debugger.debug and batch_idx == 0:
                 break
     
     # Compute mean batch-sum loss for this epoch
@@ -109,7 +105,7 @@ def validate(
     
     # If evaluation mode log the results
     if mode in ['eval']:
-        print(f"Val Loss: {val_avg_loss:.4f}")
+        print(f"Val Loss: {epoch_loss:.4f}")
         print("Val metrics:")
         for key in val_avg_metric:
             print(f"{key}: {val_avg_metric[key]:.4f}")
@@ -117,9 +113,9 @@ def validate(
         
         # Log metrics to W&B if in evaluation mode
         if use_wandb:
-            log_epoch_metrics(val_avg_loss, val_avg_metric)
+            log_epoch_metrics(epoch_loss, val_avg_metric)
 
-    return val_avg_loss, val_avg_metric
+    return epoch_loss, val_avg_metric
 
 
 # TODO: Since there is already a log_epoch_metrics function in utils/utils.py
