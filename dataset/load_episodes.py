@@ -30,10 +30,19 @@ def load_episodes(
     """
     episodes = []
     full_base_path = os.path.join(base_dir, "splits", split_dir, split)
+    
+    # Remove invalid scenes
+    invalid_scenes = ["k1cupFYWXJ6", "HY1NcmCgn3n", "7MXmsvcQjpJ"]
 
     # List all immediate subdirectories
     for subdir in os.listdir(full_base_path):
         subdir_path = os.path.join(full_base_path, subdir)
+        
+        # Skip invalid scenes
+        if subdir in invalid_scenes:
+            continue
+        
+        # Check if the path is a directory
         if os.path.isdir(subdir_path):
             episode_file = os.path.join(subdir_path, "episodes.json")
             assert os.path.exists(episode_file), f"'episodes.json' not found in {subdir_path}"
