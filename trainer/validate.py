@@ -11,9 +11,6 @@ from utils.metrics import compute_accuracy
 # Utils imports
 from utils.visualize import visualize
 
-# Get the normalization constant for the loss
-loss_norm_val = None
-
 def validate(
     model, 
     data_loader, 
@@ -41,7 +38,6 @@ def validate(
         val_avg_loss: Average validation loss.
         val_avg_acc: Average validation accuracy for each threshold.
     """
-    global loss_norm_val
     
     # Move model to device if not already on it
     if device == 'cuda' and not next(model.parameters()).is_cuda:
