@@ -192,3 +192,28 @@ class HabtoGrid:
             plt.imshow(vis_arr)
         
         return embed_arr
+    
+    def visualize(self, arr=None, target=None, save_to_disk=False, path_to_image="trainer/visualizations/map.png"):
+        """
+        Visualizes the numpy array as an image.
+        If save_to_disk is True, saves the image to the specified path.
+        """
+        assert arr is not None, "Array to visualize cannot be None"
+        
+        # Load the map
+        map_img = arr.sum(2)
+        map_img[map_img > 0] = 1
+        
+        # Add the target position
+        if target is not None:
+            map_img[int(target[0]), int(target[1])] = 0.5
+        
+        # Save the image
+        if save_to_disk:
+            plt.imsave(path_to_image, map_img, cmap='jet', vmin=0, vmax=1)
+            
+        
+            
+            
+        
+        

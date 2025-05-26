@@ -77,9 +77,25 @@ class RetMapsDataset(Dataset):
             (self.map.init_dict['map_shape'] // self.map.grid_size) // 2
         )[0]
         
+        # Save feature map. sum() + target in an image
+        # save it to trainer/visualizations/pretransform.png
+        #self.map.visualize(
+        #    arr=feature_map,
+        #    target=target,
+        #    save_to_disk=True,
+        #    path_to_image="trainer/visualizations/pretransform.png"
+        #)
+        
         # Apply optional transformations (e.g., tensor conversion, augmentations)
         if self.transform:
-            feature_map, target, ext_summary = self.transform(feature_map, target, ext_summary)
+            feature_map, target_, ext_summary = self.transform(feature_map, target, ext_summary)
+
+        #self.map.visualize(
+        #    arr=feature_map,
+        #    target=target_,
+        #    save_to_disk=True,
+        #    path_to_image="trainer/visualizations/posttransform.png"
+        #)
 
         # Package and return the sample as a dictionary
         return {
