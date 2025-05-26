@@ -81,7 +81,7 @@ def train_one_epoch(
             wandb.log({"Batch Train Loss": train_loss / len(query), "Batch": batch_idx})
             
         # Visualize predictions if enabled
-        if config.visualize:
+        if config.debugger.visualize:
             for query_, gt_target_, value_map_, map_path_ in zip(query, gt_target, output['value_map'], data['map_path']):
                 visualize(
                     query_, 
@@ -95,7 +95,7 @@ def train_one_epoch(
                     upscale_factor=2.0
                 )
         
-        if config.debug and batch_idx == 1:
+        if config.debugger.debug and batch_idx == 0:
             break
 
     # Compute raw mean batch-sum loss for this epoch
@@ -182,6 +182,7 @@ def train_and_validate(
         print("Train Metrics:")
         for key in train_acc:
             print(f"{key}: {train_acc[key]:.4f}")
+        print('-' * 20)
 
         # Determine if validation should be run this epoch
         if (epoch % validate_every_n_epocs == 0) or ((epoch + 1) == num_epochs):
