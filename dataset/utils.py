@@ -71,105 +71,113 @@ def custom_collate(batch):
 Transforms Utils for Maps
 """
 
-def random_crop_preserving_target(feature_map, xy_coords, max_crop_fraction=0.3):
+def random_crop_preserving_target(
+    feature_map: torch.Tensor,
+    xy_coords: torch.Tensor,
+    max_crop_fraction: float = 0.3,
+    min_size: tuple[int,int] = (40, 40)
+):
     """
-    Randomly crops the feature_map while ensuring that the target point (xy_coords)
-    is still within the cropped image. The maximum amount that can be cropped on each side
-    is limited to avoid overly drastic crops.
-
-    Args:
-        feature_map (torch.Tensor): A tensor of shape (H, W, C) representing the feature map.
-        xy_coords (list or tuple of int): The target point as [x, y] (x is the column, y the row).
-        max_crop_fraction (float): Maximum fraction of the image dimension to crop on any side.
-
-    Returns:
-        cropped_feature_map (torch.Tensor): The cropped feature map.
-        new_xy_coords (list of int): The adjusted target coordinates after cropping.
+    feature_map: Tensor[H, W, C]
+    xy_coords: [x, y]  (column, row)
     """
     H, W = feature_map.shape[:2]
-    x, y = xy_coords[0], xy_coords[1]
+    # unpack coords
+    if isinstance(xy_coords, torch.Tensor):
+        x, y = float(xy_coords[0]), float(xy_coords[1])
+    else:
+        x, y = float(xy_coords[0]), float(xy_coords[1])
 
-    # Compute the maximum possible crop on each side while keeping the target inside.
-    # Here we also subtract 40 pixels on the right and bottom to enforce a minimum
-    # remaining size (you can adjust this if needed).
-    max_crop_left_possible   = x
-    max_crop_top_possible    = y
-    max_crop_right_possible  = W - x - 40
-    max_crop_bottom_possible = H - y - 40
+    min_W, min_H = min_size
 
-    # Limit the crop amounts so that we never crop more than max_crop_fraction of the dimension.
-    max_crop_left   = int(min(max_crop_left_possible, int(W * max_crop_fraction)))
-    max_crop_top    = int(min(max_crop_top_possible, int(H * max_crop_fraction)))
-    max_crop_right  = int(min(max_crop_right_possible, int(W * max_crop_fraction)))
-    max_crop_bottom = int(min(max_crop_bottom_possible, int(H * max_crop_fraction)))
+    # 1) how far we *could* crop on each side without losing the point
+    max_left   = x
+    max_top    = y
+    max_right  = W - x - min_W
+    max_bottom = H - y - min_H
 
-    # Randomly select crop margins for each side.
-    crop_left   = torch.randint(0, max_crop_left + 1, (1,)).item() if max_crop_left > 0 else 0
-    crop_top    = torch.randint(0, max_crop_top + 1, (1,)).item() if max_crop_top > 0 else 0
-    crop_right  = torch.randint(0, max_crop_right + 1, (1,)).item() if max_crop_right > 0 else 0
-    crop_bottom = torch.randint(0, max_crop_bottom + 1, (1,)).item() if max_crop_bottom > 0 else 0
+    # 2) clamp to ≥ 0
+    max_left   = max(0, max_left)
+    max_top    = max(0, max_top)
+    max_right  = max(0, max_right)
+    max_bottom = max(0, max_bottom)
 
-    # Crop the feature map.
-    cropped_feature_map = feature_map[crop_top : H - crop_bottom, crop_left : W - crop_right]
+    # 3) also cap by fraction of dimension
+    max_left   = int(min(max_left,   W * max_crop_fraction))
+    max_right  = int(min(max_right,  W * max_crop_fraction))
+    max_top    = int(min(max_top,    H * max_crop_fraction))
+    max_bottom = int(min(max_bottom, H * max_crop_fraction))
 
-    # Adjust the target coordinate relative to the new cropped image.
-    new_xy_coords = [x - crop_left, y - crop_top]
+    # 4) sample random margins
+    crop_left   = torch.randint(0, max_left+1,   ()).item()
+    crop_right  = torch.randint(0, max_right+1,  ()).item()
+    crop_top    = torch.randint(0, max_top+1,    ()).item()
+    crop_bottom = torch.randint(0, max_bottom+1, ()).item()
 
-    return cropped_feature_map, new_xy_coords
+    # 5) compute new dims & guard
+    new_H = H - crop_top - crop_bottom
+    new_W = W - crop_left - crop_right
+    if new_H <= 0 or new_W <= 0:
+        return feature_map, [x, y]
+
+    # 6) crop the feature map
+    cropped = feature_map[
+        crop_top : crop_top + new_H,
+        crop_left: crop_left + new_W
+    ]
+
+    # 7) shift the target
+    # **Force exact integers** for the new point
+    new_x = int(round(x - crop_left))
+    new_y = int(round(y - crop_top))
+
+    # return in same format
+    if isinstance(xy_coords, torch.Tensor):
+        out = xy_coords.clone()
+        out[0], out[1] = new_x, new_y
+        return cropped, out
+    else:
+        return cropped, [new_x, new_y]
+
 
 def random_rotate_preserving_target(feature_map, xy_coords, angle_range=(-15, 15)):
     """
-    Randomly rotates the feature_map by an angle sampled from angle_range,
-    but only applies the rotation if the target coordinate (xy_coords) remains 
-    inside the image bounds after rotation. Otherwise, the rotation is skipped.
-    
-    Args:
-        feature_map (torch.Tensor): Tensor of shape (H, W, C).
-        xy_coords (list or tuple): The target coordinate as [x, y].
-        angle_range (tuple): (min_angle, max_angle) in degrees.
-        
-    Returns:
-        rotated_feature_map (torch.Tensor): Either the rotated feature map or the original feature_map.
-        new_xy_coords (list): Updated target coordinate if rotated, otherwise the original xy_coords.
+    feature_map: Tensor[H, W, C]
+    xy_coords: [x, y]  (column, row)
     """
-    # Sample a random angle (in degrees) from the provided range.
-    angle = torch.empty(1).uniform_(angle_range[0], angle_range[1]).item()
-    
-    # Get image dimensions and define the center.
+    # 1) sample angle
+    angle = float(torch.empty(1).uniform_(angle_range[0], angle_range[1]))
+
+    # 2) unpack dims & center
     H, W, C = feature_map.shape
-    center = (W / 2.0, H / 2.0)
-    
-    # Compute the new target coordinate using the image-coordinate rotation formula.
-    # Note: In image coordinates (origin at top-left, y increases downward),
-    # the appropriate transformation when rotating about the center is:
-    #   new_dx = dx * cos(theta) + dy * sin(theta)
-    #   new_dy = -dx * sin(theta) + dy * cos(theta)
-    # where dx = x - center_x and dy = y - center_y.
+    cx, cy = W / 2.0, H / 2.0
+
+    # 3) original x,y
     x, y = xy_coords
-    dx = x - center[0]
-    dy = y - center[1]
-    
-    theta = math.radians(angle)
-    cos_theta = math.cos(theta)
-    sin_theta = math.sin(theta)
-    
-    new_dx = dx * cos_theta + dy * sin_theta
-    new_dy = -dx * sin_theta + dy * cos_theta
-    
-    new_x = center[0] + new_dx
-    new_y = center[1] + new_dy
-    
-    # Check if the new target coordinate is inside the image bounds.
-    if new_x < 0 or new_x >= W or new_y < 0 or new_y >= H:
-        # If the target would move outside the image, skip rotation.
+
+    # 4) rotate coordinate
+    θ = math.radians(angle)
+    cosθ = math.cos(θ)
+    sinθ = math.sin(θ)
+
+    dx = x - cx
+    dy = y - cy
+
+    new_x = cosθ * dx - sinθ * dy + cx
+    new_y = sinθ * dx + cosθ * dy + cy
+
+    # 5) check bounds
+    if not (0 <= new_x < W and 0 <= new_y < H):
+        # would leave image: skip
         return feature_map, xy_coords
-    else:
-        # Otherwise, perform the rotation.
-        # TF.rotate expects images with channels first, so we permute first.
-        fm_perm = feature_map.permute(2, 0, 1)
-        rotated_fm = TF.rotate(fm_perm, angle, expand=False, center=center)
-        rotated_feature_map = rotated_fm.permute(1, 2, 0)
-        return rotated_feature_map, [new_x, new_y]
+
+    # 6) perform the actual rotation
+    #    TF.rotate expects C×H×W, CCW by 'angle' degrees
+    fm_CHW = feature_map.permute(2, 0, 1)
+    rotated_CHW = TF.rotate(fm_CHW, angle, expand=False, center=(cx, cy))
+    rotated_HWC = rotated_CHW.permute(1, 2, 0)
+
+    return rotated_HWC, [new_x, new_y]
 
 
 """

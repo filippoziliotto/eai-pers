@@ -24,7 +24,7 @@ def get_args():
     parser.add_argument("--seed", type=int, default=2025, help="Random seed for reproducibility")
 
     # Model and Training Parameters
-    parser.add_argument("--batch_size", type=int, default=4, help="Batch size for training")
+    parser.add_argument("--batch_size", type=int, default=1, help="Batch size for training")
     parser.add_argument("--lr", type=float, default=0.001, help="Learning rate for the optimizer")
     parser.add_argument("--weight_decay", type=float, default=1e-5, help="Weight decay for regularization")
     parser.add_argument("--num_epochs", type=int, default=1, help="Number of training epochs")
