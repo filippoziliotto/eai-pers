@@ -6,3 +6,27 @@ debugger:
 baseline:
   use_baseline: false
   type: "random"
+
+
+augmentations:
+  use_aug: true                    # Global switch to enable augmentations
+  default_prob: 0.5               # Default probability applied across augmentations
+
+  flip:
+    use_horizontal_flip: false     # Enable horizontal flip
+    use_vertical_flip: false     # Enable vertical flip
+    prob: 1                      # Probability of applying flip
+
+  crop:
+    use_crop: true              # Enable random cropping
+    max_crop_fraction: 0.3        # Maximum allowed crop size (fraction of image)
+    prob: 1                    # Probability of applying crop
+
+  rotation:
+    use_rotation: false      # Enable image rotation
+    angle_range: 90               # Maximum angle (degrees) for random rotation
+    prob: 1                    # Probability of applying rotation
+
+  desc:
+    use_desc: true                # Enable description/textual augmentation
+    prob: 0.5   
