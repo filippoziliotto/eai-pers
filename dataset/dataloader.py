@@ -88,11 +88,11 @@ class RetMapsDataset(Dataset):
         
         # Apply optional transformations (e.g., tensor conversion, augmentations)
         if self.transform:
-            feature_map, target_, ext_summary = self.transform(feature_map, target, ext_summary)
+            feature_map, target, ext_summary = self.transform(feature_map, target, ext_summary)
 
         #self.map.visualize(
         #    arr=feature_map,
-        #    target=target_,
+        #    target=target,
         #    save_to_disk=True,
         #    path_to_image="trainer/visualizations/posttransform.png"
         #)

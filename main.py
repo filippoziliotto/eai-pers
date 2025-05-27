@@ -38,11 +38,11 @@ def main(args):
     print("Starting run...")
     
     # Log args set seed and config
-    set_seed(args.seed)
     cfg = load_config(config_path=args.config)
+    set_seed(cfg.seed)
     
     # Initialize W&B
-    if args.use_wandb:
+    if cfg.logging.wandb.use_wandb:
         wandb.init(project="EAI-Pers", name=cfg.logging.wandb.run_name, config=flatten_config(cfg))
     
     # Get Freezed text encoder and initialize
@@ -52,10 +52,10 @@ def main(args):
         
     # Create the initial Dataset and DataLoader
     train_loader, val_loader = get_dataloader(
-        data_dir=args.data_dir,
-        split_dir=args.data_split,
-        batch_size=args.batch_size,
-        num_workers=args.num_workers,
+        data_dir=cfg.data.data_dir,
+        split_dir=cfg.data.data_split,
+        batch_size=cfg.training.batch_size,
+        num_workers=cfg.device.num_workers,
         collate_fn=custom_collate,
         augmentation=cfg.augmentations,
     )
@@ -65,12 +65,12 @@ def main(args):
         model = BaselineModel(
             encoder=encoder,
             type=cfg.baseline,
-            device=args.device,
+            device=cfg.device.type,
         )
     else:
         model = RetrievalMapModel(
-            embed_dim=args.embed_dim,
-            num_heads=args.num_heads,
+            embed_dim=cfg.attention.embed_dim,
+            num_heads=cfg.attention.num_heads,
             encoder=encoder,
             type=cfg.model.type,
             tau=cfg.model.tau,
@@ -80,14 +80,14 @@ def main(args):
 
     # Optimizer (and scheduler) initialization using **kwargs for scheduler parameters.
     optimizer, scheduler = get_optimizer(
-        optimizer_name=args.optimizer,
+        optimizer_name=cfg.optimizer.type,
         model=model,
-        lr=args.lr,
-        weight_decay=args.weight_decay,
-        scheduler_name=args.scheduler,
-        num_epochs=args.num_epochs,  # for cosine_annealing
-        step_size=args.step_size,    # for step_lr
-        gamma=args.gamma,            # for any scheduler that uses gamma
+        lr=cfg.optimizer.lr,
+        weight_decay=cfg.optimizer.weight_decay,
+        scheduler_name=cfg.scheduler.type,
+        num_epochs=cfg.training.num_epochs,  # for cosine_annealing
+        step_size=cfg.scheduler.step_size,    # for step_lr
+        gamma=cfg.scheduler.gamma,           # for any scheduler that uses gamma
     )
     
     # Train and/or validate the model
@@ -98,34 +98,34 @@ def main(args):
             val_loader=val_loader,
             optimizer=optimizer,
             scheduler=scheduler,
-            num_epochs=args.num_epochs,
-            loss_choice=args.loss_choice,
-            device=args.device,
-            use_wandb=args.use_wandb,
-            mode=args.mode,
-            load_checkpoint_=args.load_checkpoint,
-            save_checkpoint_=args.save_checkpoint,
-            checkpoint_path=args.checkpoint_path,
-            resume_training=args.resume_training,
-            validate_every_n_epocs=args.validate_after_n_epochs,
+            num_epochs=cfg.training.num_epochs,
+            loss_choice=cfg.training.loss.choice,
+            device=cfg.device.type,
+            use_wandb=cfg.logging.wandb.use_wandb,
+            mode=cfg.training.mode,
+            load_checkpoint_=cfg.checkpoint.load,
+            save_checkpoint_= cfg.checkpoint.save,
+            checkpoint_path= cfg.checkpoint.path,
+            resume_training= args.resume_training,
+            validate_every_n_epocs=cfg.training.validate_after_n_epochs,
             config=cfg,
         )
     elif args.mode in ['eval']:
-        assert args.load_checkpoint, "Checkpoint path must be provided for evaluation."
+        assert cfg.checkpoint.path, "Checkpoint path must be provided for evaluation."
         validate(
             model=model,
             data_loader=val_loader,
-            loss_choice=args.loss_choice,
-            device=args.device,
-            use_wandb=args.use_wandb,
-            load_checkpoint=args.load_checkpoint,
-            checkpoint_path=args.checkpoint_path,
-            mode=args.mode,
+            loss_choice=cfg.training.loss.choice,
+            device=cfg.device.type,
+            use_wandb=cfg.logging.wandb.use_wandb,
+            load_checkpoint= cfg.checkpoint.load,
+            checkpoint_path= cfg.checkpoint.path,
+            mode= cfg.training.mode,
             config=cfg,
         )
         
     # Finish run
-    if args.use_wandb:
+    if cfg.logging.wandb.use_wandb:
         wandb.finish()
         
     # Log completion

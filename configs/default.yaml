@@ -7,7 +7,7 @@
 # DATA CONFIGURATION
 # -------------------------------------------------------------------
 data:
-  data_dir: "data"                  # Path to dataset root directory
+  data_dir: "data/v2"                  # Path to dataset root directory
   data_split: "object_unseen"      # Which data split to use (e.g., seen, unseen)
 
 # Random seed for reproducibility
@@ -30,7 +30,8 @@ augmentations:
   crop:
     use_crop: true                # Enable random cropping
     max_crop_fraction: 0.3        # Maximum allowed crop size (fraction of image)
-    prob: 0.5                      # Probability of applying crop
+    min_size: 20                  # Minimum crop size (width, height)
+    prob: 0.5                     # Probability of applying crop
 
   rotation:
     use_rotation: true            # Enable image rotation
@@ -61,7 +62,7 @@ training:
 # Includes attention mechanism, encoder freezing, and model head
 # -------------------------------------------------------------------
 attention:
-  embed_dim: 512                   # Dimension of attention embeddings
+  embed_dim: 768                   # Dimension of attention embeddings
   num_heads: 8                     # Number of attention heads
 
 model:
@@ -95,7 +96,6 @@ scheduler:
   step_size: 5                     # Step size (used if type is 'step')
   gamma: 0.1                       # Decay factor for scheduler
   patience: 10                     # Patience for ReduceLROnPlateau
-
 
 # -------------------------------------------------------------------
 # CHECKPOINT MANAGEMENT

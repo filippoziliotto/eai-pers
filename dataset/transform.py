@@ -31,6 +31,8 @@ class MapTransform:
         self.use_random_crop = augmentations["crop"]["use_crop"]
         if self.use_random_crop:
             self.max_crop_fraction = augmentations["crop"]["max_crop_fraction"]
+            self.min_size = (augmentations["crop"]["min_size"], 
+                             augmentations["crop"]["min_size"])
             self.crop_prob = augmentations["crop"]["prob"]
         
         # Random rotation augmentation
@@ -68,7 +70,8 @@ class MapTransform:
     
         # Apply random crop
         if self.use_random_crop and torch.rand(1) < self.crop_prob:
-            feature_map, xy_coords = random_crop_preserving_target(feature_map, xy_coords, self.max_crop_fraction)
+            feature_map, xy_coords = random_crop_preserving_target(feature_map, xy_coords, self.max_crop_fraction, 
+                                                                   self.min_size)
         
         # Change description order elements
         if self.use_desc_aug and torch.rand(1) < self.desc_prob:
