@@ -69,8 +69,7 @@ def validate(
             
             # Forward pass
             output = model(description=description, map_tensor=feature_map, query=query)
-
-            print(output["coords"])
+            
             # Compute loss
             loss = compute_loss(gt_target, output, loss_choice)
             val_loss = loss.item()

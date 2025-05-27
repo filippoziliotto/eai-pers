@@ -9,24 +9,35 @@ baseline:
 
 training:
   batch_size: 4     
+  loss:
+    choice: "Huber"
+
+attention:
+  num_heads: 6
 
 augmentations:
   flip:
-    use_horizontal_flip: false     # Enable horizontal flip
-    use_vertical_flip: false      # Enable vertical flip
-    prob: 1
+    use_horizontal_flip: true     # Enable horizontal flip
+    use_vertical_flip: true      # Enable vertical flip
+    prob: 0.5
   crop:
-    use_crop: false                # Enable random cropping
-    prob: 1
+    use_crop: true                # Enable random cropping
+    prob: 0.5
   rotation:
-    use_rotation: false          # Enable image rotation
-    prob: 1
+    use_rotation: true          # Enable image rotation
+    prob: 0.5
 
 device:
   type: "mps"                      # Device type: 'cpu', 'cuda', 'mps', etc.
-  num_workers: 2                   # Number of data loading workers
+  num_workers: 4                   # Number of data loading workers
 
 optimizer:
   type: "adam"                     # Optimizer type
-  lr: 0.001                        # Learning rate
-  weight_decay: 0               # Weight decay (L2 regularization)
+  lr: 0.0001                        # Learning rate
+  weight_decay: 1e-4               # Weight decay (L2 regularization)
+
+scheduler:
+  type: "none"                     # Learning rate scheduler (e.g., 'step', 'plateau')
+  step_size: 5                     # Step size (used if type is 'step')
+  gamma: 0.1                       # Decay factor for scheduler
+  patience: 10                     # Patience for ReduceLROnPlateau

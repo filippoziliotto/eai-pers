@@ -246,16 +246,6 @@ def read_wandb_api_key(path="scripts/keys.sh"):
     return None
 
 """
-Loss Utils
-"""
-def get_loss(loss_choice):
-    if loss_choice in ["CE"]:
-        return nn.CrossEntropyLoss()
-    else:
-        return nn.MSELoss()
-
-
-"""
 SoftMax Utils
 """
 def soft_argmax_coords(value_map: torch.Tensor, tau: float = 1.0) -> torch.Tensor:

@@ -82,7 +82,7 @@ class MapConfig:
 
 @dataclass
 class LossConfig:
-    choice: str = "L2"  # Loss type: L1, L2, etc.
+    choice: str = "L2"  # Loss type: L1, L2, Huber
     scaling: float = 0.3  # Scaling factor for the loss term
 
 @dataclass
