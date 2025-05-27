@@ -10,7 +10,11 @@ from tqdm import tqdm
 from utils.losses import compute_loss
 from utils.metrics import compute_accuracy
 from utils.utils import log_lr_scheduler, log_epoch_metrics
-from utils.visualize import visualize
+from utils.visualize import visualize, plot_value_map
+
+# Trainer imports
+from trainer.validate import validate
+from trainer.utils import load_checkpoint, save_checkpoint
 
 # Trainer imports
 from trainer.validate import validate
@@ -83,19 +87,8 @@ def train_one_epoch(
             wandb.log({"Batch Train Loss": train_loss / len(query), "Batch": batch_idx})
             
         # Visualize predictions if enabled
-        if config.debugger.visualize:
-            for query_, gt_target_, value_map_, map_path_ in zip(query, gt_target, output['value_map'], data['map_path']):
-                visualize(
-                    query_, 
-                    gt_target_, 
-                    value_map_, 
-                    map_path_, 
-                    batch_idx, 
-                    name="prediction", 
-                    split="train",
-                    use_obstacle_map=config.use_obstacle_map,
-                    upscale_factor=2.0
-                )
+        if config.debugger.debug:
+            plot_value_map(output['value_map'], output["coords"], gt_target)
         
         if config.debugger.debug and batch_idx == 0:
             break
@@ -174,8 +167,7 @@ def train_and_validate(
         train_loss, train_acc = train_one_epoch(model, train_loader, optimizer, loss_choice, use_wandb, config, device)
 
         # Store the first epoch's loss as normalization baseline
-        if first_epoch_loss is None: first_epoch_loss = train_loss
-            
+        if first_epoch_loss is None: first_epoch_loss = 1.
         # Normalize the training loss
         norm_train_loss = train_loss / first_epoch_loss
 

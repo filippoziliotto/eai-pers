@@ -173,3 +173,44 @@ def save_image_to_disk(image: np.ndarray, base_path: str = "trainer/visualizatio
     os.makedirs(base_path, exist_ok=True)
     filepath = os.path.join(base_path, f"{name}_{idx_}.png")
     cv2.imwrite(filepath, image)
+
+
+"""
+Quick visualization
+"""
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+
+def plot_value_map(value_map, pred_target, gt_target, filename="trainer/visualizations/value_map.png"):
+    """
+    Plots the value map with ground truth and predicted target positions.
+    Args:
+        value_map: Tensor or numpy array of shape (N, H, W, 1) or (N, H, W)
+        pred_target: Tensor or numpy array of shape (N, 2)
+        gt_target: Tensor or numpy array of shape (N, 2)
+        filename: Output filename for the plot
+    """
+    x = 2
+    if hasattr(value_map, 'cpu'):
+        map_img = value_map[x].squeeze(-1).cpu().detach().numpy()
+    else:
+        map_img = value_map[x].squeeze(-1)
+    if hasattr(pred_target, 'cpu'):
+        pred = pred_target[x].cpu().detach().numpy()
+    else:
+        pred = pred_target[x]
+    if hasattr(gt_target, 'cpu'):
+        gt = gt_target[x].cpu().detach().numpy()
+    else:
+        gt = gt_target[x]
+
+    fig, ax = plt.subplots()
+    ax.imshow(map_img, cmap='gray')
+    # Draw a red circle at the ground truth position
+    circle_gt = patches.Circle((gt[1], gt[0]), radius=1, edgecolor='red', facecolor='none', linewidth=2, label='GT')
+    ax.add_patch(circle_gt)
+    # Draw a blue cross at the predicted position
+    ax.plot(pred[1], pred[0], 'bx', markersize=10, label='Pred')
+    plt.axis('off')
+    plt.savefig(filename, bbox_inches='tight', pad_inches=0)
+    plt.close(fig)

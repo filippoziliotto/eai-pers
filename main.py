@@ -47,6 +47,7 @@ def main(args):
     
     # Get Freezed text encoder and initialize
     # TODO: add fake encoder for debugging
+    encoder = Blip2Encoder(device=cfg.device.type, freeze_encoder=cfg.encoder.freeze)
     encoder = Blip2Encoder(device=args.device, freeze_encoder=args.freeze_encoder)
     encoder.initialize()
         
@@ -74,7 +75,7 @@ def main(args):
             encoder=encoder,
             type=cfg.model.type,
             tau=cfg.model.tau,
-            device=args.device,
+            device=cfg.device.type,
         )
     print("N° of Model parameters: ", sum(p.numel() for p in model.parameters() if p.requires_grad))
 
