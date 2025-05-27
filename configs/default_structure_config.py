@@ -33,6 +33,7 @@ class FlipAugmentationConfig:
 class RandomCropAugmentationConfig:
     use_crop: bool = False  # Enable random cropping
     max_crop_fraction: float = 0.3  # Max crop size as a fraction of image size
+    min_size: int = 20 # Minimum size of the crop (20,20 height, width)
     prob: float = 0.5  # Probability of applying cropping
 
 @dataclass
@@ -110,7 +111,6 @@ class SchedulerConfig:
     step_size: int = 5  # Step size for StepLR
     gamma: float = 0.1  # Decay factor
     patience: int = 10  # Patience for ReduceLROnPlateau
-
 
 # -------------------------------------------------------------------
 # CHECKPOINTING AND DEVICE MANAGEMENT

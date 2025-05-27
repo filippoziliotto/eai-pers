@@ -2,7 +2,7 @@
 import math
 import re
 from copy import deepcopy
-from typing import Any, List, Set, Dict
+from typing import Any, List, Set, Dict, Union, Sequence
 
 # Torch imports
 import torch
@@ -72,72 +72,72 @@ Transforms Utils for Maps
 """
 
 def random_crop_preserving_target(
-    feature_map: torch.Tensor,
-    xy_coords: torch.Tensor,
+    feature_map: torch.Tensor,                    # (H, W, E)
+    xy_coords: Union[Sequence[float], torch.Tensor],  # [y, x], floats or tensor
     max_crop_fraction: float = 0.3,
-    min_size: tuple[int,int] = (40, 40)
-):
+    min_size: tuple[int, int] = (20, 20)
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
-    feature_map: Tensor[H, W, C]
-    xy_coords: [x, y]  (column, row)
+    Randomly crop `feature_map`, ensuring the point `xy_coords` remains inside the crop,
+    and adjust `xy_coords` to the new crop coordinate frame.
+
+    Args:
+        feature_map: Tensor of shape (H, W, E).
+        xy_coords: Sequence or Tensor of shape (2,), floats [y, x].
+        max_crop_fraction: Maximum fraction of H,W you may remove.
+        min_size: Minimum (height, width) of the crop.
+
+    Returns:
+        cropped_map: Tensor of shape (new_h, new_w, E).
+        new_xy: Tensor of shape (2,), floats [y', x'] in the cropped map.
     """
-    H, W = feature_map.shape[:2]
-    # unpack coords
-    if isinstance(xy_coords, torch.Tensor):
-        x, y = float(xy_coords[0]), float(xy_coords[1])
+    # Ensure xy_coords is a float tensor on the same device
+    if not torch.is_tensor(xy_coords):
+        xy = torch.tensor(xy_coords, dtype=torch.float32, device=feature_map.device)
     else:
-        x, y = float(xy_coords[0]), float(xy_coords[1])
+        xy = xy_coords.to(device=feature_map.device, dtype=torch.float32)
+    y, x = float(xy[0]), float(xy[1])
 
-    min_W, min_H = min_size
+    H, W, _ = feature_map.shape
 
-    # 1) how far we *could* crop on each side without losing the point
-    max_left   = x
-    max_top    = y
-    max_right  = W - x - min_W
-    max_bottom = H - y - min_H
+    # If the map is already smaller than min_size, skip cropping
+    if H <= min_size[0] or W <= min_size[1]:
+        return feature_map, xy.clone()
 
-    # 2) clamp to ≥ 0
-    max_left   = max(0, max_left)
-    max_top    = max(0, max_top)
-    max_right  = max(0, max_right)
-    max_bottom = max(0, max_bottom)
+    # Compute max removal in pixels
+    max_crop_h = int(math.floor(H * max_crop_fraction))
+    max_crop_w = int(math.floor(W * max_crop_fraction))
 
-    # 3) also cap by fraction of dimension
-    max_left   = int(min(max_left,   W * max_crop_fraction))
-    max_right  = int(min(max_right,  W * max_crop_fraction))
-    max_top    = int(min(max_top,    H * max_crop_fraction))
-    max_bottom = int(min(max_bottom, H * max_crop_fraction))
+    # Compute allowed new sizes
+    min_h, min_w = min_size
+    lower_h = max(min_h, H - max_crop_h)
+    lower_w = max(min_w, W - max_crop_w)
 
-    # 4) sample random margins
-    crop_left   = torch.randint(0, max_left+1,   ()).item()
-    crop_right  = torch.randint(0, max_right+1,  ()).item()
-    crop_top    = torch.randint(0, max_top+1,    ()).item()
-    crop_bottom = torch.randint(0, max_bottom+1, ()).item()
+    # Sample new crop size uniformly in [lower, original]
+    new_h = torch.randint(lower_h, H + 1, (1,)).item()
+    new_w = torch.randint(lower_w, W + 1, (1,)).item()
 
-    # 5) compute new dims & guard
-    new_H = H - crop_top - crop_bottom
-    new_W = W - crop_left - crop_right
-    if new_H <= 0 or new_W <= 0:
-        return feature_map, [x, y]
+    # Determine valid top/left so (y,x) stays inside
+    # top ≤ y ≤ top + new_h - 1  ⇒  top ∈ [y - (new_h - 1), y]
+    top_min = max(0, int(math.ceil(y - (new_h - 1))))
+    top_max = min(int(math.floor(y)), H - new_h)
+    left_min = max(0, int(math.ceil(x - (new_w - 1))))
+    left_max = min(int(math.floor(x)), W - new_w)
 
-    # 6) crop the feature map
-    cropped = feature_map[
-        crop_top : crop_top + new_H,
-        crop_left: crop_left + new_W
-    ]
+    # If invalid, skip cropping
+    if top_min > top_max or left_min > left_max:
+        return feature_map, xy.clone()
 
-    # 7) shift the target
-    # **Force exact integers** for the new point
-    new_x = int(round(x - crop_left))
-    new_y = int(round(y - crop_top))
+    top = torch.randint(top_min, top_max + 1, (1,)).item()
+    left = torch.randint(left_min, left_max + 1, (1,)).item()
 
-    # return in same format
-    if isinstance(xy_coords, torch.Tensor):
-        out = xy_coords.clone()
-        out[0], out[1] = new_x, new_y
-        return cropped, out
-    else:
-        return cropped, [new_x, new_y]
+    # Crop and adjust coords
+    cropped = feature_map[top: top + new_h, left: left + new_w, :]
+    new_y = y - top
+    new_x = x - left
+    new_xy = torch.tensor([new_y, new_x], device=feature_map.device)
+
+    return cropped, new_xy
 
 
 def random_rotate_preserving_target(feature_map, xy_coords, angle_range=(-15, 15)):
