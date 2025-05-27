@@ -48,6 +48,7 @@ def main(args):
     # Get Freezed text encoder and initialize
     # TODO: add fake encoder for debugging
     encoder = Blip2Encoder(device=cfg.device.type, freeze_encoder=cfg.encoder.freeze)
+    encoder = Blip2Encoder(device=args.device, freeze_encoder=args.freeze_encoder)
     encoder.initialize()
         
     # Create the initial Dataset and DataLoader

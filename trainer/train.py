@@ -16,6 +16,10 @@ from utils.visualize import visualize, plot_value_map
 from trainer.validate import validate
 from trainer.utils import load_checkpoint, save_checkpoint
 
+# Trainer imports
+from trainer.validate import validate
+from trainer.utils import load_checkpoint, save_checkpoint
+
 # Get the normalization constant for the loss
 loss_norm = None
 
@@ -164,7 +168,6 @@ def train_and_validate(
 
         # Store the first epoch's loss as normalization baseline
         if first_epoch_loss is None: first_epoch_loss = 1.
-            
         # Normalize the training loss
         norm_train_loss = train_loss / first_epoch_loss
 
