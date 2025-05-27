@@ -77,8 +77,7 @@ class RetMapsDataset(Dataset):
             (self.map.init_dict['map_shape'] // self.map.grid_size) // 2
         )[0]
         
-        # Save feature map. sum() + target in an image
-        # save it to trainer/visualizations/pretransform.png
+        # Save Visualizations before and after transformations
         #self.map.visualize(
         #    arr=feature_map,
         #    target=target,

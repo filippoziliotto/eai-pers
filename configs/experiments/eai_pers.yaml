@@ -8,19 +8,25 @@ baseline:
   type: "random"
 
 training:
-  batch_size: 1     
+  batch_size: 4     
 
 augmentations:
   flip:
     use_horizontal_flip: false     # Enable horizontal flip
     use_vertical_flip: false      # Enable vertical flip
+    prob: 1
   crop:
-    use_crop: true                # Enable random cropping
-    max_crop_fraction: 0.3        # Maximum allowed crop size (fraction of image)
-    prob: 1                      # Probability of applying crop
+    use_crop: false                # Enable random cropping
+    prob: 1
   rotation:
-    use_rotation: false            # Enable image rotation
+    use_rotation: false          # Enable image rotation
+    prob: 1
 
 device:
   type: "mps"                      # Device type: 'cpu', 'cuda', 'mps', etc.
-  num_workers: 1                   # Number of data loading workers
+  num_workers: 2                   # Number of data loading workers
+
+optimizer:
+  type: "adam"                     # Optimizer type
+  lr: 0.001                        # Learning rate
+  weight_decay: 0               # Weight decay (L2 regularization)

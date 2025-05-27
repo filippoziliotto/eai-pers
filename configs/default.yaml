@@ -67,7 +67,7 @@ attention:
 
 model:
   type: "base"                     # Model architecture variant
-  tau: 0.8                         # Softmax/contrastive temperature
+  tau: 0.1                         # Softmax/contrastive temperature
 
 encoder:
   freeze: true                     # Freeze encoder weights during training
