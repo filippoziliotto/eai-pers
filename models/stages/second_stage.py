@@ -41,7 +41,7 @@ class PersonalizedFeatureMapper(nn.Module):
         """
         output = {}
         # This is the output of the MHA part
-        b, w, h, E = feature_map.shape
+        b, h, w, E = feature_map.shape
         
         # Encode the query
         query = self.encode_query(query)
@@ -59,8 +59,8 @@ class PersonalizedFeatureMapper(nn.Module):
             value_map = self.cosine_similarity(
                 feature_map, 
                 query_expanded
-            ).view(b, w, h, 1) # b x w x h x 1
-            output["value_map"] = value_map
+            ).view(b, h, w, 1) # b x h x w x 1
+            output["value_map"] = value_map   
             
             # compute soft-argmax coords
             coords = soft_argmax_coords(value_map, self.tau)
@@ -84,8 +84,8 @@ class PersonalizedFeatureMapper(nn.Module):
             value_map = self.cosine_similarity(
                 feature_map, 
                 query
-            ) # b x w x h
-            output["value_map"] = value_map.view(b, w, h, 1)
+            ) # b x h x w
+            output["value_map"] = value_map.view(b, h, w, 1)
             
             # compute soft-argmax coords
             coords = soft_argmax_coords(value_map, self.tau)

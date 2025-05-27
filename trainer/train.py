@@ -64,7 +64,9 @@ def train_one_epoch(
 
         # Compute loss and perform backpropagation
         loss = compute_loss(gt_target, output, loss_choice)
-        loss.backward()
+        loss.backward()     
+
+        # Optimize model parameters
         optimizer.step()
         optimizer.zero_grad()
 

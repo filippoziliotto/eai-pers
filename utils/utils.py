@@ -270,7 +270,7 @@ def soft_argmax_coords(value_map: torch.Tensor, tau: float = 1.0) -> torch.Tenso
     b, h, w, _ = value_map.shape
     # squeeze the last dim
     scores = value_map.view(b, h, w)
-    
+
     # flatten spatial dims and apply softmax
     flat = scores.view(b, -1)               # (b, h*w)
     probs = F.softmax(flat / tau, dim=-1)   # (b, h*w)
