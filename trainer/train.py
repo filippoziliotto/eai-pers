@@ -89,8 +89,8 @@ def train_one_epoch(
             wandb.log({"Batch Train Loss": train_loss / len(query), "Batch": batch_idx})
             
         # Visualize predictions if enabled
-        if config.debugger.debug:
-            plot_value_map(output['value_map'], output["coords"], gt_target)
+        #if config.debugger.debug:
+        #    plot_value_map(output['value_map'], output["coords"], gt_target)
         
         if config.debugger.debug and batch_idx == 0:
             break

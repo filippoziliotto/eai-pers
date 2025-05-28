@@ -44,7 +44,6 @@ def compute_loss(gt_coords, output, loss_choice='L2'):
         # Scaled Cross-Entropy loss
         gt_heatmap = generate_gt_heatmap(gt_coords, output["value_map"])
         pred_heatmap = output["value_map"]
-        
         return ScaledCE_loss(pred_heatmap, gt_heatmap, output["dist_matrix"])
     else:
         raise ValueError(f"Unknown loss choice: {loss_choice}. Use 'L1' or 'L2', 'Huber'.")
