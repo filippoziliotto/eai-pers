@@ -68,7 +68,7 @@ def validate(
             gt_target, feature_map = gt_target.to(torch.float32).to(device), feature_map.to(torch.float32).to(device)
             
             # Forward pass
-            output = model(description=description, map_tensor=feature_map, query=query)
+            output = model(description=description, map_tensor=feature_map, query=query, gt_coords=gt_target)
             
             # Compute loss
             loss = compute_loss(gt_target, output, loss_choice)
