@@ -42,7 +42,7 @@ class RetrievalMapModel(nn.Module):
         
         print("Model initialized.")
 
-    def forward(self, description, map_tensor, query):
+    def forward(self, description, map_tensor, query, gt_coords):
         """
         Performs a forward pass through the model.
 
@@ -61,4 +61,4 @@ class RetrievalMapModel(nn.Module):
         embed_map = self.first_stage(map_tensor, description)
 
         # Compute the similarity map from the second stage, based on the encoded map.
-        return self.second_stage(embed_map, query)
+        return self.second_stage(embed_map, query, gt_coords)

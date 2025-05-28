@@ -48,7 +48,6 @@ def main(args):
     # Get Freezed text encoder and initialize
     # TODO: add fake encoder for debugging
     encoder = Blip2Encoder(device=cfg.device.type, freeze_encoder=cfg.encoder.freeze)
-    encoder = Blip2Encoder(device=args.device, freeze_encoder=args.freeze_encoder)
     encoder.initialize()
         
     # Create the initial Dataset and DataLoader
@@ -92,7 +91,7 @@ def main(args):
     )
     
     # Train and/or validate the model
-    if args.mode in ['train']:    
+    if cfg.training.mode in ['train']:    
         train_and_validate(
             model=model,
             train_loader=train_loader,
@@ -111,7 +110,7 @@ def main(args):
             validate_every_n_epocs=cfg.training.validate_after_n_epochs,
             config=cfg,
         )
-    elif args.mode in ['eval']:
+    elif cfg.training.mode in ['eval']:
         assert cfg.checkpoint.path, "Checkpoint path must be provided for evaluation."
         validate(
             model=model,
