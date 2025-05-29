@@ -46,6 +46,12 @@ def compute_accuracy(gt_coords: torch.Tensor,
           - "success_2": float, fraction with error ≤ 2 px
           - "success_3": float, fraction with error ≤ 3 px
     """
+    
+    # This is uses for the baselines
+    if "coords" in output.keys():
+        return compute_accuracy_old(gt_coords, output)
+    
+    
     value_map = output['value_map']  # (b, H, W, 1)
     b, H, W, _ = value_map.shape
 

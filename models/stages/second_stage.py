@@ -7,7 +7,6 @@ import torch.nn.functional as F
 from utils.utils import calculate_dist_matrix
 
 
-# TODO: delete the COORDINATEPREDICTION CLASS
 class PersonalizedFeatureMapper(nn.Module):
     def __init__(self, encoder, process_type="base", embed_dim=768, tau=1.0):
         """
@@ -60,7 +59,7 @@ class PersonalizedFeatureMapper(nn.Module):
                 feature_map, 
                 query_expanded
             ).view(b, h, w, 1) # b x h x w x 1
-            output["value_map"] = value_map   
+            output["value_map"] = value_map
             
             # compute soft-argmax coords
             dist_matrix = calculate_dist_matrix(value_map, gt_coords)

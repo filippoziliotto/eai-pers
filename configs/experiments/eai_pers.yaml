@@ -1,14 +1,15 @@
 # Debugging stuff
 debugger:
-  debug: true
+  debug: false
 
 # Baseline
 baseline:
-  use_baseline: false
-  type: "random"
+  use_baseline: true
+  type: "zs_cosine"
 
 training:
-  batch_size: 4     
+  mode: "eval"
+  batch_size: 2     
   loss:
     choice: "SCE"
 

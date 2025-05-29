@@ -23,6 +23,11 @@ def compute_loss(gt_coords, output, loss_choice='L2'):
     Returns:
         loss (Tensor): Computed loss.
     """
+    
+    if "coords" in output.keys():
+        # We use the normale L2 loss
+        return L2_loss(output["coords"].to(torch.float32), gt_coords)
+    
     if loss_choice == 'L1':
         return L1_loss(output["coords"], gt_coords)
     elif loss_choice == 'L2':
@@ -142,13 +147,17 @@ def ScaledCE_loss(
     dist_matrix_flat = dist_matrix.squeeze(-1).view(dist_matrix.size(0), -1)
     
     # Cross-Entropy loss manually
-    ce_loss = gt_heatmap_flat * F.log_softmax(pred_heatmap_flat, dim=1)
+    # ce_loss = gt_heatmap_flat * F.log_softmax(pred_heatmap_flat, dim=1)
+    
+    # Binary cross entropy with reduction none
+    ce_loss = F.binary_cross_entropy_with_logits(pred_heatmap_flat, gt_heatmap_flat, reduction='none')
+    
     
     # Max between dist_matrix and gt_heatmap
     max_dist = torch.max(dist_matrix_flat, gt_heatmap_flat)
     
     # Scale the CE loss by the max distance
-    scaled_ce_loss = - torch.sum(ce_loss * max_dist, dim=-1)
+    scaled_ce_loss = torch.sum(ce_loss * max_dist, dim=-1)
     
     if reduction == 'mean':
         return scaled_ce_loss.mean()

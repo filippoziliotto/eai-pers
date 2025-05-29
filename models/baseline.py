@@ -3,6 +3,9 @@ import torch
 import torch.nn.functional as F
 import warnings
 
+# Local imports
+from models.stages.zs_stage import ZeroShotCosineModel
+
 # Suppress specific warnings
 warnings.filterwarnings('ignore', category=UserWarning)
 
@@ -26,10 +29,14 @@ class BaselineModel(nn.Module):
         self.baseline_type = type
         if self.baseline_type:
             print(f"Using {self.baseline_type} baseline.")
+            
+        if self.baseline_type in ["zs_cosine"]:
+            # Initialize the zero-shot cosine model
+            self.zs_model = ZeroShotCosineModel(encoder=encoder).to(device)
 
         print("Baseline initialized.")
 
-    def forward(self, feature_map, query):
+    def forward(self, map_tensor, description, query, gt_coords=None):
         """
         Performs a forward pass through the model.
 
@@ -44,6 +51,7 @@ class BaselineModel(nn.Module):
               - A tuple of predicted coordinates from the MLP predictor.
         """
         output = {}
+        feature_map = map_tensor
         b, w, h, E = feature_map.shape
         
         if self.baseline_type in ["random"]:
@@ -76,6 +84,26 @@ class BaselineModel(nn.Module):
             max_value_map, max_index = value_map.view(b, -1).max(dim=-1)
             output["max_value"] = max_value_map
             output["coords"] = max_index.view(b, w, h)  
+            return output
+        
+        elif self.baseline_type in ["zs_cosine"]:
+            # Encode query embeddings
+            query_tensor = self.encode_query(query)['text']
+            assert query_tensor.shape == (b, E), "Query embedding must have shape (b, E)"
+            
+            # Encode description embeddings
+            description_tensor = self.zs_model.encode_descriptions(description)
+            assert description_tensor.shape[0] == b, "Description embedding must have shape (b, k, E)"
+            
+            # Get the max value and index from the zero-shot cosine model
+            max_index, max_val = self.zs_model.forward(
+                feature_map=feature_map,
+                query=query_tensor,
+                description=description_tensor
+            )
+
+            output["max_value"] = max_value_map
+            output["coords"] = torch.stack([max_index // w, max_index % w], dim=-1) 
             return output
         
         else:
