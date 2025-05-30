@@ -4,10 +4,16 @@ debugger:
 
 # Baseline
 baseline:
-  use_baseline: false
-  type: "random"
+    use_baseline: false
+    type: "zs_cosine"
+
+logging:
+  wandb:
+    use_wandb: false
+    run_name: "baseline_alessandro_conv2"
 
 training:
+  mode: "train"
   batch_size: 4     
   loss:
     choice: "SCE"

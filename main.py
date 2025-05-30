@@ -64,7 +64,7 @@ def main(args):
     if cfg.baseline.use_baseline:
         model = BaselineModel(
             encoder=encoder,
-            type=cfg.baseline,
+            type=cfg.baseline.type,
             device=cfg.device.type,
         )
     else:
@@ -78,20 +78,21 @@ def main(args):
         )
     print("N° of Model parameters: ", sum(p.numel() for p in model.parameters() if p.requires_grad))
 
-    # Optimizer (and scheduler) initialization using **kwargs for scheduler parameters.
-    optimizer, scheduler = get_optimizer(
-        optimizer_name=cfg.optimizer.type,
-        model=model,
-        lr=cfg.optimizer.lr,
-        weight_decay=cfg.optimizer.weight_decay,
-        scheduler_name=cfg.scheduler.type,
-        num_epochs=cfg.training.num_epochs,  # for cosine_annealing
-        step_size=cfg.scheduler.step_size,    # for step_lr
-        gamma=cfg.scheduler.gamma,           # for any scheduler that uses gamma
-    )
-    
     # Train and/or validate the model
-    if cfg.training.mode in ['train']:    
+    if cfg.training.mode in ['train']:  
+        
+        # Optimizer (and scheduler) initialization using **kwargs for scheduler parameters.
+        optimizer, scheduler = get_optimizer(
+            optimizer_name=cfg.optimizer.type,
+            model=model,
+            lr=cfg.optimizer.lr,
+            weight_decay=cfg.optimizer.weight_decay,
+            scheduler_name=cfg.scheduler.type,
+            num_epochs=cfg.training.num_epochs,  # for cosine_annealing
+            step_size=cfg.scheduler.step_size,    # for step_lr
+            gamma=cfg.scheduler.gamma,           # for any scheduler that uses gamma
+        )
+      
         train_and_validate(
             model=model,
             train_loader=train_loader,
@@ -110,8 +111,9 @@ def main(args):
             validate_every_n_epocs=cfg.training.validate_after_n_epochs,
             config=cfg,
         )
+    
     elif cfg.training.mode in ['eval']:
-        assert cfg.checkpoint.path, "Checkpoint path must be provided for evaluation."
+        assert not cfg.baseline.use_baseline and not cfg.checkpoint.load, "Evaluation mode does not support baseline or loading checkpoints."
         validate(
             model=model,
             data_loader=val_loader,

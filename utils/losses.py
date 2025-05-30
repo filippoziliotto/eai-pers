@@ -23,6 +23,11 @@ def compute_loss(gt_coords, output, loss_choice='L2'):
     Returns:
         loss (Tensor): Computed loss.
     """
+    
+    if "coords" in output.keys():
+        # We use the normale L2 loss
+        return L2_loss(output["coords"].to(torch.float32), gt_coords)
+    
     if loss_choice == 'L1':
         return L1_loss(output["coords"], gt_coords)
     elif loss_choice == 'L2':
@@ -39,6 +44,8 @@ def compute_loss(gt_coords, output, loss_choice='L2'):
         # Compute the GT heatmap (b, H, W, 1)
         gt_heatmap = generate_gt_heatmap(gt_coords, output["value_map"])
         pred_heatmap = output["value_map"]
+        
+        # Compute the heatmap loss
         
     elif loss_choice == 'SCE':
         # Scaled Cross-Entropy loss
@@ -105,16 +112,7 @@ def Heatmap_loss(pred_heatmap: torch.Tensor,
     Returns:
         Tensor: Scalar loss if reduction!='none', else loss map of shape (b, H, W, 1).
     """
-    # ensure shape (b, 1, H, W)
-    if pred_heatmap.dim() == 4 and pred_heatmap.shape[-1] == 1:
-        pred = pred_heatmap.permute(0, 3, 1, 2)
-        gt   = gt_heatmap.permute(0, 3, 1, 2)
-    else:
-        pred, gt = pred_heatmap, gt_heatmap
-
-    # MSE between the two heatmaps
-    loss = F.mse_loss(pred, gt, reduction=reduction)
-    return loss
+    # TODO:
 
 
 def ScaledCE_loss(
@@ -142,13 +140,17 @@ def ScaledCE_loss(
     dist_matrix_flat = dist_matrix.squeeze(-1).view(dist_matrix.size(0), -1)
     
     # Cross-Entropy loss manually
-    ce_loss = gt_heatmap_flat * F.log_softmax(pred_heatmap_flat, dim=1)
+    # ce_loss = gt_heatmap_flat * F.log_softmax(pred_heatmap_flat, dim=1)
+    
+    # Binary cross entropy with reduction none
+    ce_loss = F.binary_cross_entropy_with_logits(pred_heatmap_flat, gt_heatmap_flat, reduction='none')
+    
     
     # Max between dist_matrix and gt_heatmap
     max_dist = torch.max(dist_matrix_flat, gt_heatmap_flat)
     
     # Scale the CE loss by the max distance
-    scaled_ce_loss = - torch.sum(ce_loss * max_dist, dim=-1)
+    scaled_ce_loss = torch.sum(ce_loss * max_dist, dim=-1)
     
     if reduction == 'mean':
         return scaled_ce_loss.mean()
