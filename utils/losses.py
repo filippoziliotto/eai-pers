@@ -45,6 +45,8 @@ def compute_loss(gt_coords, output, loss_choice='L2'):
         gt_heatmap = generate_gt_heatmap(gt_coords, output["value_map"])
         pred_heatmap = output["value_map"]
         
+        # Compute the heatmap loss
+        
     elif loss_choice == 'SCE':
         # Scaled Cross-Entropy loss
         gt_heatmap = generate_gt_heatmap(gt_coords, output["value_map"])
@@ -110,16 +112,7 @@ def Heatmap_loss(pred_heatmap: torch.Tensor,
     Returns:
         Tensor: Scalar loss if reduction!='none', else loss map of shape (b, H, W, 1).
     """
-    # ensure shape (b, 1, H, W)
-    if pred_heatmap.dim() == 4 and pred_heatmap.shape[-1] == 1:
-        pred = pred_heatmap.permute(0, 3, 1, 2)
-        gt   = gt_heatmap.permute(0, 3, 1, 2)
-    else:
-        pred, gt = pred_heatmap, gt_heatmap
-
-    # MSE between the two heatmaps
-    loss = F.mse_loss(pred, gt, reduction=reduction)
-    return loss
+    # TODO:
 
 
 def ScaledCE_loss(

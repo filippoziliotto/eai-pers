@@ -1,15 +1,20 @@
 # Debugging stuff
 debugger:
-  debug: false
+  debug: true
 
 # Baseline
 baseline:
-  use_baseline: true
-  type: "zs_cosine"
+    use_baseline: false
+    type: "zs_cosine"
+
+logging:
+  wandb:
+    use_wandb: false
+    run_name: "baseline_alessandro_conv2"
 
 training:
-  mode: "eval"
-  batch_size: 2     
+  mode: "train"
+  batch_size: 4     
   loss:
     choice: "SCE"
 

@@ -4,22 +4,28 @@ import torch.nn as nn
 from torch.nn.utils.rnn import pad_sequence
 
 # Importing utility functions
-from utils.attention import MultiHeadAttention
+from utils.attention import MultiHeadAttention, MultiHeadSelfAttention
 from utils.utils import reshape_map
 
 class MapAttentionModel(nn.Module):
-    def __init__(self, embed_dim, num_heads, encoder):
+    def __init__(self, embed_dim, num_heads, encoder, use_self_attention=True):
         """
         Initializes the MapAttentionModel with the given parameters.
 
         Args:
             embed_dim (int): The embedding dimension.
             num_heads (int): The number of attention heads.
-            device (torch.device): The device to run the model on.
+            encoder (Blip2Encoder): The encoder model used for text embeddings.
+            use_self_attention (bool): Whether to use self-attention in the model.
         """
         super(MapAttentionModel, self).__init__()
         self.encoder = encoder
         self.mh_attention = MultiHeadAttention(embed_dim=embed_dim, num_heads=num_heads)
+        
+        self.use_self_attention = use_self_attention
+        if self.use_self_attention:
+            # Apply self-attention if specified
+            self.mh_sattention = MultiHeadSelfAttention(embed_dim=embed_dim, num_heads=num_heads)
 
     def encode_descriptions(self, descriptions):
         """
@@ -63,5 +69,12 @@ class MapAttentionModel(nn.Module):
         # Get reshaped map tensor (b, h*w, E)
         reshaped_map = reshape_map(feature_map)
         
+        # Cross-attention
         output = self.mh_attention(reshaped_map, desc_embeds, desc_embeds)
+        
+        # Self-attention if specified
+        if self.use_self_attention:
+            output = self.mh_sattention(output)
+        
+
         return output.view(*feature_map.shape[:3], -1)

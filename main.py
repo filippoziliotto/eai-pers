@@ -113,6 +113,7 @@ def main(args):
         )
     
     elif cfg.training.mode in ['eval']:
+        assert not cfg.baseline.use_baseline and not cfg.checkpoint.load, "Evaluation mode does not support baseline or loading checkpoints."
         validate(
             model=model,
             data_loader=val_loader,

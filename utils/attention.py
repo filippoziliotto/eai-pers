@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from torch.nn.functional import scaled_dot_product_attention
+
 class MultiHeadAttention(nn.Module):
     def __init__(self, embed_dim, num_heads):
         """
@@ -63,23 +65,52 @@ class MultiHeadAttention(nn.Module):
 
         return attn_output
 
-# Example usage
-if __name__ == "__main__":
-    # Example dimensions
-    n_q = 500 * 500  # Map size (e.g., w * h)
-    k = 5    # Number of people
-    E = 768   # Embedding dimension
-    num_heads = 8  # Number of attention heads
+class MultiHeadSelfAttention(nn.Module):
+    def __init__(self, embed_dim, num_heads, dropout_p=0.0):
+        """
+        Multi-head self-attention for 2D spatial data (e.g., feature maps).
 
-    Q_input = torch.randn(n_q, E)  # Query input (map)
-    K_input = torch.randn(k, E)   # Key input (list of embeddings)
-    V_input = torch.randn(k, E)   # Value input (list of embeddings)
+        Args:
+            embed_dim (int): The embedding dimension (E).
+            num_heads (int): The number of attention heads.
+        """
+        super(MultiHeadSelfAttention, self).__init__()
+        self.embed_dim = embed_dim
+        self.num_heads = num_heads
+        self.head_dim = embed_dim // num_heads
+        assert self.head_dim * num_heads == embed_dim, "Embedding dimension must be divisible by number of heads"
+        
+        # Linear projections for Q, K, V
+        self.q_proj = nn.Linear(embed_dim, embed_dim)
+        self.k_proj = nn.Linear(embed_dim, embed_dim)
+        self.v_proj = nn.Linear(embed_dim, embed_dim)
+        
+        # Output projection
+        self.out_proj = nn.Linear(embed_dim, embed_dim)
+        
+        # Dropout layer
+        self.dropout = dropout_p
 
-    mha = MultiHeadAttention(embed_dim=E, num_heads=num_heads)
-    
-    # Get number of parameters 
-    print("Number of parameters:", sum(p.numel() for p in mha.parameters() if p.requires_grad))
-    
-    output = mha(Q_input, K_input, V_input)
-    print("Output shape:", output.shape)  # Should be (n_q, E)
+    def forward(self, x_flat):
+        """
+        Args:
+            x: Tensor of shape (b, H*W, E)
 
+        Returns:
+            out: Tensor of shape (b, H*W, E)
+        """
+        b, n, E = x_flat.shape
+        assert E == self.embed_dim, "Embedding dimension mismatch"
+        
+        # Linear projections
+        Q = self.q_proj(x_flat)  # (b, n, E)
+        K = self.k_proj(x_flat)  # (b, n, E)
+        V = self.v_proj(x_flat)  # (b, n, E)
+        
+        # Use scaled dot-product attention
+        attn_output = scaled_dot_product_attention(Q, K, V, dropout_p=self.dropout, is_causal=False)
+
+        # Project output
+        out = self.out_proj(attn_output)  # (b, n, E)
+        
+        return out

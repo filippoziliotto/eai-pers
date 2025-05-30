@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 # Local imports
-from utils.utils import calculate_dist_matrix
+from utils.utils import soft_argmax_coords
 
 
 class PersonalizedFeatureMapper(nn.Module):
@@ -30,7 +30,7 @@ class PersonalizedFeatureMapper(nn.Module):
             self.conv2 = nn.Conv2d(in_channels=embed_dim // 2, out_channels=embed_dim // 4, kernel_size=3, padding=1)
         
         
-    def forward(self, feature_map, query, gt_coords):
+    def forward(self, feature_map, query, gt_coords=None):
         """
         Processes the input map features and text query to predict coordinates.
         
@@ -41,12 +41,12 @@ class PersonalizedFeatureMapper(nn.Module):
         output = {}
         # This is the output of the MHA part
         b, h, w, E = feature_map.shape
-        
+
         # Encode the query
         query = self.encode_query(query)
         query = query["text"]
         assert query.shape == (b, E), "Query embedding must have shape (b, E)"
-        
+
         # Process with simple cosine similarity
         if self.process_type in ["base"]:
 
@@ -59,15 +59,37 @@ class PersonalizedFeatureMapper(nn.Module):
                 feature_map, 
                 query_expanded
             ).view(b, h, w, 1) # b x h x w x 1
-            output["value_map"] = value_map
-            
+            output["value_map"] = value_map   
+
             # compute soft-argmax coords
-            dist_matrix = calculate_dist_matrix(value_map, gt_coords)
-            output["dist_matrix"] = dist_matrix
+            coords = soft_argmax_coords(value_map, self.tau)
+            output["coords"] = coords
             return output  
-        
-        else:
-            raise ValueError(f"Unsupported process type: {self.process_type}. Supported types are 'base' and 'conv'.")
+
+        elif self.process_type in ["conv"]:
+            # Apply a convolutional layer to the feature map
+            feature_map = feature_map.permute(0, 3, 1, 2)
+            feature_map = self.conv(feature_map)
+            feature_map = self.conv2(feature_map)
+            feature_map = feature_map.permute(0, 2, 3, 1)
+
+            # Apply convolutions to query
+            query = query.unsqueeze(1).unsqueeze(2)
+            query = self.conv(query)
+            query = self.conv2(query)
+            query = query.squeeze(1).squeeze(2)
+
+            # Calculate cosine similarity
+            value_map = self.cosine_similarity(
+                feature_map, 
+                query
+            ) # b x h x w
+            output["value_map"] = value_map.view(b, h, w, 1)
+
+            # compute soft-argmax coords
+            coords = soft_argmax_coords(value_map, self.tau)
+            output["coords"] = coords
+            return output
         
     def encode_query(self, query):
         """

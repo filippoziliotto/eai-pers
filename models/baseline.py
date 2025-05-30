@@ -63,9 +63,9 @@ class BaselineModel(nn.Module):
             
         elif self.baseline_type in ["center"]:
             # For center baseline, just return the center of the feature map
-            output["value_map"] = torch.rand((b, w, h, 1))
+            output["value_map"] = torch.rand((b, h, w, 1))
             output["max_value"] = torch.rand((b, 1))
-            output["coords"] = torch.tensor([w // 2, h // 2]).expand(b, -1)
+            output["coords"] = torch.tensor([h// 2, w // 2]).expand(b, -1).to(self.device)
             return output
         
         elif self.baseline_type in ["vlfm"]:
@@ -98,11 +98,14 @@ class BaselineModel(nn.Module):
             # Get the max value and index from the zero-shot cosine model
             max_index, max_val = self.zs_model.forward(
                 feature_map=feature_map,
-                query=query_tensor,
-                description=description_tensor
+                query_tensor=query_tensor,
+                description_tensor=description_tensor,
+                top_k=4,
+                neighborhood=0,
+                nms_radius=2,
             )
 
-            output["max_value"] = max_value_map
+            output["max_value"] = max_val
             output["coords"] = torch.stack([max_index // w, max_index % w], dim=-1) 
             return output
         
