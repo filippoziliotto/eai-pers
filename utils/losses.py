@@ -24,9 +24,10 @@ def compute_loss(gt_coords, output, loss_choice='L2'):
         loss (Tensor): Computed loss.
     """
     
-    if "coords" in output.keys():
-        # We use the normale L2 loss
-        return L2_loss(output["coords"].to(torch.float32), gt_coords)
+    if loss_choice not in ['L1', 'L2', 'Huber', 'Huber+Heatmap']:
+        assert 'coords' in output, "'coords' key missing in output for selected loss_choice"
+    elif loss_choice not in ['Heatmap', 'SCE']:
+        assert 'value_map' in output, "'value_map' key missing in output for selected loss_choice"
     
     if loss_choice == 'L1':
         return L1_loss(output["coords"], gt_coords)
@@ -38,15 +39,13 @@ def compute_loss(gt_coords, output, loss_choice='L2'):
         # Compute the GT heatmap (b, H, W, 1)
         gt_heatmap = generate_gt_heatmap(gt_coords, output["value_map"])
         pred_heatmap = output["value_map"]
-        
         return Huber_loss(output["coords"], gt_coords) + Heatmap_loss(pred_heatmap, gt_heatmap)
     elif loss_choice == 'Heatmap':
         # Compute the GT heatmap (b, H, W, 1)
         gt_heatmap = generate_gt_heatmap(gt_coords, output["value_map"])
         pred_heatmap = output["value_map"]
-        
         # Compute the heatmap loss
-        
+        return Heatmap_loss(pred_heatmap, gt_heatmap)
     elif loss_choice == 'SCE':
         # Scaled Cross-Entropy loss
         gt_heatmap = generate_gt_heatmap(gt_coords, output["value_map"])
@@ -102,18 +101,23 @@ def Heatmap_loss(pred_heatmap: torch.Tensor,
                  gt_heatmap: torch.Tensor,
                  reduction: str = 'mean') -> torch.Tensor:
     """
-    Computes MSE loss between predicted heatmap and ground-truth heatmap.
+    Computes Cross-Entropy loss between predicted and ground truth heatmaps.
 
     Args:
-        pred_heatmap (Tensor): Predicted heatmap, shape (b, H, W, 1) or (b, 1, H, W).
+        pred_heatmap (Tensor): Predicted heatmap, shape (b, H, W, 1).
         gt_heatmap   (Tensor): Ground-truth heatmap, same shape as pred.
-        reduction    (str): ‘mean’ | ‘sum’ | ‘none’. How to reduce per-pixel losses.
-
-    Returns:
-        Tensor: Scalar loss if reduction!='none', else loss map of shape (b, H, W, 1).
     """
-    # TODO:
+    # Squeeze to (n, H, W) and Flatten the matrices
+    pred_heatmap_flat = pred_heatmap.squeeze(-1).view(pred_heatmap.size(0), -1)
+    gt_heatmap_flat = gt_heatmap.squeeze(-1).view(gt_heatmap.size(0), -1)
 
+    # Binary cross entropy with reduction none
+    ce_loss = F.binary_cross_entropy_with_logits(pred_heatmap_flat, gt_heatmap_flat, reduction='none')
+    
+    if reduction == 'mean':
+        return ce_loss.mean()
+    elif reduction == 'sum':
+        return ce_loss.sum()
 
 def ScaledCE_loss(
     pred_heatmap: torch.Tensor,
@@ -144,7 +148,6 @@ def ScaledCE_loss(
     
     # Binary cross entropy with reduction none
     ce_loss = F.binary_cross_entropy_with_logits(pred_heatmap_flat, gt_heatmap_flat, reduction='none')
-    
     
     # Max between dist_matrix and gt_heatmap
     max_dist = torch.max(dist_matrix_flat, gt_heatmap_flat)

@@ -1,11 +1,10 @@
 # Base imports
 import torch
+import torch.nn as nn
 import numpy as np
 from PIL import Image
 from typing import Optional, Tuple, Union, List
-
 import sys
-import os
 
 # Add the path to the lavis directory
 sys.path.append('LAVIS/')
@@ -13,16 +12,20 @@ sys.path.append('LAVIS/')
 # Lavis imports
 from lavis.models import load_model_and_preprocess
 
+# Lora imports
+from peft import get_peft_model, LoraConfig, TaskType, PeftModel
+
 class Blip2Encoder:
     encoder: torch.nn.Module
     vis_processors: torch.nn.Module
     text_processors: torch.nn.Module
     
-    def __init__(self, device: str = 'cpu', freeze_encoder: bool = True):
+    def __init__(self, device: str = 'cpu', freeze_encoder: bool = True, use_lora: bool = True):
         self.device = device
         self.freeze_encoder = freeze_encoder
+        self.use_lora = use_lora
 
-    def initialize(self, name: str = "blip2_image_text_matching", model_type: str = "pretrain"):
+    def initialize(self, name: str = "blip2_image_text_matching", model_type: str = "pretrain") -> torch.nn.Module:
         """
         Initialize the BLIP2ITM model.
         
@@ -34,7 +37,7 @@ class Blip2Encoder:
         self.encoder, self.vis_processors, self.text_processors = load_model_and_preprocess(
             name=name,
             model_type=model_type,
-            is_eval=True,
+            is_eval=not self.use_lora,
             device=self.device,
         )
         
@@ -42,6 +45,32 @@ class Blip2Encoder:
         if self.freeze_encoder:
             for param in self.encoder.parameters():
                 param.requires_grad = False
+                
+        # Inject LoRA nella Q-Former
+        if self.use_lora:
+            print("Injecting LoRA into BLIP-2 QFormer...")
+            # Prendi l'oggetto QFormer.bert
+            orig_bert = self.encoder.Qformer.bert
+            
+            # Se è già un PeftModel, estrai il modello base; altrimenti usa orig_bert direttamente
+            base_bert = orig_bert.base_model if isinstance(orig_bert, PeftModel) else orig_bert
+            
+            # Configurazione LoRA
+            lora_config = LoraConfig(
+                r=8,
+                lora_alpha=16,
+                target_modules=["query", "value"],
+                lora_dropout=0.1,
+                bias="none",
+                task_type=TaskType.FEATURE_EXTRACTION,
+            )
+            
+            # Inietta LoRA sul modello base
+            lora_bert = get_peft_model(base_bert, lora_config)
+            lora_bert.print_trainable_parameters()
+            
+            # Riassegna il modello modificato al wrapper QFormer
+            self.encoder.Qformer.bert = lora_bert
             
         return self.encoder
 

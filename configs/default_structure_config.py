@@ -59,15 +59,25 @@ class AugmentationsConfig:
 class AttentionConfig:
     embed_dim: int = 512  # Embedding dimension for attention modules
     num_heads: int = 8  # Number of attention heads
+    use_self_attention: bool = False  # Whether to use self-attention in the model
 
 @dataclass
 class ModelConfig:
     type: str = "base"  # Model variant or architecture key
     tau: float = 0.8  # Temperature for softmax or contrastive objectives
-
+@dataclass 
+class LoraConfig:
+    use_lora: bool = True  # Whether to use LoRA for the text encoder
+    r: int = 8  # Rank for LoRA
+    lora_alpha: int = 16  # Alpha scaling factor for LoRA
+    lora_dropout: float = 0.1  # Dropout rate for LoRA
+    bias: str = "none"  # Bias type for LoRA (e.g., 'none', 'lora_only', 'all')
+    task_type: str = "feature_extraction"  # Task type for LoRA
+    
 @dataclass
 class EncoderConfig:
     freeze: bool = True  # Whether to freeze encoder weights during training
+    lora: LoraConfig = LoraConfig()  # LoRA configuration for the text encoder
 
 @dataclass
 class MapConfig:

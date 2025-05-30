@@ -64,6 +64,7 @@ training:
 attention:
   embed_dim: 768                   # Dimension of attention embeddings
   num_heads: 8                     # Number of attention heads
+  use_self_attention: false              # Enable attention mechanism
 
 model:
   type: "base"                     # Model architecture variant
@@ -71,7 +72,13 @@ model:
 
 encoder:
   freeze: true                     # Freeze encoder weights during training
-
+  lora:
+    use_lora: false
+    r: 8  # Rank for LoRA
+    lora_alpha: 16  # Alpha scaling factor for LoRA
+    lora_dropout: 0.1  # Dropout rate for LoRA
+    bias: "none"  # Bias type for LoRA (e.g., 'none', 'lora_only', 'all')
+    task_type: "feature_extraction"  # Task type for LoRA
 
 # -------------------------------------------------------------------
 # MAP MODULE CONFIGURATION
