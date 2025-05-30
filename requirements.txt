@@ -92,7 +92,7 @@ opendatasets==0.1.22
 packaging==24.2
 pandas==2.2.3
 parso==0.8.4
-peft==0.14.0
+peft==0.10.0
 pexpect==4.9.0
 pillow==10.4.0
 platformdirs==4.3.6

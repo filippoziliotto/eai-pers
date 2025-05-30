@@ -14,12 +14,17 @@ logging:
 
 training:
   mode: "train"
-  batch_size: 4     
+  batch_size: 2     
   loss:
-    choice: "SCE"
+    choice: "L2"
 
 attention:
   num_heads: 4
+
+encoder:
+  freeze: true                     # Freeze encoder weights during training
+  lora:
+    use_lora: true
 
 augmentations:
   flip:

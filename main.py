@@ -47,7 +47,7 @@ def main(args):
     
     # Get Freezed text encoder and initialize
     # TODO: add fake encoder for debugging
-    encoder = Blip2Encoder(device=cfg.device.type, freeze_encoder=cfg.encoder.freeze)
+    encoder = Blip2Encoder(device=cfg.device.type, freeze_encoder=cfg.encoder.freeze, use_lora=cfg.encoder.lora.use_lora)
     encoder.initialize()
         
     # Create the initial Dataset and DataLoader
@@ -74,6 +74,7 @@ def main(args):
             encoder=encoder,
             type=cfg.model.type,
             tau=cfg.model.tau,
+            use_self_attention=cfg.attention.use_self_attention,
             device=cfg.device.type,
         )
     print("N° of Model parameters: ", sum(p.numel() for p in model.parameters() if p.requires_grad))

@@ -8,7 +8,7 @@ from utils.attention import MultiHeadAttention, MultiHeadSelfAttention
 from utils.utils import reshape_map
 
 class MapAttentionModel(nn.Module):
-    def __init__(self, embed_dim, num_heads, encoder, use_self_attention=True):
+    def __init__(self, embed_dim, num_heads, encoder, use_self_attention=False):
         """
         Initializes the MapAttentionModel with the given parameters.
 
