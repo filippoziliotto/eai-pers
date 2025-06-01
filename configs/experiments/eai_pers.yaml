@@ -24,7 +24,7 @@ attention:
 encoder:
   freeze: true                     # Freeze encoder weights during training
   lora:
-    use_lora: true
+    use_lora: false
 
 augmentations:
   flip:
