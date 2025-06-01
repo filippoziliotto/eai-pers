@@ -6,9 +6,10 @@ from torch.nn.utils.rnn import pad_sequence
 # Importing utility functions
 from utils.attention import MultiHeadAttention, MultiHeadSelfAttention
 from utils.utils import reshape_map
+from utils.positional import Learnable2DPositionalEncodingMax
 
 class MapAttentionModel(nn.Module):
-    def __init__(self, embed_dim, num_heads, encoder, use_self_attention=False):
+    def __init__(self, embed_dim, num_heads, encoder, use_self_attention=False, use_pos_embed=True):
         """
         Initializes the MapAttentionModel with the given parameters.
 
@@ -26,6 +27,12 @@ class MapAttentionModel(nn.Module):
         if self.use_self_attention:
             # Apply self-attention if specified
             self.mh_sattention = MultiHeadSelfAttention(embed_dim=embed_dim, num_heads=num_heads)
+
+        # Positional encoding learnable
+        if use_pos_embed:
+            # Use learnable 2D positional encoding
+            self.pos_enc = Learnable2DPositionalEncodingMax(E=embed_dim)
+
 
     def encode_descriptions(self, descriptions):
         """
@@ -63,18 +70,24 @@ class MapAttentionModel(nn.Module):
             torch.Tensor: The output of the multi-head attention mechanism.
         """
         
-        # Get description embeddings (b, k, E)
-        desc_embeds = self.encode_descriptions(description)
-        
-        # Get reshaped map tensor (b, h*w, E)
-        reshaped_map = reshape_map(feature_map)
-        
-        # Cross-attention
-        output = self.mh_attention(reshaped_map, desc_embeds, desc_embeds)
-        
-        # Self-attention if specified
+        b, H, W, E = feature_map.shape
+        # 1) Get desc_embeds as before
+        desc_embeds = self.encode_descriptions(description)  # (b, k, E)
+
+        # 2) Get the positional map for (H, W)
+        pe_hw = self.pos_enc(H, W)               # (H, W, E)
+        pe_hw = pe_hw.unsqueeze(0).expand(b, -1, -1, -1)  # (b, H, W, E)
+
+        # 3) Add to feature_map and reshape
+        fmap_pe = feature_map + pe_hw            # (b, H, W, E)
+        reshaped_map = fmap_pe.view(b, H*W, E)   # (b, H*W, E)
+
+        # 4) Cross-attention
+        output = self.mh_attention(reshaped_map, desc_embeds, desc_embeds)  # (b, H*W, E)
+
+        # 5) (If desired) self-attention
         if self.use_self_attention:
             output = self.mh_sattention(output)
-        
 
-        return output.view(*feature_map.shape[:3], -1)
+        # 6) Reshape to (b, H, W, E) and return
+        return output.view(b, H, W, E)

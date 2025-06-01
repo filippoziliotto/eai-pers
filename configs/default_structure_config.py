@@ -65,6 +65,8 @@ class AttentionConfig:
 class ModelConfig:
     type: str = "base"  # Model variant or architecture key
     tau: float = 0.8  # Temperature for softmax or contrastive objectives
+    use_pos_embed: bool = True  # Whether to use positional embeddings
+    
 @dataclass 
 class LoraConfig:
     use_lora: bool = True  # Whether to use LoRA for the text encoder
