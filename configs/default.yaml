@@ -69,6 +69,7 @@ attention:
 model:
   type: "base"                     # Model architecture variant
   tau: 0.1                         # Softmax/contrastive temperature
+  use_pos_embed: true              # Use positional embeddings
 
 encoder:
   freeze: true                     # Freeze encoder weights during training
