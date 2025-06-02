@@ -64,12 +64,17 @@ training:
 attention:
   embed_dim: 768                   # Dimension of attention embeddings
   num_heads: 8                     # Number of attention heads
-  use_self_attention: false              # Enable attention mechanism
+  ffn_dim: 1536                   # Dimension of feed-forward network
+  dropout: 0.1                    # Dropout rate for attention layers
 
 model:
   type: "base"                     # Model architecture variant
   tau: 0.1                         # Softmax/contrastive temperature
   use_pos_embed: true              # Use positional embeddings
+  use_self_attention: false        # Enable attention mechanism
+  num_cross_layers: 2          # Number of cross-attention layers
+  num_self_layers: 1          # Number of self-attention layers
+
 
 encoder:
   freeze: true                     # Freeze encoder weights during training

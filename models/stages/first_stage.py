@@ -4,12 +4,20 @@ import torch.nn as nn
 from torch.nn.utils.rnn import pad_sequence
 
 # Importing utility functions
-from utils.attention import MultiHeadAttention, MultiHeadSelfAttention
-from utils.utils import reshape_map
+from utils.attention import CrossAttentionBlock, SelfAttentionBlock
 from utils.positional import Learnable2DPositionalEncodingMax
 
 class MapAttentionModel(nn.Module):
-    def __init__(self, embed_dim, num_heads, encoder, use_self_attention=False, use_pos_embed=True):
+    def __init__(self, 
+                 embed_dim, 
+                 num_heads, 
+                 ffn_dim,
+                 encoder, 
+                 num_cross_layers: int = 2,
+                 num_self_layers: int = 1,
+                 dropout: float = 0.1,
+                 use_self_attention: bool = False, 
+                 use_pos_embed: bool = True):
         """
         Initializes the MapAttentionModel with the given parameters.
 
@@ -21,15 +29,26 @@ class MapAttentionModel(nn.Module):
         """
         super(MapAttentionModel, self).__init__()
         self.encoder = encoder
-        self.mh_attention = MultiHeadAttention(embed_dim=embed_dim, num_heads=num_heads)
+        
+        if ffn_dim is None:
+            ffn_dim = 2 * embed_dim
+        
+        self.cross_blocks = nn.ModuleList([
+            CrossAttentionBlock(embed_dim=embed_dim, num_heads=num_heads, ffn_dim=ffn_dim, dropout=dropout)
+            for _ in range(num_cross_layers)
+        ])
         
         self.use_self_attention = use_self_attention
+        # Now build a stack of SelfAttentionBlock if requested
         if self.use_self_attention:
-            # Apply self-attention if specified
-            self.mh_sattention = MultiHeadSelfAttention(embed_dim=embed_dim, num_heads=num_heads)
+            self.self_blocks = nn.ModuleList([
+                SelfAttentionBlock(embed_dim=embed_dim, num_heads=num_heads, ffn_dim=ffn_dim, dropout=dropout)
+                for _ in range(num_self_layers)
+            ])
 
         # Positional encoding learnable
-        if use_pos_embed:
+        self.use_pos_embed = use_pos_embed
+        if self.use_pos_embed:
             # Use learnable 2D positional encoding
             self.pos_enc = Learnable2DPositionalEncodingMax(E=embed_dim)
 
@@ -58,36 +77,32 @@ class MapAttentionModel(nn.Module):
 
         return padded
     
-    def forward(self, feature_map, description):
-        """
-        Forward pass of the model.
-
-        Args:
-            feature_map (torch.Tensor): The map tensor.
-            description (str): The description to encode.
-
-        Returns:
-            torch.Tensor: The output of the multi-head attention mechanism.
-        """
-        
+    def forward(self, feature_map: torch.Tensor, descriptions: list) -> torch.Tensor:
         b, H, W, E = feature_map.shape
-        # 1) Get desc_embeds as before
-        desc_embeds = self.encode_descriptions(description)  # (b, k, E)
+        # 1) encode descriptions → desc_embeds (b, k, E)
+        desc_embeds = self.encode_descriptions(descriptions)
 
-        # 2) Get the positional map for (H, W)
-        pe_hw = self.pos_enc(H, W)               # (H, W, E)
-        pe_hw = pe_hw.unsqueeze(0).expand(b, -1, -1, -1)  # (b, H, W, E)
+        # 2) optional pos-emb
+        if self.use_pos_embed:
+            pe_hw = self.pos_enc(H, W)  # (H, W, E)
+            pe_hw = pe_hw.unsqueeze(0).expand(b, -1, -1, -1)  # (b, H, W, E)
+            fmap_pe = feature_map + pe_hw
+        else:
+            fmap_pe = feature_map
 
-        # 3) Add to feature_map and reshape
-        fmap_pe = feature_map + pe_hw            # (b, H, W, E)
-        reshaped_map = fmap_pe.view(b, H*W, E)   # (b, H*W, E)
+        # 3) flatten to (b, H*W, E) for cross-attention
+        Q = fmap_pe.view(b, H * W, E)
 
-        # 4) Cross-attention
-        output = self.mh_attention(reshaped_map, desc_embeds, desc_embeds)  # (b, H*W, E)
+        # 4) stack cross-attention blocks
+        for cross_block in self.cross_blocks:
+            Q = cross_block(Q, desc_embeds, desc_embeds)
 
-        # 5) (If desired) self-attention
+        # 5) optionally reshape back to (b, H, W, E) or keep (b, H*W, E)
+        #    If you want to apply self-attention on the *flattened* map, keep it flat:
         if self.use_self_attention:
-            output = self.mh_sattention(output)
+            for self_block in self.self_blocks:
+                Q = self_block(Q)  # Q remains shape (b, H*W, E)
 
-        # 6) Reshape to (b, H, W, E) and return
-        return output.view(b, H, W, E)
+        # 6) reshape back before returning
+        output_map = Q.view(b, H, W, E)
+        return output_map

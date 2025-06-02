@@ -1,9 +1,10 @@
 # Base imports
 import torch
-import torch.nn as nn
+import torch.nn.functional as F
 import numpy as np
 from PIL import Image
 from typing import Optional, Tuple, Union, List
+import types
 import sys
 
 # Add the path to the lavis directory
@@ -11,6 +12,7 @@ sys.path.append('LAVIS/')
 
 # Lavis imports
 from lavis.models import load_model_and_preprocess
+from lavis.models.blip_models.blip_outputs import BlipOutputFeatures
 
 # Lora imports
 from peft import get_peft_model, LoraConfig, TaskType, PeftModel
@@ -72,7 +74,56 @@ class Blip2Encoder:
             # Riassegna il modello modificato al wrapper QFormer
             self.encoder.Qformer.bert = lora_bert
             
+        # Patch the extract_features method to support PEFT models in "text" mode
+        self._monkeypatch_extract_features(self.encoder)
+            
         return self.encoder
+    
+    def _monkeypatch_extract_features(self, encoder):
+        """
+        Replace the original extract_features function with a patched version
+        that correctly handles PEFT-wrapped QFormer BERT in 'text' mode.
+        """
+        original_method = encoder.extract_features
+
+        def patched_extract_features(self_, samples, mode="multimodal"):
+            if mode != "text":
+                return original_method(samples, mode)
+
+            # Handle text mode with PEFT-wrapped QFormer
+            image = samples.get("image")
+            caption = samples.get("text_input")
+            assert caption is not None, "Text input is required for mode 'text'"
+
+            text = self_.tokenizer(caption, return_tensors="pt", padding=True).to(self_.device)
+
+            # Retrieve the correct BERT model depending on whether LoRA is used
+            bert_model = (
+                self_.Qformer.bert.base_model
+                if isinstance(self_.Qformer.bert, PeftModel)
+                else self_.Qformer.bert
+            )
+
+            text_output = bert_model(
+                input_ids=text.input_ids,
+                attention_mask=text.attention_mask,
+                return_dict=True,
+            )
+
+            text_embeds = text_output.last_hidden_state
+            text_features = self_.text_proj(text_embeds)
+            text_features = F.normalize(text_features, dim=-1)
+
+            return BlipOutputFeatures(
+                image_embeds=None,
+                image_embeds_proj=None,
+                text_embeds=text_embeds,
+                text_embeds_proj=text_features,
+                multimodal_embeds=None,
+            )
+
+        # Bind the method to the encoder instance
+        encoder.extract_features = types.MethodType(patched_extract_features, encoder)
 
     def cosine(self, image: np.ndarray, txt: str) -> float:
         """
@@ -150,18 +201,18 @@ class Blip2Encoder:
 
         if modality in ["image"]:
             assert image is not None
-            with torch.inference_mode():
-                image_embedding = self.encoder.extract_features(sample, mode="image").image_embeds[:,0,:]
+            #with torch.inference_mode():
+            image_embedding = self.encoder.extract_features(sample, mode="image").image_embeds[:,0,:]
         elif modality in ["text"]:
             assert text is not None
-            with torch.inference_mode():
-                text_embeddings = [self.encoder.extract_features({"image": img, "text_input": t}, mode="text").text_embeds[:,0,:] for t in txt]
-                text_embedding = torch.stack(text_embeddings).squeeze(1)
+            #with torch.inference_mode():
+            text_embeddings = [self.encoder.extract_features({"image": img, "text_input": t}, mode="text").text_embeds[:,0,:] for t in txt]
+            text_embedding = torch.stack(text_embeddings).squeeze(1)
         elif modality in ['both']:
             assert image is not None and text is not None
-            with torch.inference_mode():
-                image_embedding = self.encoder.extract_features(sample, mode="image").image_embeds[:,0,:]
-                text_embedding = self.encoder.extract_features(sample, mode="text").text_embeds[:,0,:]
+            #with torch.inference_mode():
+            image_embedding = self.encoder.extract_features(sample, mode="image").image_embeds[:,0,:]
+            text_embedding = self.encoder.extract_features(sample, mode="text").text_embeds[:,0,:]
         elif modality in ['multimodal']:
                 multimodal_embedding = self.encoder.extract_features(sample).multimodal_embeds[:,0,:]
 
