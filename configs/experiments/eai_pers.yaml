@@ -17,7 +17,7 @@ training:
   num_epochs: 100
   batch_size: 2     
   loss:
-    choice: "L2"
+    choice: "Huber"
 
 attention:
   num_heads: 4
@@ -25,7 +25,7 @@ attention:
 encoder:
   freeze: true                     # Freeze encoder weights during training
   lora:
-    use_lora: false
+    use_lora: true
 
 augmentations:
   flip:

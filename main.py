@@ -28,7 +28,7 @@ os.environ["WANDB_API_KEY"] = read_wandb_api_key("scripts/keys.sh")
 try:
     from models.encoder import Blip2Encoder
 except ImportError:
-    print("Blip2Encoder cannot be imported, check your salesforce-lavis dependencies!!!")
+    raise ImportError("Blip2Encoder cannot be imported, check your salesforce-lavis dependencies!!!")
 from models.model import RetrievalMapModel  
 from models.baseline import BaselineModel
 
@@ -75,6 +75,7 @@ def main(args):
             type=cfg.model.type,
             tau=cfg.model.tau,
             use_self_attention=cfg.attention.use_self_attention,
+            use_pos_embed=cfg.model.use_pos_embed,
             device=cfg.device.type,
         )
     print("N° of Model parameters: ", sum(p.numel() for p in model.parameters() if p.requires_grad))

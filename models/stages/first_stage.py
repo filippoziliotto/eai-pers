@@ -29,7 +29,8 @@ class MapAttentionModel(nn.Module):
             self.mh_sattention = MultiHeadSelfAttention(embed_dim=embed_dim, num_heads=num_heads)
 
         # Positional encoding learnable
-        if use_pos_embed:
+        self.use_pos_embed = use_pos_embed
+        if self.use_pos_embed:
             # Use learnable 2D positional encoding
             self.pos_enc = Learnable2DPositionalEncodingMax(E=embed_dim)
 
@@ -75,11 +76,15 @@ class MapAttentionModel(nn.Module):
         desc_embeds = self.encode_descriptions(description)  # (b, k, E)
 
         # 2) Get the positional map for (H, W)
-        pe_hw = self.pos_enc(H, W)               # (H, W, E)
-        pe_hw = pe_hw.unsqueeze(0).expand(b, -1, -1, -1)  # (b, H, W, E)
+        if self.use_pos_embed:
+            pe_hw = self.pos_enc(H, W)               # (H, W, E)
+            pe_hw = pe_hw.unsqueeze(0).expand(b, -1, -1, -1)  # (b, H, W, E)
+            # 3) Add to feature_map and reshape
+            fmap_pe = feature_map + pe_hw            # (b, H, W, E)
+        else:
+            fmap_pe = feature_map                  
 
-        # 3) Add to feature_map and reshape
-        fmap_pe = feature_map + pe_hw            # (b, H, W, E)
+         # Reshape
         reshaped_map = fmap_pe.view(b, H*W, E)   # (b, H*W, E)
 
         # 4) Cross-attention
