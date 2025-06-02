@@ -59,13 +59,17 @@ class AugmentationsConfig:
 class AttentionConfig:
     embed_dim: int = 512  # Embedding dimension for attention modules
     num_heads: int = 8  # Number of attention heads
-    use_self_attention: bool = False  # Whether to use self-attention in the model
+    ffn_dim: int = 1536  # Feed-forward network dimension
+    dropout: float = 0.1  # Dropout rate for attention layers
 
 @dataclass
 class ModelConfig:
     type: str = "base"  # Model variant or architecture key
     tau: float = 0.8  # Temperature for softmax or contrastive objectives
     use_pos_embed: bool = True  # Whether to use positional embeddings
+    use_self_attention: bool = False  # Whether to use self-attention in the model
+    num_cross_layers: int = 2  # Number of cross-attention layers
+    num_self_layers: int = 1  # Number of self-attention layers
     
 @dataclass 
 class LoraConfig:

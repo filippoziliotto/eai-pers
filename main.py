@@ -71,10 +71,14 @@ def main(args):
         model = RetrievalMapModel(
             embed_dim=cfg.attention.embed_dim,
             num_heads=cfg.attention.num_heads,
+            ffn_dim=cfg.attention.ffn_dim,
+            dropout=cfg.attention.dropout,
+            num_cross_layers=cfg.model.num_cross_layers,
+            num_self_layers=cfg.model.num_self_layers,
             encoder=encoder,
             type=cfg.model.type,
             tau=cfg.model.tau,
-            use_self_attention=cfg.attention.use_self_attention,
+            use_self_attention=cfg.model.use_self_attention,
             use_pos_embed=cfg.model.use_pos_embed,
             device=cfg.device.type,
         )
