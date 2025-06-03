@@ -5,6 +5,7 @@ import torch.nn.functional as F
 
 # Local imports
 from utils.utils import soft_argmax_coords
+from utils.similarity import LearnableScalarSimilarity
 
 
 class PersonalizedFeatureMapper(nn.Module):
@@ -21,13 +22,19 @@ class PersonalizedFeatureMapper(nn.Module):
         self.process_type = process_type
         self.tau = tau
         
-        # We'll use cosine similarity (over the embedding dimension) for the heatmap branch.
-        self.cosine_similarity = nn.CosineSimilarity(dim=-1, eps=1e-8)
-        
-        if self.type in ["conv"]:
-            # Apply a convolutional layer to the feature map
-            self.conv = nn.Conv2d(in_channels=embed_dim, out_channels=embed_dim // 2, kernel_size=3, padding=1)
+        if self.process_type == "base":
+            # Use unbounded learned‐scalar similarity (E → 1)
+            self.learnable_sim = LearnableScalarSimilarity(input_dim=embed_dim)
+
+        elif self.process_type == "conv":
+            # Two convolutional layers to reduce E → E/4 (must be divisible by 4)
+            self.conv  = nn.Conv2d(in_channels=embed_dim,   out_channels=embed_dim // 2, kernel_size=3, padding=1)
             self.conv2 = nn.Conv2d(in_channels=embed_dim // 2, out_channels=embed_dim // 4, kernel_size=3, padding=1)
+            # Then use LearnableScalarSimilarity on reduced (E/4 → 1)
+            self.learnable_sim = LearnableScalarSimilarity(input_dim=embed_dim // 4)
+
+        else:
+            raise ValueError(f"Unknown process_type: {self.process_type!r}")
         
         
     def forward(self, feature_map, query, gt_coords=None):
@@ -43,50 +50,48 @@ class PersonalizedFeatureMapper(nn.Module):
         b, h, w, E = feature_map.shape
 
         # Encode the query
-        query = self.encode_query(query)
-        query = query["text"]
-        assert query.shape == (b, E), "Query embedding must have shape (b, E)"
+        # 1) Encode the query to (b, E)
+        query_dict = self.encode_query(query)
+        q_emb = query_dict["text"]
+        assert q_emb.shape == (b, E), "Query embedding must have shape (b, E)"
+        
 
-        # Process with simple cosine similarity
-        if self.process_type in ["base"]:
+        if self.process_type == "base":
+            # Directly compute unbounded learned score map:
+            # sim_map: (b, h, w)
+            sim_map = self.learnable_sim(feature_map, q_emb)
+            # Add a trailing singleton channel to match (b, h, w, 1)
+            value_map = sim_map.view(b, h, w, 1)
+            output["value_map"] = value_map
 
-            # Expand query to match the spatial dimensions
-            query_expanded = query.unsqueeze(1).unsqueeze(2)  # (b, 1, 1, E)
-            query_expanded = query_expanded.expand(-1, h, w, -1)  # (b, h, w, E)            
-
-            # Calculate cosine similarity
-            value_map = self.cosine_similarity(
-                feature_map, 
-                query_expanded
-            ).view(b, h, w, 1) # b x h x w x 1
-            output["value_map"] = value_map   
-
-            # compute soft-argmax coords
+            # 2) Soft-argmax → (b, 2)
             coords = soft_argmax_coords(value_map, self.tau)
             output["coords"] = coords
-            return output  
+            return output
 
-        elif self.process_type in ["conv"]:
-            # Apply a convolutional layer to the feature map
-            feature_map = feature_map.permute(0, 3, 1, 2)
-            feature_map = self.conv(feature_map)
-            feature_map = self.conv2(feature_map)
-            feature_map = feature_map.permute(0, 2, 3, 1)
+        elif self.process_type == "conv":
+            # 1) Apply convolutions to feature_map:
+            #    Input: (b, H, W, E) → permute to (b, E, H, W)
+            x = feature_map.permute(0, 3, 1, 2)  # → (b, E, h, w)
+            x = self.conv(x)                     # → (b, E/2, h, w)
+            x = self.conv2(x)                    # → (b, E/4, h, w)
+            # Permute back to (b, h, w, E/4)
+            x = x.permute(0, 2, 3, 1)            # → (b, h, w, E/4)
 
-            # Apply convolutions to query
-            query = query.unsqueeze(1).unsqueeze(2)
-            query = self.conv(query)
-            query = self.conv2(query)
-            query = query.squeeze(1).squeeze(2)
+            # 2) Apply the same two convs to the query embedding:
+            #    q_emb: (b, E) → unsqueeze → (b, E, 1, 1) → conv → conv2 → (b, E/4, 1, 1)
+            q = q_emb.unsqueeze(-1).unsqueeze(-1).permute(0, 3, 1, 2)  # → (b, E, 1, 1)
+            q = self.conv(q)                                          # → (b, E/2, 1, 1)
+            q = self.conv2(q)                                         # → (b, E/4, 1, 1)
+            q = q.squeeze(-1).squeeze(-1)                             # → (b, E/4)
 
-            # Calculate cosine similarity
-            value_map = self.cosine_similarity(
-                feature_map, 
-                query
-            ) # b x h x w
-            output["value_map"] = value_map.view(b, h, w, 1)
+            # 3) Compute unbounded learned score on reduced embeddings:
+            #    x: (b, h, w, E/4), q: (b, E/4) → sim_map (b, h, w)
+            sim_map = self.learnable_sim(x, q)
+            value_map = sim_map.view(b, h, w, 1)
+            output["value_map"] = value_map
 
-            # compute soft-argmax coords
+            # 4) Soft-argmax → (b, 2)
             coords = soft_argmax_coords(value_map, self.tau)
             output["coords"] = coords
             return output
