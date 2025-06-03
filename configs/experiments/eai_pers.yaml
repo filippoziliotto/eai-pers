@@ -23,9 +23,15 @@ attention:
   num_heads: 4
 
 encoder:
-  freeze: true                     # Freeze encoder weights during training
+  freeze: true
   lora:
     use_lora: false
+
+model:
+  type: "base"           
+  use_pos_embed: true              # Use positional embeddings
+  use_self_attention: false        # Enable attention mechanism
+  num_cross_layers: 1          # Number of cross-attention layers
 
 augmentations:
   flip:
