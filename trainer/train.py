@@ -69,7 +69,7 @@ def train_one_epoch(
         )  # e.g., output dict contains 'value_map'
 
         # Compute loss and perform backpropagation
-        loss = compute_loss(gt_target, output, loss_choice)
+        loss = compute_loss(gt_target, output, loss_choice, feature_map)
         loss.backward()     
 
         # Optimize model parameters

@@ -10,14 +10,14 @@ baseline:
 logging:
   wandb:
     use_wandb: false
-    run_name: "baseline_alessandro_conv2"
+    run_name: "eai_pers"
 
 training:
   mode: "train"
   num_epochs: 100
   batch_size: 2     
   loss:
-    choice: "Huber"
+    choice: "Chebyshev-combined"
 
 attention:
   num_heads: 4
@@ -25,7 +25,7 @@ attention:
 encoder:
   freeze: true                     # Freeze encoder weights during training
   lora:
-    use_lora: true
+    use_lora: false
 
 augmentations:
   flip:

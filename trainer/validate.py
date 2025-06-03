@@ -71,7 +71,7 @@ def validate(
             output = model(description=description, map_tensor=feature_map, query=query, gt_coords=gt_target)
             
             # Compute loss
-            loss = compute_loss(gt_target, output, loss_choice)
+            loss = compute_loss(gt_target, output, loss_choice, feature_map)
             val_loss = loss.item()
             epoch_loss += val_loss
             num_batches += 1

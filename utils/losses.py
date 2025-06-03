@@ -11,7 +11,7 @@ from utils.heatmap import generate_gt_heatmap
 Loss Utils
 """
 
-def compute_loss(gt_coords, output, loss_choice='L2'):
+def compute_loss(gt_coords, output, loss_choice='L2', feature_map=None):
     """
     Computes the loss between ground truth and predicted coordinates.
     
@@ -24,33 +24,48 @@ def compute_loss(gt_coords, output, loss_choice='L2'):
         loss (Tensor): Computed loss.
     """
     
-    if loss_choice not in ['L1', 'L2', 'Huber', 'Huber+Heatmap']:
+    if loss_choice not in ['L1', 'L2', 'Huber', 'Huber+Heatmap', "Chebyschev-cobined"]:
         assert 'coords' in output, "'coords' key missing in output for selected loss_choice"
     elif loss_choice not in ['Heatmap', 'SCE']:
         assert 'value_map' in output, "'value_map' key missing in output for selected loss_choice"
     
+    # Regression
     if loss_choice == 'L1':
         return L1_loss(output["coords"], gt_coords)
     elif loss_choice == 'L2':
         return L2_loss(output["coords"], gt_coords)
     elif loss_choice == 'Huber':
         return Huber_loss(output["coords"], gt_coords)
+    
+    # Classification
+    elif loss_choice == 'Heatmap':
+        gt_heatmap = generate_gt_heatmap(gt_coords, output["value_map"], feature_map)
+        pred_heatmap = output["value_map"]
+        return Heatmap_loss(pred_heatmap, gt_heatmap)
     elif loss_choice == 'Huber+Heatmap':
-        # Compute the GT heatmap (b, H, W, 1)
-        gt_heatmap = generate_gt_heatmap(gt_coords, output["value_map"])
+        gt_heatmap = generate_gt_heatmap(gt_coords, output["value_map"], feature_map)
         pred_heatmap = output["value_map"]
         return Huber_loss(output["coords"], gt_coords) + Heatmap_loss(pred_heatmap, gt_heatmap)
-    elif loss_choice == 'Heatmap':
-        # Compute the GT heatmap (b, H, W, 1)
-        gt_heatmap = generate_gt_heatmap(gt_coords, output["value_map"])
-        pred_heatmap = output["value_map"]
-        # Compute the heatmap loss
-        return Heatmap_loss(pred_heatmap, gt_heatmap)
     elif loss_choice == 'SCE':
         # Scaled Cross-Entropy loss
         gt_heatmap = generate_gt_heatmap(gt_coords, output["value_map"])
         pred_heatmap = output["value_map"]
         return ScaledCE_loss(pred_heatmap, gt_heatmap, output["dist_matrix"])
+    
+    # Combined Chebyshev loss
+    # loss = alpha * L_in + beta * L_far + gamma * L_near
+    elif loss_choice == "Chebyshev-combined":
+        alpha, beta, gamma = 1.0, 1.0, 1.0
+        return Chebyshev_combined_loss(
+            pred_coords=output["coords"],
+            gt_coords=gt_coords,
+            F_input=output["value_map"],
+            alpha=alpha,
+            beta=beta,
+            gamma=gamma,
+            eps=1e-6
+        )
+    
     else:
         raise ValueError(f"Unknown loss choice: {loss_choice}. Use 'L1' or 'L2', 'Huber'.")
     
@@ -162,3 +177,67 @@ def ScaledCE_loss(
     else:
         raise ValueError(f"Unknown reduction method: {reduction}. Use 'mean' or 'sum'.")
     
+def Chebyshev_combined_loss(
+    pred_coords,   # LongTensor, shape (b,2), each row=(y_pred, x_pred)
+    gt_coords,     # LongTensor, shape (b,2), each row=(y_gt, x_gt)
+    F_input,       # FloatTensor, shape (b, H, W, E), zero outside
+    alpha=1.0,
+    beta=1.0,
+    gamma=1.0,
+    eps=1e-6
+):
+    """
+    Returns:
+      L_total = alpha*L_in + beta*L_far + gamma*L_near
+
+    pred_coords: (b,2)  = predicted (y,x) per batch
+    gt_coords:   (b,2)  = ground‐truth (y,x) per batch
+    F_input:   (b,H,W,E) = feature‐map whose zero‐vectors mark outside
+
+    L_in   = average_n [-log( M_in[y_pred, x_pred] + eps )]
+    L_far  = average_n [ max(0, d_cheb - 2)^2 ]
+    L_near = average_n [ 0 if d_cheb <=1, else (d_cheb - 1)^2 ]
+
+    where
+      d_cheb = max(|y_pred - y_gt|, |x_pred - x_gt|).
+    """
+    b, H, W, E = F_input.shape
+    device = F_input.device
+
+    # 1) Build binary “inside‐map” mask M_in[n,i,j] ∈ {0,1}
+    F_norm = torch.norm(F_input, dim=-1)    # (b, H, W)
+    M_in   = (F_norm > 0).float()            # (b, H, W)
+
+    # 2) Index M_in at the predicted coordinates → m_n = 0 or 1
+    ys_pred = pred_coords[:, 0].clamp(0, H-1)
+    xs_pred = pred_coords[:, 1].clamp(0, W-1)
+    batch_idx = torch.arange(b, device=device)
+
+    m = M_in[batch_idx, ys_pred.round().int(), xs_pred.round().int()]    # shape (b,)
+
+    # Inside‐map loss:  L_in = -(1/b) sum_n log(m_n + eps)
+    L_in = - (m + eps).clamp(min=eps).log().mean()
+
+    # 3) Compute Chebyshev distance d_cheb[n] between pred and GT
+    ys_gt = gt_coords[:, 0].clamp(0, H-1)
+    xs_gt = gt_coords[:, 1].clamp(0, W-1)
+    d_cheb = torch.max(
+        torch.abs(ys_pred - ys_gt),
+        torch.abs(xs_pred - xs_gt)
+    )  # shape (b,)
+
+    # 4) “Far‐inside” loss:  L_far = average_n [ max(0, d_cheb - 2)^2 ]
+    far_term = torch.relu(d_cheb - 2.0) ** 2
+    L_far = far_term.mean()
+
+    # 5) “Near‐ring” loss:  L_near = average_n [ 0 if d_cheb ≤1 else (d_cheb - 1)^2 ]
+    near_term = torch.where(
+        d_cheb <= 1.0,
+        torch.zeros_like(d_cheb),
+        (d_cheb - 1.0) ** 2
+    )  # shape (b,)
+    L_near = near_term.mean()
+
+    # 6) Combine
+    L_total = alpha * L_in + beta * L_far + gamma * L_near
+    return L_total
