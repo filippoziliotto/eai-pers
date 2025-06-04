@@ -25,7 +25,7 @@ attention:
 encoder:
   freeze: true
   lora:
-    use_lora: false
+    use_lora: true
 
 model:
   fs:
