@@ -20,7 +20,9 @@ class PersonalizedFeatureMapper(nn.Module):
         super().__init__()
         self.encoder = encoder
         self.process_type = process_type
-        self.tau = tau
+        self.tau_min, self.tau_max = tau.tau
+        self.tau_step = tau.step
+        self.tau = self.tau_max
         self.cosine_similarity = nn.CosineSimilarity(dim=-1, eps=1e-8)
         self.learn_similarity = learn_similarity
         
@@ -121,4 +123,10 @@ class PersonalizedFeatureMapper(nn.Module):
             dict: Contains a key 'text' with tensor shape (b, E) representing the query embedding.
         """
         return self.encoder.get_embeddings(text=query, modality='text')
-        
+    
+    def update_tau(self, epoch):
+        if epoch >= self.tau_step:
+            self.tau = self.tau_min
+        else:
+            self.tau = self.tau_max
+        return

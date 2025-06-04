@@ -61,16 +61,29 @@ class AttentionConfig:
     num_heads: int = 8  # Number of attention heads
     ffn_dim: int = 1536  # Feed-forward network dimension
     dropout: float = 0.1  # Dropout rate for attention layers
-
+    
 @dataclass
-class ModelConfig:
-    type: str = "base"  # Model variant or architecture key
-    tau: float = 0.8  # Temperature for softmax or contrastive objectives
+class FirstStageConfig:
     use_pos_embed: bool = True  # Whether to use positional embeddings
     use_self_attention: bool = False  # Whether to use self-attention in the model
     num_cross_layers: int = 2  # Number of cross-attention layers
     num_self_layers: int = 1  # Number of self-attention layers
+
+@dataclass
+class Tauconfig:
+    tau: tuple = (0.1, 0.5)  # (min, max)
+    step: int = 10  # Number of epochs to decrease tau from max to min
+    
+@dataclass
+class SecondStageConfig:
+    type: str = "base"
     learn_similarity: bool = False  # Whether to learn a similarity function
+    tau_config: Tauconfig = Tauconfig()  # Temperature for soft-argmax
+
+@dataclass
+class ModelConfig:
+    fs: FirstStageConfig = FirstStageConfig()  # Configuration for the first stage of the model
+    ss: SecondStageConfig = SecondStageConfig()  # Configuration for the second stage of the model
     
 @dataclass 
 class LoraConfig:
