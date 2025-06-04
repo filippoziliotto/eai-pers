@@ -74,6 +74,7 @@ model:
   use_self_attention: false        # Enable attention mechanism
   num_cross_layers: 2          # Number of cross-attention layers
   num_self_layers: 1          # Number of self-attention layers
+  learn_similarity: false          # Learn similarity matrix
 
 
 encoder:

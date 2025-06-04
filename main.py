@@ -80,6 +80,7 @@ def main(args):
             tau=cfg.model.tau,
             use_self_attention=cfg.model.use_self_attention,
             use_pos_embed=cfg.model.use_pos_embed,
+            learn_similarity=cfg.model.learn_similarity,
             device=cfg.device.type,
         )
     print("N° of Model parameters: ", sum(p.numel() for p in model.parameters() if p.requires_grad))
