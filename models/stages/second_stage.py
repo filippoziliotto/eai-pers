@@ -9,7 +9,7 @@ from utils.similarity import LearnableScalarSimilarity
 
 
 class PersonalizedFeatureMapper(nn.Module):
-    def __init__(self, encoder, process_type="base", embed_dim=768, tau=1.0):
+    def __init__(self, encoder, process_type="base", learn_similarity=False, embed_dim=768, tau=1.0):
         """
         Args:
             encoder: An encoder with a method get_embeddings(text=..., modality='text') that returns
@@ -21,17 +21,22 @@ class PersonalizedFeatureMapper(nn.Module):
         self.encoder = encoder
         self.process_type = process_type
         self.tau = tau
+        self.cosine_similarity = nn.CosineSimilarity(dim=-1, eps=1e-8)
+        self.learn_similarity = learn_similarity
         
         if self.process_type == "base":
             # Use unbounded learned‐scalar similarity (E → 1)
-            self.learnable_sim = LearnableScalarSimilarity(input_dim=embed_dim)
+            if self.learn_similarity:
+                self.learnable_sim = LearnableScalarSimilarity(input_dim=embed_dim)
 
         elif self.process_type == "conv":
             # Two convolutional layers to reduce E → E/4 (must be divisible by 4)
             self.conv  = nn.Conv2d(in_channels=embed_dim,   out_channels=embed_dim // 2, kernel_size=3, padding=1)
             self.conv2 = nn.Conv2d(in_channels=embed_dim // 2, out_channels=embed_dim // 4, kernel_size=3, padding=1)
-            # Then use LearnableScalarSimilarity on reduced (E/4 → 1)
-            self.learnable_sim = LearnableScalarSimilarity(input_dim=embed_dim // 4)
+            
+            if self.learn_similarity:
+                # Use unbounded learned‐scalar similarity (E/4 → 1)
+                self.learnable_sim = LearnableScalarSimilarity(input_dim=embed_dim // 4)
 
         else:
             raise ValueError(f"Unknown process_type: {self.process_type!r}")
@@ -58,10 +63,14 @@ class PersonalizedFeatureMapper(nn.Module):
 
         if self.process_type == "base":
             # Directly compute unbounded learned score map:
-            # sim_map: (b, h, w)
-            sim_map = self.learnable_sim(feature_map, q_emb)
+            # value_map: (b, h, w)
+            if self.learn_similarity:
+                value_map = self.learnable_sim(feature_map, q_emb)
+            else:
+                value_map = self.cosine_similarity(feature_map, q_emb.unsqueeze(1).unsqueeze(1))
+
             # Add a trailing singleton channel to match (b, h, w, 1)
-            value_map = sim_map.view(b, h, w, 1)
+            value_map = value_map.view(b, h, w, 1)
             output["value_map"] = value_map
 
             # 2) Soft-argmax → (b, 2)
@@ -87,8 +96,13 @@ class PersonalizedFeatureMapper(nn.Module):
 
             # 3) Compute unbounded learned score on reduced embeddings:
             #    x: (b, h, w, E/4), q: (b, E/4) → sim_map (b, h, w)
-            sim_map = self.learnable_sim(x, q)
-            value_map = sim_map.view(b, h, w, 1)
+            if self.learn_similarity:
+                # Use learnable similarity
+                value_map = self.learnable_sim(x, q)
+            else:
+                # Use cosine similarity
+                value_map = self.cosine_similarity(x, q.unsqueeze(1).unsqueeze(1))
+            value_map = value_map.view(b, h, w, 1)
             output["value_map"] = value_map
 
             # 4) Soft-argmax → (b, 2)

@@ -29,6 +29,7 @@ class LearnableScalarSimilarity(nn.Module):
         # Feature branch (no bias on final layer to match original design, but bias=True on intermediates is OK)
         self.feature_mlp = nn.Sequential(
             nn.Linear(input_dim, hidden1),
+            nn.LayerNorm(hidden1),
             nn.ReLU(inplace=True),
             nn.Linear(hidden1, hidden2),
             nn.ReLU(inplace=True),
@@ -38,6 +39,7 @@ class LearnableScalarSimilarity(nn.Module):
         # Query branch
         self.query_mlp = nn.Sequential(
             nn.Linear(input_dim, hidden1),
+            nn.LayerNorm(hidden1),
             nn.ReLU(inplace=True),
             nn.Linear(hidden1, hidden2),
             nn.ReLU(inplace=True),

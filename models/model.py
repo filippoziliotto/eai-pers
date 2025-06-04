@@ -11,7 +11,7 @@ warnings.filterwarnings('ignore', category=UserWarning)
 
 class RetrievalMapModel(nn.Module):
     def __init__(self, embed_dim, num_heads, ffn_dim, dropout, num_cross_layers, 
-                 num_self_layers, encoder, type, tau, use_self_attention, use_pos_embed, device):
+                 num_self_layers, encoder, type, tau, use_self_attention, use_pos_embed, learn_similarity, device):
         """
         Initializes the RetrievalMapModel.
 
@@ -41,6 +41,7 @@ class RetrievalMapModel(nn.Module):
         self.device = device
         self.process_type = type
         self.tau = tau
+        self.learn_similarity = learn_similarity
 
         # Initialize and move first and second stages to the specified device
         self.first_stage = MapAttentionModel(self.embed_dim, 
@@ -55,6 +56,7 @@ class RetrievalMapModel(nn.Module):
                                              ).to(self.device)
         self.second_stage = PersonalizedFeatureMapper(encoder, 
                                                       process_type=self.process_type, 
+                                                      learn_similarity=self.learn_similarity,
                                                       embed_dim=self.embed_dim, 
                                                       tau=self.tau
                                                       ).to(self.device)

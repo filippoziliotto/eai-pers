@@ -70,6 +70,7 @@ class ModelConfig:
     use_self_attention: bool = False  # Whether to use self-attention in the model
     num_cross_layers: int = 2  # Number of cross-attention layers
     num_self_layers: int = 1  # Number of self-attention layers
+    learn_similarity: bool = False  # Whether to learn a similarity function
     
 @dataclass 
 class LoraConfig:

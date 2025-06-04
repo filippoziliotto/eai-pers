@@ -143,9 +143,9 @@ def get_dataloader(data_dir,
         val_dataset = RetMapsDataset(data_dir, split_dir, "val", transform=None)
         
         train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True,
-                                  num_workers=num_workers, collate_fn=collate_fn)
+                                  num_workers=num_workers, collate_fn=collate_fn, drop_last=True)
         val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False,
-                                num_workers=num_workers, collate_fn=collate_fn)
+                                num_workers=num_workers, collate_fn=collate_fn, drop_last=False)
         
         print("DataLoader initialized.")
         return train_loader, val_loader
@@ -161,9 +161,9 @@ def get_dataloader(data_dir,
         val_dataset = RetMapsDataset(data_dir, split_dir, "val", transform=None)
         
         train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True,
-                                  num_workers=num_workers, collate_fn=collate_fn)
+                                  num_workers=num_workers, collate_fn=collate_fn, drop_last=True)
         val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False,
-                                num_workers=num_workers, collate_fn=collate_fn)
+                                num_workers=num_workers, collate_fn=collate_fn, drop_last=False)
         
         print("DataLoader initialized.")
         return train_loader, val_loader
