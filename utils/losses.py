@@ -38,14 +38,14 @@ def compute_loss(gt_coords, output, loss_choice='L2', feature_map=None):
         return Huber_loss(output["coords"], gt_coords)
     
     # Classification
-    elif loss_choice == 'Heatmap':
-        gt_heatmap = generate_gt_heatmap(gt_coords, output["value_map"], feature_map)
+    elif loss_choice == 'CE':
+        gt_heatmap = generate_gt_heatmap(gt_coords, feature_map)
         pred_heatmap = output["value_map"]
-        return Heatmap_loss(pred_heatmap, gt_heatmap)
-    elif loss_choice == 'Huber+Heatmap':
-        gt_heatmap = generate_gt_heatmap(gt_coords, output["value_map"], feature_map)
+        return CE_loss(pred_heatmap, gt_heatmap)
+    elif loss_choice == 'Huber+CE':
+        gt_heatmap = generate_gt_heatmap(gt_coords, feature_map, True)
         pred_heatmap = output["value_map"]
-        return Huber_loss(output["coords"], gt_coords) + Heatmap_loss(pred_heatmap, gt_heatmap)
+        return Huber_loss(output["coords"], gt_coords) + CE_loss(pred_heatmap, gt_heatmap)
     elif loss_choice == 'SCE':
         # Scaled Cross-Entropy loss
         gt_heatmap = generate_gt_heatmap(gt_coords, output["value_map"])
@@ -112,27 +112,86 @@ def Huber_loss(pred_coords, gt_coords, delta=1.0):
     """
     return nn.SmoothL1Loss(beta=delta)(pred_coords, gt_coords)
 
-def Heatmap_loss(pred_heatmap: torch.Tensor,
-                 gt_heatmap: torch.Tensor,
-                 reduction: str = 'mean') -> torch.Tensor:
+def CE_loss(
+    pred_heatmap: torch.Tensor,
+    gt_heatmap:   torch.Tensor,
+    reduction:    str = 'mean'
+) -> torch.Tensor:
     """
-    Computes Cross-Entropy loss between predicted and ground truth heatmaps.
+    “Normal” (categorical) cross‐entropy over the entire H×W grid,
+    supporting soft‐labels {0.0, 0.5, 1.0} on “inside” pixels and ignoring 
+    all “outside” pixels marked as -1 in gt_heatmap.
 
     Args:
-        pred_heatmap (Tensor): Predicted heatmap, shape (b, H, W, 1).
-        gt_heatmap   (Tensor): Ground-truth heatmap, same shape as pred.
-    """
-    # Squeeze to (n, H, W) and Flatten the matrices
-    pred_heatmap_flat = pred_heatmap.squeeze(-1).view(pred_heatmap.size(0), -1)
-    gt_heatmap_flat = gt_heatmap.squeeze(-1).view(gt_heatmap.size(0), -1)
+        pred_heatmap (Tensor):
+            Predicted raw logits, shape (b, H, W, 1).
+        gt_heatmap (Tensor):
+            GT soft‐labels, shape (b, H, W, 1). Valid inside‐map values 
+            are {0.0, 0.5, 1.0}, and outside‐map pixels must be exactly -1.0.
+        reduction (str):
+            One of {'mean', 'sum', 'none'}. 
+            - 'mean': returns scalar = (Σ_{k} L^{(k)}) / b 
+                      (where L^{(k)} is the per‐sample loss).  
+            - 'sum' : returns scalar = Σ_{k} L^{(k)}.  
+            - 'none' : returns a tensor of shape (b,) with each sample’s loss.
 
-    # Binary cross entropy with reduction none
-    ce_loss = F.binary_cross_entropy_with_logits(pred_heatmap_flat, gt_heatmap_flat, reduction='none')
-    
+    Returns:
+        Tensor: 
+          If reduction in {'mean','sum'}, returns a scalar tensor. 
+          If reduction=='none', returns a tensor of shape (b,) containing each sample’s loss.
+    """
+    b, H, W, _ = pred_heatmap.shape
+    device = pred_heatmap.device
+
+    # 1) Flatten both pred_heatmap and gt_heatmap to shape (b, H*W)
+    pred_flat = pred_heatmap.view(b, H * W)       # raw logits, shape (b, H*W)
+    gt_flat   = gt_heatmap.view(b, H * W)         # targets ∈ {1, 0.5, 0, -1}
+
+    # 2) Build a mask of “inside” pixels: gt_flat >= 0.0
+    #    (outside pixels were marked -1.0, so we ignore those)
+    mask_inside = (gt_flat >= 0.0)  # shape (b, H*W), dtype=torch.bool
+
+    # 3) For each sample k, compute the sum of all positive GT‐values at inside pixels
+    #    This is the normalizing constant so that the remaining GTs become a valid distribution.
+    #    E.g. center=1, four neighbors=0.5 each → sum = 1 + 4*0.5 = 3.0  
+    #    If a sample has no “inside” pixels at all (mask_inside.sum()==0), we can set loss=0 for that sample.
+    gt_flat_positive = torch.clamp(gt_flat, min=0.0)  # anything negative becomes 0
+    # shape (b,) = sum over the H*W dimension
+    sum_positive_per_sample = gt_flat_positive.sum(dim=1)  # may be 0 if everything is “outside.”
+
+    # 4) Build the normalized target distribution ˜G^{(k)}:
+    #    ˜G^{(k)}_{i} = gt_flat_positive[k,i] / sum_positive_per_sample[k]
+    #                 if gt_flat_positive[k,i] > 0, else 0.
+    #    If sum_positive_per_sample[k]==0, we will just skip that sample.
+    #    We create a (b, H*W) tensor `gt_normalized` that holds ˜G.
+    eps = 1e-8  # to avoid division by zero
+    normalizer = sum_positive_per_sample.unsqueeze(1).clamp(min=eps)  # shape (b,1)
+    gt_normalized = gt_flat_positive / normalizer  # shape (b, H*W)
+
+    # 5) Compute log‐softmax of pred_flat along dimension=1 (over the H*W “classes”)
+    log_probs = F.log_softmax(pred_flat, dim=1)  # shape (b, H*W)
+
+    # 6) The per‐sample cross‐entropy is
+    #     L^{(k)} = - Σ_{i=1}^{H*W} ˜G^{(k)}_{i} * log_probs[k, i],
+    #    but we only want to sum over “inside” pixels (mask_inside[k, i]==True).  
+    #    Since ˜G_{i} is already zero on “outside” pixels, we can just do:
+    #        L^{(k)} = - Σ_{i} [ gt_normalized[k,i] * log_probs[k,i] ] 
+    #    and those terms are zero wherever gt_normalized==0.
+    per_pixel_term = gt_normalized * log_probs  # shape (b, H*W)
+    loss_per_sample = - per_pixel_term.sum(dim=1)  # shape (b,)
+
+    # 7) For any sample k where sum_positive_per_sample[k] was zero (no inside pixels),
+    #    we define loss_per_sample[k] = 0.0 explicitly.
+    no_inside_mask = (sum_positive_per_sample < eps)  # shape (b,)
+    if no_inside_mask.any():
+        loss_per_sample = loss_per_sample.masked_fill(no_inside_mask, 0.0)
+
+    # 8) Finally, apply reduction across the batch
     if reduction == 'mean':
-        return ce_loss.mean()
+        # mean over the b samples
+        return loss_per_sample.mean()
     elif reduction == 'sum':
-        return ce_loss.sum()
+        return loss_per_sample.sum()
 
 def ScaledCE_loss(
     pred_heatmap: torch.Tensor,

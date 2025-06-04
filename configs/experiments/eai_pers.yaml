@@ -17,7 +17,7 @@ training:
   num_epochs: 100
   batch_size: 2     
   loss:
-    choice: "Chebyshev-combined"
+    choice: "Huber+CE"
 
 attention:
   num_heads: 4
