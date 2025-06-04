@@ -28,11 +28,15 @@ encoder:
     use_lora: false
 
 model:
-  type: "base"           
-  use_pos_embed: true              # Use positional embeddings
-  use_self_attention: false        # Enable attention mechanism
-  num_cross_layers: 1          # Number of cross-attention layers
-
+  fs:
+    use_pos_embed: true              # Use positional embeddings
+    num_cross_layers: 1          # Number of cross-attention layers
+  ss:
+    type: "base"                     # Model architecture variant
+    tau_config:
+      tau: [0.1, 0.5]                         # Softmax/contrastive temperature
+      step: 20
+      
 augmentations:
   flip:
     use_horizontal_flip: true
