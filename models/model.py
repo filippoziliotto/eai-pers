@@ -11,7 +11,7 @@ warnings.filterwarnings('ignore', category=UserWarning)
 
 class RetrievalMapModel(nn.Module):
     def __init__(self, embed_dim, num_heads, ffn_dim, dropout, num_cross_layers, 
-                 num_self_layers, encoder, type, tau, use_self_attention, use_pos_embed, learn_similarity, device):
+                 num_self_layers, scene_encoder, query_encoder, type, tau, use_self_attention, use_pos_embed, learn_similarity, device):
         """
         Initializes the RetrievalMapModel.
 
@@ -26,7 +26,8 @@ class RetrievalMapModel(nn.Module):
             tau (float): Temperature parameter for the second stage.
             use_self_attention (bool): Whether to use self-attention in the first stage.
             use_pos_embed (bool): Whether to use positional embeddings in the first stage.
-            encoder (Blip2Encoder): The encoder model.
+            scene_encoder (Blip2Encoder): The encoder model.
+            query_encoder (Blip2Encoder): The encoder model for queries.
             device (str): The device for model computation.
         """
         super().__init__()
@@ -47,14 +48,14 @@ class RetrievalMapModel(nn.Module):
         self.first_stage = MapAttentionModel(self.embed_dim, 
                                              self.num_heads, 
                                              self.ffn_dim,
-                                             encoder,
+                                             scene_encoder,
                                              self.num_cross_layers,
                                              self.num_self_layers,
                                              self.dropout,
                                              use_self_attention=use_self_attention,
                                              use_pos_embed=use_pos_embed
                                              ).to(self.device)
-        self.second_stage = PersonalizedFeatureMapper(encoder, 
+        self.second_stage = PersonalizedFeatureMapper(query_encoder, 
                                                       process_type=self.process_type, 
                                                       learn_similarity=self.learn_similarity,
                                                       embed_dim=self.embed_dim, 

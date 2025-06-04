@@ -47,8 +47,13 @@ def main(args):
     
     # Get Freezed text encoder and initialize
     # TODO: add fake encoder for debugging
-    encoder = Blip2Encoder(device=cfg.device.type, freeze_encoder=cfg.encoder.freeze, use_lora=cfg.encoder.lora.use_lora)
-    encoder.initialize()
+    scene_encoder = Blip2Encoder(device=cfg.device.type, freeze_encoder=cfg.encoder.freeze, use_lora=cfg.encoder.lora.use_lora)
+    scene_encoder.initialize()
+    if cfg.encoder.lora.use_lora:
+        query_encoder = Blip2Encoder(device=cfg.device.type, freeze_encoder=cfg.encoder.freeze, use_lora=cfg.encoder.lora.use_lora)
+        query_encoder.initialize()
+    else:
+        query_encoder = scene_encoder
         
     # Create the initial Dataset and DataLoader
     train_loader, val_loader = get_dataloader(
@@ -63,7 +68,7 @@ def main(args):
     # Model Initialization & Baseline Initialization
     if cfg.baseline.use_baseline:
         model = BaselineModel(
-            encoder=encoder,
+            encoder=scene_encoder,
             type=cfg.baseline.type,
             device=cfg.device.type,
         )
@@ -75,7 +80,8 @@ def main(args):
             dropout=cfg.attention.dropout,
             num_cross_layers=cfg.model.fs.num_cross_layers,
             num_self_layers=cfg.model.fs.num_self_layers,
-            encoder=encoder,
+            scene_encoder=scene_encoder,
+            query_encoder=query_encoder,
             type=cfg.model.ss.type,
             tau=cfg.model.ss.tau_config,
             use_self_attention=cfg.model.fs.use_self_attention,
