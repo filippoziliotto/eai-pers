@@ -1,23 +1,23 @@
 # Debugging stuff
 debugger:
-  debug: true
+  debug: false
 
 # Baseline
 baseline:
     use_baseline: false
-    type: "zs_cosine"
+    type: "random"
 
 logging:
   wandb:
     use_wandb: false
-    run_name: "eai_pers"
+    run_name: "baseline_random"
 
 training:
   mode: "train"
   num_epochs: 100
   batch_size: 2     
   loss:
-    choice: "Huber+CE"
+    choice: "Huber"
 
 attention:
   num_heads: 4
@@ -25,7 +25,7 @@ attention:
 encoder:
   freeze: true
   lora:
-    use_lora: true
+    use_lora: false
 
 model:
   fs:
@@ -37,7 +37,7 @@ model:
       tau: [0.1, 0.5]                         
       step: 20
   lora_model:
-    use_trained_lora: true          
+    use_trained_lora: false          
     top_k: 5                     
     neighborhood: 2                
     nms_radius: 2     

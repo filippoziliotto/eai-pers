@@ -75,6 +75,7 @@ def main(args):
         )
     elif cfg.model.lora_model.use_trained_lora:
         assert cfg.encoder.lora.use_lora, "Lora model requires Lora to be enabled in the encoder configuration."
+        assert cfg.baseline.use_baseline is False, "Lora model cannot be used with baseline."
         model = TrainedLoraModel(
             scene_encoder=scene_encoder,
             query_encoder=query_encoder,
@@ -105,7 +106,7 @@ def main(args):
 
     # Train and/or validate the model
     if cfg.training.mode in ['train']:  
-        
+        assert not cfg.baseline.use_baseline, "Baseline cannot be used in training mode."
         # Optimizer (and scheduler) initialization using **kwargs for scheduler parameters.
         optimizer, scheduler = get_optimizer(
             optimizer_name=cfg.optimizer.type,
@@ -138,7 +139,7 @@ def main(args):
         )
     
     elif cfg.training.mode in ['eval']:
-        assert not cfg.baseline.use_baseline and not cfg.checkpoint.load, "Evaluation mode does not support baseline or loading checkpoints."
+        assert cfg.baseline.use_baseline and not cfg.checkpoint.load, "Evaluation mode only with baseline"
         validate(
             model=model,
             data_loader=val_loader,
