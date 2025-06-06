@@ -24,9 +24,9 @@ def compute_loss(gt_coords, output, loss_choice='L2', feature_map=None):
         loss (Tensor): Computed loss.
     """
     
-    if loss_choice not in ['L1', 'L2', 'Huber', 'Huber+Heatmap', "Chebyschev-cobined"]:
+    if loss_choice in ['L1', 'L2', 'Huber', 'Huber+Heatmap', "Chebyschev-cobined"]:
         assert 'coords' in output, "'coords' key missing in output for selected loss_choice"
-    elif loss_choice not in ['Heatmap', 'SCE']:
+    elif loss_choice in ['Heatmap', 'SCE']:
         assert 'value_map' in output, "'value_map' key missing in output for selected loss_choice"
     
     # Regression

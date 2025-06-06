@@ -100,12 +100,12 @@ class BaselineModel(nn.Module):
                 query_tensor=query_tensor,
                 description_tensor=description_tensor,
                 top_k=4,
-                neighborhood=0,
-                nms_radius=2,
+                neighborhood=1,
+                nms_radius=1,
             )
 
             output["max_value"] = max_val
-            output["coords"] = torch.stack([max_index // w, max_index % w], dim=-1) 
+            output["coords"] = torch.stack([max_index // w, max_index % w], dim=-1).to(torch.float32)
             return output
         
         else:

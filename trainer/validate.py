@@ -6,7 +6,7 @@ import os
 
 # Other imports
 from utils.losses import compute_loss
-from utils.metrics import compute_accuracy
+from utils.metrics import compute_accuracy, calculate_metrics_distribution
 
 # Utils imports
 from utils.visualize import visualize
@@ -54,6 +54,7 @@ def validate(
     epoch_loss = 0.0
     metrics = []
     num_batches = 0
+    metrics_lst = []
     
     # Iterate over the data loader
     with torch.no_grad():
@@ -78,6 +79,7 @@ def validate(
 
             # Compute accuracy
             metrics.append(compute_accuracy(gt_target, output))
+            metrics_lst.append(metrics)
             
             # Visualize results
             if config.debugger.visualize:
@@ -114,6 +116,11 @@ def validate(
         # Log metrics to W&B if in evaluation mode
         if use_wandb:
             log_epoch_metrics(epoch_loss, val_avg_metric)
+            
+    print("calculating metrics distribution...")
+    # Calculate and log metrics distribution if available
+    if metrics_lst:
+        distribution = calculate_metrics_distribution(metrics_lst, save_to_disk=True, path_to_img="trainer/visualizations/metrics_distribution.png")
 
     return epoch_loss, val_avg_metric
 

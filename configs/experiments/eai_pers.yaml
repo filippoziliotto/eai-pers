@@ -4,8 +4,8 @@ debugger:
 
 # Baseline
 baseline:
-    use_baseline: false
-    type: "random"
+    use_baseline: true
+    type: "zs_cosine"
 
 logging:
   wandb:
@@ -13,11 +13,11 @@ logging:
     run_name: "baseline_random"
 
 training:
-  mode: "train"
+  mode: "eval"
   num_epochs: 100
   batch_size: 2     
   loss:
-    choice: "Huber"
+    choice: "L2"
 
 attention:
   num_heads: 4
