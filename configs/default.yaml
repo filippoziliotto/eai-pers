@@ -79,6 +79,11 @@ model:
       tau: [0.1, 0.5]                         # Softmax/contrastive temperature
       step: 20
     learn_similarity: false          # Learn similarity matrix
+  lora_model:
+    use_trained_lora: false          # Use pretrained LoRA weights
+    top_k: 5                     # Top-k for attention heads
+    neighborhood: 2                # Neighborhood size for attention
+    nms_radius: 2                # Non-Maximum Suppression radius
 
 encoder:
   freeze: true                     # Freeze encoder weights during training

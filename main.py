@@ -31,6 +31,7 @@ except ImportError:
     raise ImportError("Blip2Encoder cannot be imported, check your salesforce-lavis dependencies!!!")
 from models.model import RetrievalMapModel  
 from models.baseline import BaselineModel
+from models.model_lora import TrainedLoraModel
 
 def main(args):
     
@@ -72,7 +73,18 @@ def main(args):
             type=cfg.baseline.type,
             device=cfg.device.type,
         )
+    elif cfg.model.lora_model.use_trained_lora:
+        assert cfg.encoder.lora.use_lora, "Lora model requires Lora to be enabled in the encoder configuration."
+        model = TrainedLoraModel(
+            scene_encoder=scene_encoder,
+            query_encoder=query_encoder,
+            top_k=cfg.model.lora_model.top_k,
+            neighborhood=cfg.model.lora_model.neighborhood,
+            nms_radius=cfg.model.lora_model.nms_radius,
+            device=cfg.device.type,
+        )
     else:
+        assert not cfg.model.lora_model.use_trained_lora, "Lora model is not enabled in the configuration."
         model = RetrievalMapModel(
             embed_dim=cfg.attention.embed_dim,
             num_heads=cfg.attention.num_heads,

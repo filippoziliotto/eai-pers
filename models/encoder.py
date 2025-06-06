@@ -1,6 +1,7 @@
 # Base imports
 import torch
 import torch.nn.functional as F
+import torch.nn as nn
 import numpy as np
 from PIL import Image
 from typing import Optional, Tuple, Union, List
@@ -17,12 +18,14 @@ from lavis.models.blip_models.blip_outputs import BlipOutputFeatures
 # Lora imports
 from peft import get_peft_model, LoraConfig, TaskType, PeftModel
 
-class Blip2Encoder:
+class Blip2Encoder(nn.Module):
     encoder: torch.nn.Module
     vis_processors: torch.nn.Module
     text_processors: torch.nn.Module
     
     def __init__(self, device: str = 'cpu', freeze_encoder: bool = True, use_lora: bool = True):
+        super().__init__()
+        
         self.device = device
         self.freeze_encoder = freeze_encoder
         self.use_lora = use_lora

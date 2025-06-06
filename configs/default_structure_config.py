@@ -81,10 +81,18 @@ class SecondStageConfig:
     tau_config: Tauconfig = Tauconfig()  # Temperature for soft-argmax
 
 @dataclass
+class TrainedLoraModelConfig:
+    use_trained_lora: bool = False  # Whether to use the "trained" ZS baselineù
+    top_k: int = 5  # Top-k for neighborhood search
+    nms_radius: int = 2  # Radius for non-maximum suppression
+    neighborhood: int = 1  # Neighborhood size for local search
+
+@dataclass
 class ModelConfig:
     fs: FirstStageConfig = FirstStageConfig()  # Configuration for the first stage of the model
     ss: SecondStageConfig = SecondStageConfig()  # Configuration for the second stage of the model
-    
+    lora_model: TrainedLoraModelConfig = TrainedLoraModelConfig()  # Configuration for the LoRA model   
+        
 @dataclass 
 class LoraConfig:
     use_lora: bool = True  # Whether to use LoRA for the text encoder
