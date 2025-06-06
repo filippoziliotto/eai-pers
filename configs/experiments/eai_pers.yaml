@@ -29,14 +29,19 @@ encoder:
 
 model:
   fs:
-    use_pos_embed: true              # Use positional embeddings
-    num_cross_layers: 1          # Number of cross-attention layers
+    use_pos_embed: true        
+    num_cross_layers: 1          
   ss:
-    type: "base"                     # Model architecture variant
+    type: "base"                   
     tau_config:
-      tau: [0.1, 0.5]                         # Softmax/contrastive temperature
+      tau: [0.1, 0.5]                         
       step: 20
-      
+  lora_model:
+    use_trained_lora: true          
+    top_k: 5                     
+    neighborhood: 2                
+    nms_radius: 2     
+
 augmentations:
   flip:
     use_horizontal_flip: true

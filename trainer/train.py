@@ -169,7 +169,8 @@ def train_and_validate(
         train_loss, train_acc = train_one_epoch(model, train_loader, optimizer, loss_choice, use_wandb, config, device)
 
         # Update tau for softmax
-        model.second_stage.update_tau(epoch)
+        if hasattr(model, 'second_stage') and hasattr(model.second_stage, 'update_tau'):
+            model.second_stage.update_tau(epoch)
 
         # Store the first epoch's loss as normalization baseline
         if first_epoch_loss is None: first_epoch_loss = 1.
