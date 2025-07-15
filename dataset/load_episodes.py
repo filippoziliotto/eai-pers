@@ -29,13 +29,14 @@ def load_episodes(
     and merges them into a single list.
     """
     episodes = []
-    full_base_path = os.path.join(base_dir, "splits", split_dir, split)
+    full_base_path = os.path.join(base_dir, "v2/", "splits", split_dir, split)
     
     # Remove invalid scenes
     invalid_scenes = ["k1cupFYWXJ6", "HY1NcmCgn3n", "7MXmsvcQjpJ"]
 
     # List all immediate subdirectories
     for subdir in os.listdir(full_base_path):
+        print(subdir)
         subdir_path = os.path.join(full_base_path, subdir)
         
         # Skip invalid scenes

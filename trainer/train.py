@@ -5,6 +5,8 @@ import torch
 from torch.utils.data import DataLoader
 import wandb
 from tqdm import tqdm
+import logging
+
 
 # Other imports
 from utils.losses import compute_loss
@@ -15,6 +17,10 @@ from utils.visualize import visualize
 # Trainer imports
 from trainer.validate import validate
 from trainer.utils import load_checkpoint, save_checkpoint
+
+# Set up logging configuration
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logger = logging.getLogger(__name__)
 
 # Get the normalization constant for the loss
 loss_norm = None
@@ -107,7 +113,8 @@ def train_one_epoch(
     return train_loss, train_avg_metric
 
 def train_and_validate(
-    model, 
+    model,
+    logger, 
     train_loader: DataLoader,
     val_loader: DataLoader, 
     optimizer: torch.optim.Optimizer, 
@@ -164,7 +171,8 @@ def train_and_validate(
             device=device
         )
     else:
-        print("Starting training from scratch...")
+        logger.info("Starting training from scratch...")
+
     
     # Training loop
     for epoch in tqdm(range(start_epoch, num_epochs), desc="Epochs"):
@@ -178,11 +186,11 @@ def train_and_validate(
         norm_train_loss = train_loss / first_epoch_loss
 
         # Always print training metrics
-        print(f"\nEpoch {epoch}/{num_epochs} - Train Loss: {norm_train_loss:.4f}")
-        print("Train Metrics:")
+        logger.info(f"\nEpoch {epoch}/{num_epochs} - Train Loss: {norm_train_loss:.4f}")
+        logger.info("Train Metrics:")
         for key in train_acc:
-            print(f"{key}: {train_acc[key]:.4f}")
-        print('-' * 20)
+            logger.info(f"{key}: {train_acc[key]:.4f}")
+        logger.info('-' * 20)
 
         # Determine if validation should be run this epoch
         if (epoch % validate_every_n_epocs == 0) or ((epoch + 1) == num_epochs):
@@ -210,11 +218,11 @@ def train_and_validate(
                 )
                 
             # Print epoch summary with both training and validation metrics
-            print(f"Epoch {epoch}/{num_epochs}, Val Loss: {val_loss:.4f}")
-            print("Val Metrics:")
+            logger.info(f"Epoch {epoch}/{num_epochs}, Val Loss: {val_loss:.4f}")
+            logger.info("Val Metrics:")
             for key in val_acc:
-                print(f"{key}: {val_acc.get(key, 0):.4f}")
-            print('-' * 20)
+                logger.info(f"{key}: {val_acc.get(key, 0):.4f}")
+            logger.info('-' * 20)
             
         else:
             # For epochs without validation, update scheduler if it doesn't depend on validation loss
@@ -226,4 +234,4 @@ def train_and_validate(
         if use_wandb:
             log_epoch_metrics(epoch, optimizer, norm_train_loss, train_acc, val_loss if val_loss else None, val_acc if val_acc else None)
 
-    print("Training complete...")
+    logger.info("Training complete...")

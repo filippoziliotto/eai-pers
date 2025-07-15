@@ -49,7 +49,8 @@ augmentations:
 training:
   mode: "train"                  # Training mode: 'train', 'eval', etc.
   batch_size: 4                    # Number of samples per training batch
-  validate_after_n_epochs: 1      # Frequency of validation (in epochs)
+  num_epochs: 2  # Number of training epochs
+  validate_after_n_epochs: 2      # Frequency of validation (in epochs)
 
   loss:
     choice: "L2"                   # Loss type: L2, L1, etc.
@@ -79,6 +80,8 @@ encoder:
 map:
   size: 50                         # Spatial resolution (e.g., 50x50 grid)
   embedding_size: 768              # Size of spatial embedding vectors
+  pixels_per_meter: 10             # Pixels per meter for map scaling
+
 
 
 # -------------------------------------------------------------------
@@ -107,12 +110,12 @@ checkpoint:
   load: false                      # Whether to load from checkpoint
   resume_training: false           # Resume whole training from checkpoint
 
-
 # -------------------------------------------------------------------
 # SYSTEM AND DEVICE CONFIGURATION
+#
 # -------------------------------------------------------------------
 device:
-  type: "mps"                      # Device type: 'cpu', 'cuda', 'mps', etc.
+  type: "cpu"                      # Device type: 'cpu', 'cuda', 'mps', etc.
   num_workers: 4                   # Number of data loading workers
 
 
@@ -124,6 +127,9 @@ logging:
   wandb:
     use_wandb: false               # Enable wandb logging
     run_name: "none"              # Name of the wandb run
+  
+  logger:
+    name: "run.log"
 
 
 # -------------------------------------------------------------------

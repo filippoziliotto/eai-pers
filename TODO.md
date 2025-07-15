@@ -4,10 +4,10 @@
 - [ ] Implement a unified logger:
       - Redirect all `print` statements to both terminal and `outputs/run.log`
       - Create a `Logger` class and replace `print` with `logger.info()`
-- [ ] Restructure configuration handling:
+- [√] Restructure configuration handling:
       - Move all settings into the `Config` class, except the current experiment file (e.g. `python main.py --config your_config`)
-- [ ] Fix augmentation arguments to be fully handled via config (Gaia)
-- [ ] Migrate argument parsing into config:
+- [√] Fix augmentation arguments to be fully handled via config (Gaia)
+- [√] Migrate argument parsing into config:
       - Optimizer settings
       - Training hyperparameters
       - Map constants 

@@ -106,7 +106,8 @@ def get_optimizer(optimizer_name, model, lr, weight_decay=0.0, scheduler_name=No
     
     # Scheduler selection
     scheduler = None
-    if scheduler_name is not None and scheduler_name.lower() != "none":
+    if scheduler_name.type is not None and scheduler_name.type.lower() != "none":
+
         scheduler_name_clean = scheduler_name.lower()
         if scheduler_name_clean == "step_lr":
             if 'step_size' not in scheduler_kwargs:
@@ -219,7 +220,7 @@ def generate_wandb_run_name(args):
         "lr": args.lr,
         "wd": args.weight_decay,
         "epochs": args.num_epochs,
-        "loss": args.loss_choice,
+        "loss": args.choice,
         "embed": args.embed_dim,
         "heads": args.num_heads,
         "opt": args.optimizer,

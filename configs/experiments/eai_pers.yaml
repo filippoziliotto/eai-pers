@@ -2,7 +2,26 @@
 debugger:
   debug: true
 
-# Baseline
-baseline:
-  use_baseline: false
-  type: "random"
+# Attention parameters
+attention:
+  embed_dim: 768 # Embedding dimension for attention
+  num_heads: 8 # Number of attention heads
+
+########
+####parte mia
+training:
+  mode: "train"
+  batch_size: 8
+  num_epochs: 50  # CAMBIA QUESTO da 1 a 10 (o qualsiasi numero vuoi)
+  validate_after_n_epochs: 2
+  loss:
+    choice: "L2"
+    scaling: 0.3
+
+optimizer:
+  lr: 0.0001  # Da 0.001 a 0.0001
+
+scheduler:
+  type: "step_lr"
+  step_size: 5
+  gamma: 0.5

@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import List
 from omegaconf import OmegaConf, DictConfig
+from enum import Enum
 
 # -------------------------------------------------------------------
 # DATA CONFIGURATION
@@ -11,6 +12,11 @@ class DataConfig:
     data_dir: str = "data"  # Root directory containing the dataset
     data_split: str = "object_unseen"  # Dataset split (e.g., seen/unseen scenarios)
 
+    def __post_init__(self):
+        """Validate data configuration"""
+        valid_splits = ["object_unseen", "scene_unseen"]
+        if self.data_split not in valid_splits:
+            raise ValueError(f"data_split must be one of {valid_splits}, got: '{self.data_split}'")
 
 # -------------------------------------------------------------------
 # AUGMENTATION CONFIGURATION
@@ -72,6 +78,7 @@ class EncoderConfig:
 class MapConfig:
     size: int = 50  # Spatial map size (e.g., grid resolution)
     embedding_size: int = 768  # Size of the learned spatial representation
+    pixels_per_meter: int = 10  # Pixels per meter for map scaling
 
 
 # -------------------------------------------------------------------
@@ -92,6 +99,12 @@ class TrainingConfig:
     validate_after_n_epochs: int = 1  # Frequency of validation (in epochs)
     loss: LossConfig = LossConfig()  # Loss-related configuration
 
+    def __post_init__(self):
+        """Automatic validation after initialization"""
+        valid_modes = ["train", "eval"]  # or ["train", "test"] if you use test
+        if self.mode not in valid_modes:
+            raise ValueError(f"mode must be one of {valid_modes}, got: {self.mode}")
+
 
 # -------------------------------------------------------------------
 # OPTIMIZATION CONFIGURATION
@@ -104,12 +117,24 @@ class OptimizerConfig:
     lr: float = 0.001  # Learning rate
     weight_decay: float = 1e-5  # L2 regularization
 
+    def __post_init__(self):
+        """Validate optimizer configuration"""
+        valid_types = ["adam", "sgd", "adamw", "rmsprop"]
+        if self.type not in valid_types:
+            raise ValueError(f"type must be one of {valid_types}, got: '{self.type}'")
+
 @dataclass
 class SchedulerConfig:
     type: str = "none"  # Scheduler type (e.g., step, plateau)
     step_size: int = 5  # Step size for StepLR
     gamma: float = 0.1  # Decay factor
     patience: int = 10  # Patience for ReduceLROnPlateau
+
+    def __post_init__(self):
+        """Validate scheduler configuration"""
+        valid_types = ["none", "step_lr", "cosine_annealing", "exponential_lr", "reduce_on_plateau"]
+        if self.type not in valid_types:
+            raise ValueError(f"type must be one of {valid_types}, got: '{self.type}'")
 
 
 # -------------------------------------------------------------------
@@ -128,10 +153,20 @@ class DeviceConfig:
     type: str = "cpu"  # Device type: 'cpu' or 'cuda'
     num_workers: int = 4  # DataLoader parallel workers
 
+    def __post_init__(self):
+        """Validate scheduler configuration"""
+        valid_types = ["cpu", "cuda", "mps"]
+        if self.type not in valid_types:
+            raise ValueError(f"type must be one of {valid_types}, got: '{self.type}'")
+
 
 # -------------------------------------------------------------------
 # LOGGING & DEBUGGING CONFIGURATION
 # -------------------------------------------------------------------
+
+@dataclass
+class LoggerFileConfig:
+    name: str = "run.log"  # Default log file
 
 @dataclass
 class WandbConfig:
@@ -141,6 +176,7 @@ class WandbConfig:
 @dataclass
 class LoggingConfig:
     wandb: WandbConfig = WandbConfig()  # Encapsulated wandb config
+    logger: LoggerFileConfig = LoggerFileConfig()
 
 @dataclass
 class DebugConfig:
