@@ -5,22 +5,20 @@ import torch
 from torch.utils.data import DataLoader
 import wandb
 from tqdm import tqdm
-import logging
-
 
 # Other imports
 from utils.losses import compute_loss
 from utils.metrics import compute_accuracy
 from utils.utils import log_lr_scheduler, log_epoch_metrics
-from utils.visualize import visualize
+from utils.visualize import visualize, plot_value_map
 
 # Trainer imports
 from trainer.validate import validate
 from trainer.utils import load_checkpoint, save_checkpoint
 
-# Set up logging configuration
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
-logger = logging.getLogger(__name__)
+# Trainer imports
+from trainer.validate import validate
+from trainer.utils import load_checkpoint, save_checkpoint
 
 # Get the normalization constant for the loss
 loss_norm = None
@@ -66,11 +64,15 @@ def train_one_epoch(
         gt_target, feature_map = gt_target.to(torch.float32).to(device), feature_map.to(torch.float32).to(device)
         
         # Forward pass
-        output = model(description=description, map_tensor=feature_map, query=query)  # e.g., output dict contains 'value_map'
+        output = model(
+            description=description, map_tensor=feature_map, query=query, gt_coords=gt_target
+        )  # e.g., output dict contains 'value_map'
 
         # Compute loss and perform backpropagation
-        loss = compute_loss(gt_target, output, loss_choice)
-        loss.backward()
+        loss = compute_loss(gt_target, output, loss_choice, feature_map)
+        loss.backward()     
+
+        # Optimize model parameters
         optimizer.step()
         optimizer.zero_grad()
 
@@ -87,19 +89,8 @@ def train_one_epoch(
             wandb.log({"Batch Train Loss": train_loss / len(query), "Batch": batch_idx})
             
         # Visualize predictions if enabled
-        if config.debugger.visualize:
-            for query_, gt_target_, value_map_, map_path_ in zip(query, gt_target, output['value_map'], data['map_path']):
-                visualize(
-                    query_, 
-                    gt_target_, 
-                    value_map_, 
-                    map_path_, 
-                    batch_idx, 
-                    name="prediction", 
-                    split="train",
-                    use_obstacle_map=config.use_obstacle_map,
-                    upscale_factor=2.0
-                )
+        #if config.debugger.debug:
+        #    plot_value_map(output['value_map'], output["coords"], gt_target)
         
         if config.debugger.debug and batch_idx == 0:
             break
@@ -113,8 +104,7 @@ def train_one_epoch(
     return train_loss, train_avg_metric
 
 def train_and_validate(
-    model,
-    logger, 
+    model, 
     train_loader: DataLoader,
     val_loader: DataLoader, 
     optimizer: torch.optim.Optimizer, 
@@ -130,6 +120,8 @@ def train_and_validate(
     resume_training: Optional[bool] = False,
     validate_every_n_epocs: int = 5,
     config: Optional[Dict] = None,
+    logger: Optional[str] = 'run.log',
+
 ):
     """
     Full training loop that trains and validates the model for multiple epochs.
@@ -171,26 +163,28 @@ def train_and_validate(
             device=device
         )
     else:
-        logger.info("Starting training from scratch...")
-
+        print("Starting training from scratch...")
     
     # Training loop
     for epoch in tqdm(range(start_epoch, num_epochs), desc="Epochs"):
         # Train for one epoch and get training metrics
         train_loss, train_acc = train_one_epoch(model, train_loader, optimizer, loss_choice, use_wandb, config, device)
 
+        # Update tau for softmax
+        if hasattr(model, 'second_stage') and hasattr(model.second_stage, 'update_tau'):
+            model.second_stage.update_tau(epoch)
+
         # Store the first epoch's loss as normalization baseline
-        if first_epoch_loss is None: first_epoch_loss = train_loss
-            
+        if first_epoch_loss is None: first_epoch_loss = 1.
         # Normalize the training loss
         norm_train_loss = train_loss / first_epoch_loss
 
         # Always print training metrics
-        logger.info(f"\nEpoch {epoch}/{num_epochs} - Train Loss: {norm_train_loss:.4f}")
-        logger.info("Train Metrics:")
+        print(f"\nEpoch {epoch}/{num_epochs} - Train Loss: {norm_train_loss:.4f}")
+        print("Train Metrics:")
         for key in train_acc:
-            logger.info(f"{key}: {train_acc[key]:.4f}")
-        logger.info('-' * 20)
+            print(f"{key}: {train_acc[key]:.4f}")
+        print('-' * 20)
 
         # Determine if validation should be run this epoch
         if (epoch % validate_every_n_epocs == 0) or ((epoch + 1) == num_epochs):
@@ -218,11 +212,11 @@ def train_and_validate(
                 )
                 
             # Print epoch summary with both training and validation metrics
-            logger.info(f"Epoch {epoch}/{num_epochs}, Val Loss: {val_loss:.4f}")
-            logger.info("Val Metrics:")
+            print(f"Epoch {epoch}/{num_epochs}, Val Loss: {val_loss:.4f}")
+            print("Val Metrics:")
             for key in val_acc:
-                logger.info(f"{key}: {val_acc.get(key, 0):.4f}")
-            logger.info('-' * 20)
+                print(f"{key}: {val_acc.get(key, 0):.4f}")
+            print('-' * 20)
             
         else:
             # For epochs without validation, update scheduler if it doesn't depend on validation loss
@@ -234,4 +228,4 @@ def train_and_validate(
         if use_wandb:
             log_epoch_metrics(epoch, optimizer, norm_train_loss, train_acc, val_loss if val_loss else None, val_acc if val_acc else None)
 
-    logger.info("Training complete...")
+    print("Training complete...")

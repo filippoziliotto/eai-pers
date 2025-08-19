@@ -59,6 +59,10 @@ def validate(
     with torch.no_grad():
         for batch_idx, data in tqdm(enumerate(data_loader), total=len(data_loader), desc="Batch", leave=False):
             
+            if data is None:
+                print(f"[WARNING] Skipping batch {batch_idx} because data is None")
+                continue
+
             # Get data and move to device
             description, query = data['summary'], data['query']
             gt_target, feature_map = data['target'], data['feature_map']
@@ -68,10 +72,10 @@ def validate(
             gt_target, feature_map = gt_target.to(torch.float32).to(device), feature_map.to(torch.float32).to(device)
             
             # Forward pass
-            output = model(description=description, map_tensor=feature_map, query=query)
-
+            output = model(description=description, map_tensor=feature_map, query=query, gt_coords=gt_target)
+            
             # Compute loss
-            loss = compute_loss(gt_target, output, loss_choice)
+            loss = compute_loss(gt_target, output, loss_choice, feature_map)
             val_loss = loss.item()
             epoch_loss += val_loss
             num_batches += 1
