@@ -245,21 +245,6 @@ def read_wandb_api_key(path="scripts/keys.sh"):
         print("Make sure the file 'scripts/keys.sh' exists and contains your WANDB_API_KEY.")
     return None
 
-def read_openai_api_key(path="scripts/keys.sh"):
-    """
-    Reads the OpenAI API key from a file.
-    Make sure the key is saved as OPENAI_API_KEY="your_key_here"
-    in the file scripts/keys.sh (without export).
-    """
-    try:
-        with open(path, "r") as file:
-            for line in file:
-                if "OPENAI_API_KEY" in line:
-                    return eval(line.split("=")[1].strip())
-    except FileNotFoundError:
-        print("Make sure the file 'scripts/keys.sh' exists and contains your OPENAI_API_KEY.")
-    return None
-
 """
 SoftMax Utils
 """

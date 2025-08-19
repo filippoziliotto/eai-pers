@@ -39,6 +39,7 @@ class FlipAugmentationConfig:
 class RandomCropAugmentationConfig:
     use_crop: bool = False  # Enable random cropping
     max_crop_fraction: float = 0.3  # Max crop size as a fraction of image size
+    min_size: int = 20 # Minimum size of the crop (20,20 height, width)
     prob: float = 0.5  # Probability of applying cropping
 
 @dataclass
@@ -64,15 +65,53 @@ class AugmentationsConfig:
 class AttentionConfig:
     embed_dim: int = 512  # Embedding dimension for attention modules
     num_heads: int = 8  # Number of attention heads
+    ffn_dim: int = 1536  # Feed-forward network dimension
+    dropout: float = 0.1  # Dropout rate for attention layers
+    
+@dataclass
+class FirstStageConfig:
+    use_pos_embed: bool = True  # Whether to use positional embeddings
+    use_self_attention: bool = False  # Whether to use self-attention in the model
+    num_cross_layers: int = 2  # Number of cross-attention layers
+    num_self_layers: int = 1  # Number of self-attention layers
+
+@dataclass
+class Tauconfig:
+    tau: tuple = (0.1, 0.5)  # (min, max)
+    step: int = 10  # Number of epochs to decrease tau from max to min
+    
+@dataclass
+class SecondStageConfig:
+    type: str = "base"
+    learn_similarity: bool = False  # Whether to learn a similarity function
+    tau_config: Tauconfig = Tauconfig()  # Temperature for soft-argmax
+
+@dataclass
+class TrainedLoraModelConfig:
+    use_trained_lora: bool = False  # Whether to use the "trained" ZS baselineù
+    top_k: int = 5  # Top-k for neighborhood search
+    nms_radius: int = 2  # Radius for non-maximum suppression
+    neighborhood: int = 1  # Neighborhood size for local search
 
 @dataclass
 class ModelConfig:
-    type: str = "base"  # Model variant or architecture key
-    tau: float = 0.8  # Temperature for softmax or contrastive objectives
-
+    fs: FirstStageConfig = FirstStageConfig()  # Configuration for the first stage of the model
+    ss: SecondStageConfig = SecondStageConfig()  # Configuration for the second stage of the model
+    lora_model: TrainedLoraModelConfig = TrainedLoraModelConfig()  # Configuration for the LoRA model   
+        
+@dataclass 
+class LoraConfig:
+    use_lora: bool = True  # Whether to use LoRA for the text encoder
+    r: int = 8  # Rank for LoRA
+    lora_alpha: int = 16  # Alpha scaling factor for LoRA
+    lora_dropout: float = 0.1  # Dropout rate for LoRA
+    bias: str = "none"  # Bias type for LoRA (e.g., 'none', 'lora_only', 'all')
+    task_type: str = "feature_extraction"  # Task type for LoRA
+    
 @dataclass
 class EncoderConfig:
     freeze: bool = True  # Whether to freeze encoder weights during training
+    lora: LoraConfig = LoraConfig()  # LoRA configuration for the text encoder
 
 @dataclass
 class MapConfig:
@@ -88,7 +127,7 @@ class MapConfig:
 
 @dataclass
 class LossConfig:
-    choice: str = "L2"  # Loss type: L1, L2, etc.
+    choice: str = "L2"  # Loss type: L1, L2, Huber
     scaling: float = 0.3  # Scaling factor for the loss term
 
 @dataclass
@@ -129,13 +168,6 @@ class SchedulerConfig:
     step_size: int = 5  # Step size for StepLR
     gamma: float = 0.1  # Decay factor
     patience: int = 10  # Patience for ReduceLROnPlateau
-
-    def __post_init__(self):
-        """Validate scheduler configuration"""
-        valid_types = ["none", "step_lr", "cosine_annealing", "exponential_lr", "reduce_on_plateau"]
-        if self.type not in valid_types:
-            raise ValueError(f"type must be one of {valid_types}, got: '{self.type}'")
-
 
 # -------------------------------------------------------------------
 # CHECKPOINTING AND DEVICE MANAGEMENT

@@ -7,7 +7,7 @@
 # DATA CONFIGURATION
 # -------------------------------------------------------------------
 data:
-  data_dir: "data"                  # Path to dataset root directory
+  data_dir: "data/v2"                  # Path to dataset root directory
   data_split: "object_unseen"      # Which data split to use (e.g., seen, unseen)
 
 # Random seed for reproducibility
@@ -30,7 +30,8 @@ augmentations:
   crop:
     use_crop: true                # Enable random cropping
     max_crop_fraction: 0.3        # Maximum allowed crop size (fraction of image)
-    prob: 0.5                      # Probability of applying crop
+    min_size: 20                  # Minimum crop size (width, height)
+    prob: 0.5                     # Probability of applying crop
 
   rotation:
     use_rotation: true            # Enable image rotation
@@ -62,16 +63,38 @@ training:
 # Includes attention mechanism, encoder freezing, and model head
 # -------------------------------------------------------------------
 attention:
-  embed_dim: 512                   # Dimension of attention embeddings
+  embed_dim: 768                   # Dimension of attention embeddings
   num_heads: 8                     # Number of attention heads
+  ffn_dim: 1536                   # Dimension of feed-forward network
+  dropout: 0.1                    # Dropout rate for attention layers
 
 model:
-  type: "base"                     # Model architecture variant
-  tau: 0.8                         # Softmax/contrastive temperature
+  fs:
+    use_pos_embed: true              # Use positional embeddings
+    use_self_attention: false        # Enable attention mechanism
+    num_cross_layers: 2          # Number of cross-attention layers
+    num_self_layers: 1          # Number of self-attention layers
+  ss:
+    type: "base"                     # Model architecture variant
+    tau_config:
+      tau: [0.1, 0.5]                         # Softmax/contrastive temperature
+      step: 20
+    learn_similarity: false          # Learn similarity matrix
+  lora_model:
+    use_trained_lora: false          # Use pretrained LoRA weights
+    top_k: 5                     # Top-k for attention heads
+    neighborhood: 2                # Neighborhood size for attention
+    nms_radius: 2                # Non-Maximum Suppression radius
 
 encoder:
   freeze: true                     # Freeze encoder weights during training
-
+  lora:
+    use_lora: false
+    r: 8  # Rank for LoRA
+    lora_alpha: 16  # Alpha scaling factor for LoRA
+    lora_dropout: 0.1  # Dropout rate for LoRA
+    bias: "none"  # Bias type for LoRA (e.g., 'none', 'lora_only', 'all')
+    task_type: "feature_extraction"  # Task type for LoRA
 
 # -------------------------------------------------------------------
 # MAP MODULE CONFIGURATION
@@ -98,7 +121,6 @@ scheduler:
   step_size: 5                     # Step size (used if type is 'step')
   gamma: 0.1                       # Decay factor for scheduler
   patience: 10                     # Patience for ReduceLROnPlateau
-
 
 # -------------------------------------------------------------------
 # CHECKPOINT MANAGEMENT

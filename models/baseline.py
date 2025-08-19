@@ -2,8 +2,6 @@ import torch.nn as nn
 import torch
 import torch.nn.functional as F
 import warnings
-import os
-from openai import OpenAI
 
 # Local imports
 from models.stages.zs_stage import ZeroShotCosineModel
@@ -43,156 +41,82 @@ class BaselineModel(nn.Module):
 
         print("Baseline initialized.")
 
-
     def forward(self, map_tensor, description, query, gt_coords=None):
-            """
-            Performs a forward pass through the model.
+        """
+        Performs a forward pass through the model.
 
             Args:
                 description (str): Description of the map.
                 map_tensor (Tensor): The map tensor of shape (w, h, C).
                 query (str): The query to locate in the map.
 
-            Returns:
-                Either:
-                - The similarity map result as computed by second_stage if not using MLP predictor.
-                - A tuple of predicted coordinates from the MLP predictor.
-            """
-            output = {}
-            feature_map = map_tensor
-            b, w, h, E = feature_map.shape
-            
-            if self.baseline_type in ["random"]:
-                # For random baseline, just return a random index
-                output["value_map"] = torch.rand((b, w, h, 1))
-                output["max_value"] = torch.rand((b, 1))
-
-                x = torch.randint(0, w, (b,), device=self.device)
-                y = torch.randint(0, h, (b,), device=self.device)
-
-                # output["coords"] = torch.randint(0, w * h, (b,)).view(b, w, h)
-                output["coords"] = torch.stack([x, y], dim=1)  # [b, 2]
-                
-                return output
+        Returns:
+            Either:
+              - The similarity map result as computed by second_stage if not using MLP predictor.
+              - A tuple of predicted coordinates from the MLP predictor.
+        """
+        output = {}
+        feature_map = map_tensor
+        b, w, h, E = feature_map.shape
         
+        if self.baseline_type in ["random"]:
+            # For random baseline, just return a random index
+            output["value_map"] = torch.rand((b, w, h, 1))
+            output["max_value"] = torch.rand((b, 1))
+            output["coords"] = torch.randint(0, w * h, (b,)).view(b, w, h)
+            return output
             
-            elif self.baseline_type in ["center"]:
-                # For center baseline, just return the center of the feature map
-                output["value_map"] = torch.rand((b, h, w, 1))
-                output["max_value"] = torch.rand((b, 1))
-                output["coords"] = torch.tensor([h// 2, w // 2]).expand(b, -1).to(self.device)
-                return output
-            
-            elif self.baseline_type in ["vlfm"]:
-                # Encode the query
-                #query_tensor = self.encode_query(query)
-                query_tensor = self.encode_query(query)["text"]
-                print("query_tensor shape:", query_tensor.shape)
-
-                assert query_tensor.shape == (b, E), "Query embedding must have shape (b, E)"
-
-                query_tensor = query_tensor.unsqueeze(1).unsqueeze(1)
-
-                # Calculate cosine similarity
-                value_map = self.cosine_similarity(
-                    feature_map, 
-                    query_tensor
-                ) # b x w x h
-                output["value_map"] = value_map.view(b, w, h, 1)
-                
-                # Get max element in the value map for each batch and convert to coordinates
-                max_value_map, max_index = value_map.view(b, -1).max(dim=-1)
-                output["max_value"] = max_value_map
-                # output["coords"] = max_index.view(b, w, h)
-                output["coords"] = torch.stack([
-                    max_index // h,
-                    max_index % h
-                ], dim=1)  # shape: (b, 2)++
-                return output
-            
-            elif self.baseline_type in ["zs_cosine"]:
-                # Encode query embeddings
-                query_tensor = self.encode_query(query)['text']
-                assert query_tensor.shape == (b, E), "Query embedding must have shape (b, E)"
-                
-                # Encode description embeddings
-                description_tensor = self.zs_model.encode_descriptions(description)
-                assert description_tensor.shape[0] == b, "Description embedding must have shape (b, k, E)"
-                
-                # Get the max value and index from the zero-shot cosine model
-                max_index, max_val = self.zs_model.forward(
-                    feature_map=feature_map,
-                    query_tensor=query_tensor,
-                    description_tensor=description_tensor,
-                    top_k=4,
-                    neighborhood=0,
-                    nms_radius=2,
-                )
-
-                output["max_value"] = max_val
-                output["coords"] = torch.stack([max_index // w, max_index % w], dim=-1) 
-                return output
-            
-            elif self.baseline_type in ["llm_parse_similarity"]:
-                # Use the parser to extract the key object from the description
-                parsed_queries = self.llm_parse(description)  # List[str]
-
-                # Embed the parsed query
-                query_tensor = self.encode_query(parsed_queries)["text"]  # (b, E)
-                print("Expected E =", E) 
-                print("b =", b)
-                print("query_tensor.shape =", query_tensor.shape)
-                assert query_tensor.shape == (b, E), f"Query embedding must have shape (b, E), got {query_tensor.shape}"
-
-                # Expand dimensions for broadcasting with feature_map (b, w, h, E)
-                query_tensor = query_tensor.unsqueeze(1).unsqueeze(1)  # (b, 1, 1, E)
-
-                # Cosine similarity
-                value_map = self.cosine_similarity(feature_map, query_tensor)  # (b, w, h)
-                output["value_map"] = value_map.view(b, w, h, 1)
-
-                # Get the maximum value and its index in the value map
-                max_value_map, max_index = value_map.view(b, -1).max(dim=-1)
-                output["max_value"] = max_value_map
-                output["coords"] = torch.stack([
-                    max_index // h,
-                    max_index % h
-                ], dim=1)  # shape: (b, 2)
-
-                return output
-
-            elif self.baseline_type in ["llm_parse_masked_similarity"]:
-                # 1) Keywords dal LLM (una per esempio -> len == b)
-                keywords = self.llm_parse(description)  # List[str] len == b
-
-                # 2) Embedding delle keyword
-                query_tensor = self.encode_query(keywords)["text"]  # atteso (b, E)
-                if query_tensor.shape[0] != b:
-                    # sicurezza: se per qualche motivo arriva 1 x E, fai broadcast
-                    query_tensor = query_tensor[:1].expand(b, -1)
-
-                # 3) Similarity map (cosine a ogni cella)
-                # feature_map: (b, w, h, E) —> portiamo query a (b,1,1,E)
-                query_tensor = query_tensor.unsqueeze(1).unsqueeze(1)  # (b,1,1,E)
-                value_map = self.cosine_similarity(feature_map, query_tensor)  # (b, w, h)
-
-                # 4) Maschera per batch
-                mask = self.get_mask_for_batch(keywords, w, h, b, self.device)  # (b,w,h)
-
-                # 5) Applica mask + argmax
-                max_value_map, max_index = self.apply_mask_and_argmax(value_map, mask)
-
-                output["value_map"] = value_map.view(b, w, h, 1)
-                output["max_value"] = max_value_map
-                output["coords"] = torch.stack([
-                    max_index // h,
-                    max_index % h
-                ], dim=1)  # (b,2)
-                return output
-
-            else:
-                raise NotImplementedError(f"Baseline type '{self.baseline_type}' is not implemented.")
+        elif self.baseline_type in ["center"]:
+            # For center baseline, just return the center of the feature map
+            output["value_map"] = torch.rand((b, h, w, 1))
+            output["max_value"] = torch.rand((b, 1))
+            output["coords"] = torch.tensor([h// 2, w // 2]).expand(b, -1).to(self.device)
+            return output
         
+        elif self.baseline_type in ["vlfm"]:
+            # Encode the query
+            query_tensor = self.encode_query(query)
+            assert query_tensor.shape == (b, E), "Query embedding must have shape (b, E)"
+            
+            # Calculate cosine similarity
+            value_map = self.cosine_similarity(
+                feature_map, 
+                query_tensor
+            ) # b x w x h
+            output["value_map"] = value_map.view(b, w, h, 1)
+            
+            # Get max element in the value map for each batch
+            max_value_map, max_index = value_map.view(b, -1).max(dim=-1)
+            output["max_value"] = max_value_map
+            output["coords"] = max_index.view(b, w, h)  
+            return output
+        
+        elif self.baseline_type in ["zs_cosine"]:
+            # Encode query embeddings
+            query_tensor = self.encode_query(query)['text']
+            assert query_tensor.shape == (b, E), "Query embedding must have shape (b, E)"
+            
+            # Encode description embeddings
+            description_tensor = self.zs_model.encode_descriptions(description)
+            assert description_tensor.shape[0] == b, "Description embedding must have shape (b, k, E)"
+            
+            # Get the max value and index from the zero-shot cosine model
+            max_index, max_val = self.zs_model.forward(
+                feature_map=feature_map,
+                query_tensor=query_tensor,
+                description_tensor=description_tensor,
+                top_k=4,
+                neighborhood=0,
+                nms_radius=2,
+            )
+
+            output["max_value"] = max_val
+            output["coords"] = torch.stack([max_index // w, max_index % w], dim=-1) 
+            return output
+        
+        else:
+            raise NotImplementedError(f"Baseline type '{self.baseline_type}' is not implemented.")
+    
     def encode_query(self, query):
         """
         Encodes a given query into an embedding.
