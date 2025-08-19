@@ -10,14 +10,24 @@ warnings.filterwarnings('ignore', category=UserWarning)
 
 
 class RetrievalMapModel(nn.Module):
-    def __init__(self, embed_dim, num_heads, encoder, type, tau, device):
+    def __init__(self, embed_dim, num_heads, ffn_dim, dropout, num_cross_layers, 
+                 num_self_layers, scene_encoder, query_encoder, type, tau, use_self_attention, use_pos_embed, learn_similarity, device):
         """
         Initializes the RetrievalMapModel.
 
         Args:
             embed_dim (int): The embedding dimension.
             num_heads (int): The number of attention heads.
-            encoder (Blip2Encoder): The encoder model.
+            ffn_dim (int): The dimension of the feed-forward network.
+            dropout (float): The dropout rate.
+            num_cross_layers (int): The number of cross-attention layers.
+            num_self_layers (int): The number of self-attention layers.
+            type (str): The type of processing to be used in the second stage.
+            tau (float): Temperature parameter for the second stage.
+            use_self_attention (bool): Whether to use self-attention in the first stage.
+            use_pos_embed (bool): Whether to use positional embeddings in the first stage.
+            scene_encoder (Blip2Encoder): The encoder model.
+            query_encoder (Blip2Encoder): The encoder model for queries.
             device (str): The device for model computation.
         """
         super().__init__()
@@ -25,24 +35,36 @@ class RetrievalMapModel(nn.Module):
         
         self.embed_dim = embed_dim
         self.num_heads = num_heads
+        self.ffn_dim = ffn_dim
+        self.dropout = dropout
+        self.num_cross_layers = num_cross_layers
+        self.num_self_layers = num_self_layers
         self.device = device
         self.process_type = type
         self.tau = tau
+        self.learn_similarity = learn_similarity
 
         # Initialize and move first and second stages to the specified device
         self.first_stage = MapAttentionModel(self.embed_dim, 
                                              self.num_heads, 
-                                             encoder
+                                             self.ffn_dim,
+                                             scene_encoder,
+                                             self.num_cross_layers,
+                                             self.num_self_layers,
+                                             self.dropout,
+                                             use_self_attention=use_self_attention,
+                                             use_pos_embed=use_pos_embed
                                              ).to(self.device)
-        self.second_stage = PersonalizedFeatureMapper(encoder, 
+        self.second_stage = PersonalizedFeatureMapper(query_encoder, 
                                                       process_type=self.process_type, 
+                                                      learn_similarity=self.learn_similarity,
                                                       embed_dim=self.embed_dim, 
                                                       tau=self.tau
                                                       ).to(self.device)
         
         print("Model initialized.")
 
-    def forward(self, description, map_tensor, query):
+    def forward(self, description, map_tensor, query, gt_coords):
         """
         Performs a forward pass through the model.
 
@@ -61,4 +83,4 @@ class RetrievalMapModel(nn.Module):
         embed_map = self.first_stage(map_tensor, description)
 
         # Compute the similarity map from the second stage, based on the encoded map.
-        return self.second_stage(embed_map, query)
+        return self.second_stage(embed_map, query, gt_coords)
