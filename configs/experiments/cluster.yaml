@@ -1,0 +1,68 @@
+# Debugging stuff
+debugger:
+  debug: false
+
+# Baseline
+baseline:
+    use_baseline: false
+    type: "zs_cosine"
+
+logging:
+  wandb:
+    use_wandb: true
+    run_name: "ca_block-pos_enc-Chebyshev-adamw-0.0001-wd1e-5-200"
+
+training:
+  mode: "train"
+  num_epochs: 200
+  batch_size: 8     
+  loss:
+    choice: "Chebyshev-combined"
+
+attention:
+  embed_dim: 768                   # Dimension of attention embeddings
+  num_heads: 12                     # Number of attention heads
+  ffn_dim: 2048                     # Dimension of feed-forward network
+  dropout: 0.2                     # Dropout rate for attention layers
+
+model:
+  fs:
+    use_pos_embed: true              # Use positional embeddings
+    num_cross_layers: 1          # Number of cross-attention layers
+  ss:
+    type: "base"                     # Model architecture variant
+    tau_config:
+      tau: [0.1, 0.5]                         # Softmax/contrastive temperature
+      step: 20
+      
+encoder:
+  freeze: true                     # Freeze encoder weights during training
+  lora:
+    use_lora: true
+
+augmentations:
+  flip:
+    use_horizontal_flip: true
+    use_vertical_flip: true
+    prob: 0.5
+  crop:
+    use_crop: true
+    prob: 0.5
+  rotation:
+    use_rotation: true   
+    prob: 0.5
+
+device:
+  type: "cuda"
+  num_workers: 4
+
+optimizer:
+  type: "adamw"
+  lr: 0.0001 
+  weight_decay: 1e-5
+
+scheduler:
+  type: "step_lr"
+  step_size: 20
+  gamma: 0.8
+  patience: 10

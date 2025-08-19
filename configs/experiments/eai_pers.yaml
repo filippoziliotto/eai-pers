@@ -2,26 +2,79 @@
 debugger:
   debug: true
 
-# Attention parameters
-attention:
-  embed_dim: 768 # Embedding dimension for attention
-  num_heads: 8 # Number of attention heads
+# Baseline
+baseline:
+    use_baseline: false
+    type: "zs_cosine"
+  
+logging:
+  wandb:
+    use_wandb: false
+    run_name: "eai_pers"
 
-########
-####parte mia
 training:
   mode: "train"
-  batch_size: 8
-  num_epochs: 50  # CAMBIA QUESTO da 1 a 10 (o qualsiasi numero vuoi)
-  validate_after_n_epochs: 2
+  # mode: "eval"
+  num_epochs: 100
+  # batch_size: 8
+  batch_size: 2
+  # validate_after_n_epochs: 2
   loss:
-    choice: "L2"
-    scaling: 0.3
+    # choice: "L2"
+    # scaling: 0.3
+    choice: "Huber+CE"
+
+
+attention:
+#   embed_dim: 768 # Embedding dimension for attention
+#   num_heads: 8 # Number of attention heads
+  num_heads: 4
+
+encoder:
+  freeze: true
+  lora:
+    use_lora: true
+
+model:
+  fs:
+    use_pos_embed: true        
+    num_cross_layers: 1          
+  ss:
+    type: "base"                   
+    tau_config:
+      tau: [0.1, 0.5]                         
+      step: 20
+  lora_model:
+    use_trained_lora: true          
+    top_k: 5                     
+    neighborhood: 2                
+    nms_radius: 2     
+
+augmentations:
+  flip:
+    use_horizontal_flip: true
+    use_vertical_flip: true
+    prob: 0.5
+  crop:
+    use_crop: true
+    prob: 0.5
+  rotation:
+    use_rotation: true   
+    prob: 0.5
+
+device:
+  type: "mps"
+  num_workers: 4
 
 optimizer:
-  lr: 0.0001  # Da 0.001 a 0.0001
+  type: "adam"
+  lr: 0.001 
+  weight_decay: 1e-3
 
 scheduler:
-  type: "step_lr"
+  # type: "step_lr"
+  type: "none"
   step_size: 5
-  gamma: 0.5
+  # gamma: 0.5
+  gamma: 0.1
+  patience: 10

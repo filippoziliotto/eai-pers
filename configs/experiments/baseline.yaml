@@ -4,11 +4,19 @@
 # -------------------------------------------------------------------
 
 data:
-  data_split: "scene_unseen"
+  data_split: "object_unseen"
+  #val_subsplit: "easy"
+  #val_subsplit: "medium"
+  #val_subsplit: "hard"
+  val_subsplit: "total"
 
 training:
   batch_size: 2
   num_epochs: 20
+  mode: eval
+
+device:
+  type: "cuda"
 
 optimizer:
   lr: 5e-4
@@ -21,3 +29,14 @@ logging:
   wandb:
     use_wandb: false
     run_name: "none"
+
+baseline:
+  use_baseline: true
+ # type: random
+ # type: center
+ # type: vlfm
+ # type: llm_parse_similarity
+  type: llm_parse_masked_similarity
+
+checkpoint:
+  load: false
