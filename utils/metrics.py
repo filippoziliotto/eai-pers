@@ -23,7 +23,7 @@ def compute_accuracy(gt_target, pred_target):
     gt   = gt_target.detach().cpu().numpy()             # (N,2), can be floats or ints
 
     # 1) compute Euclidean distances (in meters)
-    distances = np.linalg.norm(pred - gt, axis=1)  # shape (N,)
+    distances = np.linalg.norm(pred - gt, axis=1) # shape (N,)
 
     # 2) success rates at 1m, 2m, 3m
     metrics = {"distance": distances.mean().tolist()}

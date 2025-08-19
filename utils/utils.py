@@ -106,8 +106,7 @@ def get_optimizer(optimizer_name, model, lr, weight_decay=0.0, scheduler_name=No
     
     # Scheduler selection
     scheduler = None
-    if scheduler_name.type is not None and scheduler_name.type.lower() != "none":
-
+    if scheduler_name is not None and scheduler_name.lower() != "none":
         scheduler_name_clean = scheduler_name.lower()
         if scheduler_name_clean == "step_lr":
             if 'step_size' not in scheduler_kwargs:
@@ -220,7 +219,7 @@ def generate_wandb_run_name(args):
         "lr": args.lr,
         "wd": args.weight_decay,
         "epochs": args.num_epochs,
-        "loss": args.choice,
+        "loss": args.loss_choice,
         "embed": args.embed_dim,
         "heads": args.num_heads,
         "opt": args.optimizer,
@@ -246,15 +245,20 @@ def read_wandb_api_key(path="scripts/keys.sh"):
         print("Make sure the file 'scripts/keys.sh' exists and contains your WANDB_API_KEY.")
     return None
 
-"""
-Loss Utils
-"""
-def get_loss(loss_choice):
-    if loss_choice in ["CE"]:
-        return nn.CrossEntropyLoss()
-    else:
-        return nn.MSELoss()
-
+def read_openai_api_key(path="scripts/keys.sh"):
+    """
+    Reads the OpenAI API key from a file.
+    Make sure the key is saved as OPENAI_API_KEY="your_key_here"
+    in the file scripts/keys.sh (without export).
+    """
+    try:
+        with open(path, "r") as file:
+            for line in file:
+                if "OPENAI_API_KEY" in line:
+                    return eval(line.split("=")[1].strip())
+    except FileNotFoundError:
+        print("Make sure the file 'scripts/keys.sh' exists and contains your OPENAI_API_KEY.")
+    return None
 
 """
 SoftMax Utils
@@ -271,7 +275,7 @@ def soft_argmax_coords(value_map: torch.Tensor, tau: float = 1.0) -> torch.Tenso
     b, h, w, _ = value_map.shape
     # squeeze the last dim
     scores = value_map.view(b, h, w)
-    
+
     # flatten spatial dims and apply softmax
     flat = scores.view(b, -1)               # (b, h*w)
     probs = F.softmax(flat / tau, dim=-1)   # (b, h*w)
@@ -293,6 +297,47 @@ def soft_argmax_coords(value_map: torch.Tensor, tau: float = 1.0) -> torch.Tenso
     # stack into (b, 2)
     coords = torch.stack([exp_h, exp_w], dim=-1)
     return coords
+
+def calculate_dist_matrix(value_map: torch.Tensor,
+                          gt_coords: torch.Tensor) -> torch.Tensor:
+    """
+    For each pixel in each batch, compute the *normalized* squared distance
+    to the ground-truth coordinate.
+
+    Args:
+        value_map: Tensor of shape (b, h, w, 1).  (We only need (b,h,w) for sizing.)
+        gt_coords: Tensor of shape (b, 2), where gt_coords[i] = (y_i, x_i).
+
+    Returns:
+        dist_matrix: Tensor of shape (b, h, w, 1), where
+                     dist_matrix[i, y, x, 0]
+                       = ( (y - y_i)^2 + (x - x_i)^2 )
+                         / sum_{all pixels} [ (y - y_i)^2 + (x - x_i)^2 ].
+    """
+    b, h, w, _ = value_map.shape
+    device = value_map.device
+
+    # 1) Create two (h, w) grids: one for y-coordinates, one for x-coordinates
+    ys = torch.arange(h, device=device).view(h, 1).expand(h, w)  # each row has [0,1,2…,w-1]
+    xs = torch.arange(w, device=device).view(1, w).expand(h, w)  # each column has [0,1,2…,h-1]
+
+    # 2) Stack them into a (h*w, 2) tensor of all pixel positions
+    #    Each entry is (y, x).
+    coords = torch.stack([ys, xs], dim=-1).view(-1, 2)  # (h*w, 2)
+
+    # 3) Repeat for each batch: (b, h*w, 2)
+    coords = coords.unsqueeze(0).repeat(b, 1, 1)       # tile along batch
+    gt   = gt_coords.unsqueeze(1).repeat(1, h*w, 1)    # (b, 1, 2) → (b, h*w, 2)
+
+    # 4) Compute squared differences: (y - y_i)^2 + (x - x_i)^2
+    diff  = coords - gt                                # (b, h*w, 2)
+    dist2 = (diff ** 2).sum(dim=-1)                    # (b, h*w)
+
+    # 5) Normalize so each batch sums to 1
+    dist_norm = dist2 / dist2.sum(dim=1, keepdim=True) # (b, h*w)
+
+    # 6) Reshape back to (b, h, w, 1)
+    return dist_norm.view(b, h, w, 1)
 
 """
 Logger utils
