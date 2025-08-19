@@ -48,7 +48,7 @@ class RetMapsDataset(Dataset):
 
     #     n_total = len(self.episodes)
     #     n_invalid = sum(1 for ep in self.episodes if not isinstance(ep, dict))
-    #     print(f"[INFO] Invalid episodes: {n_invalid}/{n_total}")
+     #     print(f"[INFO] Invalid episodes: {n_invalid}/{n_total}")
 
     #     if isinstance(episode, dict):
     #         scene_name = episode["scene_id"].split("/")[-1].split(".")[0]
@@ -99,7 +99,7 @@ class RetMapsDataset(Dataset):
     #         #    arr=feature_map,
     #         #    target=target,
     #         #    save_to_disk=True,
-    #         #    path_to_image="trainer/visualizations/posttransform.png"
+#         #    path_to_image="trainer/visualizations/posttransform.png"
     #         #)
 
     #         # Package and return the sample as a dictionary
@@ -121,71 +121,85 @@ class RetMapsDataset(Dataset):
             print(episode)
             return None
 
-        # Estrai nome scena
-        scene_name = episode["scene_id"].split("/")[-1].split(".")[0]
+        try:
+            # Estrai nome scena
+            scene_name = episode["scene_id"].split("/")[-1].split(".")[0]
 
-        # Apply realistic names to the episode
-        episode = self.selector.apply_names(episode)
-        # Extract episode information
-        ext_summary = episode["extracted_summary"]
-        summary = episode["summary"]
-        query = episode["query"]
-        floor_id = episode["floor_id"]
-        target_pos_hab = np.array([episode["object_pos"]])
+            # Apply realistic names to the episode
+            episode = self.selector.apply_names(episode)
+            # Extract episode information
+            ext_summary = episode["extracted_summary"]
+            summary = episode["summary"]
+            query = episode["query"]
+            floor_id = episode["floor_id"]
+            target_pos_hab = np.array([episode["object_pos"]])
 
-        # Load the corresponding map embeddings
-        self.map.load_embed_init(
-            scene_name=scene_name,
-            base_dir=self.base_dir,
-            episode_id=convert_floor_ep(ID_TO_FLOOR, scene_name, floor_id),
-        )
+           # Load the corresponding map embeddings
+            self.map.load_embed_init(
+                scene_name=scene_name,
+                base_dir=self.base_dir,
+                episode_id=convert_floor_ep(ID_TO_FLOOR, scene_name, floor_id),
+            )
 
-        # Load the feature map for the current episode
-        feature_map = self.map.load_embed_np_arr(visualize=False)
-        feature_map = torch.from_numpy(feature_map)
-        os.makedirs("debug/feature_maps", exist_ok=True)
-        np.save(f"debug/feature_maps/feature_map_{idx}.npy", feature_map.numpy())
-        if feature_map is None:
-                print(f"[ERROR] episode[{idx}]: Feature map is None for scene {scene_name}")
-        
-        # TODO: here we create the graph
+            # Load the feature map for the current episode
+            feature_map = self.map.load_embed_np_arr(visualize=False)
+            feature_map = torch.from_numpy(feature_map)
+            os.makedirs("debug/feature_maps", exist_ok=True)
+            np.save(f"debug/feature_maps/feature_map_{idx}.npy", feature_map.numpy())
+            if feature_map is None:
+                 print(f"[ERROR] episode[{idx}]: Feature map is None for scene {scene_name}")
+            
+            # TODO: here we create the graph
 
-        # Convert the target position from habitat coordinates to map frame
-        target = self.map.hab_to_px(target_pos_hab[:, [0, 2]])
-        target = self.map.px_to_arr(
-            target,
-            (self.map.init_dict['map_shape'] // self.map.grid_size) // 2
-        )[0]
-        
-        # Save Visualizations before and after transformations
-        #self.map.visualize(
-        #    arr=feature_map,
-        #    target=target,
-        #    save_to_disk=True,
-        #    path_to_image="trainer/visualizations/pretransform.png"
-        #)
-        
-        # Apply optional transformations (e.g., tensor conversion, augmentations)
-        if self.transform:
-            feature_map, target, ext_summary = self.transform(feature_map, target, ext_summary)
+            # Convert the target position from habitat coordinates to map frame
+            target = self.map.hab_to_px(target_pos_hab[:, [0, 2]])
+            target = self.map.px_to_arr(
+                target,
+                (self.map.init_dict['map_shape'] // self.map.grid_size) // 2
+            )[0]
 
-        #self.map.visualize(
-        #    arr=feature_map,
-        #    target=target,
-        #    save_to_disk=True,
-        #    path_to_image="trainer/visualizations/posttransform.png"
-        #)
+            # Save Visualizations before and after transformations
+            #self.map.visualize(
+            #    arr=feature_map,
+            #    target=target,
+            #    save_to_disk=True,
+            #    path_to_image="trainer/visualizations/pretransform.png"
+            #)
+                
+            # Apply optional transformations (e.g., tensor conversion, augmentations)
+            if self.transform:
+                try:
+                    feature_map, target, ext_summary = self.transform(feature_map, target, ext_summary)
+                except Exception as e:
+                    print(f"[ERROR] episode[{idx}]: Transform failed — {e}")
+                    return None
 
-        # Package and return the sample as a dictionary
-        return {
-            "scene_name": scene_name,
-            "floor_id": floor_id,
-            "t_summary": summary,
-            "summary": ext_summary,
-            "target": target,
-            "query": query,
-            "feature_map": feature_map,
-        }
+            #self.map.visualize(
+            #    arr=feature_map,
+            #    target=target,
+            #    save_to_disk=True,
+            #    path_to_image="trainer/visualizations/posttransform.png"
+
+            # Package and return the sample as a dictionary
+            return {
+                "scene_name": scene_name,
+                "floor_id": floor_id,
+                "t_summary": summary,
+                "summary": ext_summary,
+                "target": target,
+                "query": query,
+                "feature_map": feature_map,
+            }
+
+        except Exception as e:
+            print(f"[ERROR] episode[{idx}] — Unexpected failure: {e}")
+            return None
+
+            
+            # 👇 Aggiungi questo
+            print(f"[WARNING] episode[{idx}] is not a dict, but {type(episode)}")
+            return None
+
 
 def get_dataloader(data_dir, 
                    split_dir="object_unseen", 
@@ -224,7 +238,8 @@ def get_dataloader(data_dir,
         val_dataset = RetMapsDataset(data_dir, split_dir, "val", transform=None, val_subsplit=val_subsplit)
         
         train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True,
-                                  num_workers=num_workers, collate_fn=collate_fn, drop_last=True)
+                                    num_workers=num_workers, collate_fn=collate_fn, drop_last=True)
+        
         val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False,
                                 num_workers=num_workers, collate_fn=collate_fn, drop_last=False)
         
@@ -243,8 +258,30 @@ def get_dataloader(data_dir,
         
         train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True,
                                   num_workers=num_workers, collate_fn=collate_fn, drop_last=True)
+                                  
         val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False,
                                 num_workers=num_workers, collate_fn=collate_fn, drop_last=False)
+
+        
+        print("DataLoader initialized.")
+        return train_loader, val_loader
+    
+    elif split_dir == "scene_unseen":
+        print("Setting: Scene Unseen")
+        print("Using both training and validation datasets.")
+        # --- Training dataset from the "train" folder ---
+        aug_train = MapTransform(augmentation) if augmentation["use_aug"] else None
+        train_dataset = RetMapsDataset(data_dir, split_dir, "train", transform=aug_train)
+        
+        # --- Validation dataset from the "val" folder (always no augmentation) ---
+        val_dataset = RetMapsDataset(data_dir, split_dir, "val", transform=None)
+        
+        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True,
+                                  num_workers=num_workers, collate_fn=collate_fn, drop_last=True)
+                                  
+        val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False,
+                                num_workers=num_workers, collate_fn=collate_fn, drop_last=False)
+
         
         print("DataLoader initialized.")
         return train_loader, val_loader
