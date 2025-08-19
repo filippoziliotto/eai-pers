@@ -31,6 +31,8 @@ class MapTransform:
         self.use_random_crop = augmentations["crop"]["use_crop"]
         if self.use_random_crop:
             self.max_crop_fraction = augmentations["crop"]["max_crop_fraction"]
+            self.min_size = (augmentations["crop"]["min_size"], 
+                             augmentations["crop"]["min_size"])
             self.crop_prob = augmentations["crop"]["prob"]
         
         # Random rotation augmentation
@@ -49,15 +51,18 @@ class MapTransform:
         if not self.use_aug:
             return feature_map, xy_coords, description
                 
+        # Get the height and width of the feature map
+        H, W = feature_map.shape[0], feature_map.shape[1]        
+        
         # Apply horizontal flip
         if self.use_horizontal_flip and torch.rand(1) < self.flip_prob:
-            feature_map = torch.flip(feature_map, dims=(1,))
-            xy_coords[0] = feature_map.shape[1] - xy_coords[0]
+            xy_coords[1] = W - xy_coords[1]
+            feature_map = torch.flip(feature_map, dims=(1,))    
             
         # Apply vertical flip
         if self.use_vertical_flip and torch.rand(1) < self.flip_prob:
             feature_map = torch.flip(feature_map, dims=(0,))
-            xy_coords[1] = feature_map.shape[0] - xy_coords[1]
+            xy_coords[0] = H - xy_coords[0]
             
         # Apply random rotation
         if self.use_random_rotate and torch.rand(1) < self.rot_prob:
@@ -65,7 +70,8 @@ class MapTransform:
     
         # Apply random crop
         if self.use_random_crop and torch.rand(1) < self.crop_prob:
-            feature_map, xy_coords = random_crop_preserving_target(feature_map, xy_coords, self.max_crop_fraction)
+            feature_map, xy_coords = random_crop_preserving_target(feature_map, xy_coords, self.max_crop_fraction, 
+                                                                   self.min_size)
         
         # Change description order elements
         if self.use_desc_aug and torch.rand(1) < self.desc_prob:
