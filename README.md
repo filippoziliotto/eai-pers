@@ -33,14 +33,9 @@ To install the **EAI-Pers** package, make sure you have Python 3.9 or higher.
     pip install -r requirements.txt
     ```
 
-4. Install the package using `setup.py`:  
-    ```sh
-    python setup.py install
-    ```
+4. Download the data from [link: https://www.dropbox.com/scl/fi/17frggambpp9jts07jgop/data.zip?rlkey=9phx05i856ulfdsk93uor6gne&st=si9mjlf5&dl=0], extract it, and it will create a `data/val/` folder. 
 
-5. Download the data from [link: https://www.dropbox.com/scl/fi/17frggambpp9jts07jgop/data.zip?rlkey=9phx05i856ulfdsk93uor6gne&st=si9mjlf5&dl=0], extract it, and it will create a `data/val/` folder. 
-
-6. Make sure you have the LAVIS repository installed on macOS, or install it via conda on Linux. This allows loading the BLIP2 model also used to extract the feature map.
+5. Make sure you have the LAVIS repository installed on macOS, or install it via conda on Linux. This allows loading the BLIP2 model also used to extract the feature map.
 ---
 
 ### Dataset Structure
@@ -69,6 +64,11 @@ Difficulty splits live under `data/val/splits/{easy,medium,hard}`. Each level co
 ### Zero-shot baseline and evaluation flow
 
 Evaluation uses the difficulty splits from `data/val/splits/{easy,medium,hard}`. Training can use the same dataset by splitting episodes into train/val via the `data.train_*` settings.
+
+Run evaluation with:
+```sh
+python main.py --config "zs_eval.yaml" --mode "eval"
+```
 
 #### How to write the evaluation code
 
@@ -110,6 +110,11 @@ if cfg.training.mode == "eval":
 ### Training mode: how the model works
 
 Training follows a two-stage pipeline that turns a map and text into a spatial prediction:
+
+Run training with:
+```sh
+python main.py --config "train.yaml" --mode "train"
+```
 
 1. **Data inputs**  
    Each batch provides a feature map (`feature_map`), a list of scene descriptions (`summary`), a query string (`query`), and the target coordinates (`target`).
