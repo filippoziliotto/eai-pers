@@ -102,3 +102,22 @@ if cfg.training.mode == "eval":
 - Uses description embeddings to score each spatial location, keeps the top-k locations per description with NMS, and builds a spatial mask.
 - Computes cosine similarity between the **query** embedding and the masked **feature map**.
 - Returns the location with the maximum similarity as the prediction.
+
+---
+### Training mode: how the model works
+
+Training follows a two-stage pipeline that turns a map and text into a spatial prediction:
+
+1. **Data inputs**  
+   Each batch provides a feature map (`feature_map`), a list of scene descriptions (`summary`), a query string (`query`), and the target coordinates (`target`).
+
+2. **Stage 1: Map–text fusion**  
+   The first stage (`MapAttentionModel`) encodes the descriptions with the BLIP2 encoder, applies positional embeddings (optional), and runs cross-attention over the flattened map to inject textual context into the spatial features.
+
+3. **Stage 2: Query matching**  
+   The second stage (`PersonalizedFeatureMapper`) encodes the query, computes a similarity map over the fused features (cosine similarity or learnable similarity), and applies a soft-argmax to produce predicted coordinates.
+
+4. **Loss + optimization**  
+   The training loop computes a coordinate loss (e.g., L2 or Chebyshev-based) from the predicted coordinates (and optionally the value map), backpropagates, and updates model weights.
+
+To train on the difficulty splits in `data/val`, set `training.mode: "train"` and use the `data.train_*` settings to select levels and the train/val split ratio (see `configs/experiments/train.yaml`).
