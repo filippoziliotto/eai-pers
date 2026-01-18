@@ -1,7 +1,4 @@
 # Debugging stuff
-debugger:
-  debug: false
-
 # Baseline
 baseline:
     use_baseline: true
@@ -10,7 +7,7 @@ baseline:
 logging:
   wandb:
     use_wandb: false
-    run_name: "zs_cosine"
+    run_name: "zs_cosine_evaluation"
 
 data:
   eval_base_dir: "data/val"

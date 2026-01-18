@@ -1,7 +1,3 @@
-# Debugging stuff
-debugger:
-  debug: false
-
 # Baseline
 baseline:
     use_baseline: false
@@ -9,15 +5,22 @@ baseline:
 
 logging:
   wandb:
-    use_wandb: true
-    run_name: "ca_block-pos_enc-Chebyshev-adamw-0.0001-wd1e-5-200"
+    use_wandb: false
+    run_name: "train-adamw-0.0001-wd1e-5-200-lora"
+
+data:
+  train_base_dir: "data/val"
+  train_split_dir: "splits"
+  train_levels: ["easy", "medium", "hard"]
+  train_val_ratio: 0.2
+  train_split_seed: 2025
 
 training:
   mode: "train"
-  num_epochs: 200
-  batch_size: 8     
+  num_epochs: 100
+  batch_size: 2     
   loss:
-    choice: "Chebyshev-combined"
+    choice: "L2"
 
 attention:
   embed_dim: 768                   # Dimension of attention embeddings
@@ -53,7 +56,7 @@ augmentations:
     prob: 0.5
 
 device:
-  type: "cuda"
+  type: "mps"
   num_workers: 4
 
 optimizer:

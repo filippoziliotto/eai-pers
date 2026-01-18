@@ -6,8 +6,6 @@ setup(
     description="Personalized robotic navigation via queryable online maps",  # Short description
     long_description=open("README.md").read(),  # Use README.md as the long description
     long_description_content_type="text/markdown",  # Specify markdown for the long description
-    author="Filippo Ziliotto",
-    author_email="filippo.ziliotto@phd.unipd.it", 
     url="https://github.com/filippoziliotto/eai-pers.git",  #
     license="MIT",  # Specify your license
     packages=find_packages(),  # Automatically find all packages in the project
@@ -20,5 +18,5 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    keywords="computer-vision robotics navigation maps",  # Add relevant keywords
+    keywords="Personalization Embodied AI Navigation",  # Add relevant keywords
 )

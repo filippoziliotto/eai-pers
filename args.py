@@ -13,8 +13,8 @@ def get_args():
     parser.add_argument("--config", type=str, default="eai_pers.yaml", help="Path to the configuration file")
     
     # Data path Parameters
-    parser.add_argument("--data_dir", type=str, default="data/v2", help="Path to the data directory")
-    parser.add_argument("--data_split", type=str, default="object_unseen", choices=["object_unseen", "scene_unseen"], help="Evaluation setting to use")
+    parser.add_argument("--data_dir", type=str, default="data/val", help="Path to the data directory")
+    parser.add_argument("--data_split", type=str, default="easy", choices=["easy", "medium", "hard"], help="Difficulty level to use")
 
     # Mode Parameters
     parser.add_argument("--mode", type=str, default="train", choices=["train", "eval"], help="Mode to run the script")

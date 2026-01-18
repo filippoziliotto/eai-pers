@@ -14,7 +14,7 @@ import dataset.maps.utils.geometry_utils as gu
 
 class HabtoGrid:
 
-    def __init__(self, embeds_dir: str = "data/v2/maps"):
+    def __init__(self, embeds_dir: str = "data/val/maps"):
 
         self.results_dir = embeds_dir             
         self.model_name = "BLIP2"

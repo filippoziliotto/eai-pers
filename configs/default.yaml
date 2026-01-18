@@ -7,11 +7,14 @@
 # DATA CONFIGURATION
 # -------------------------------------------------------------------
 data:
-  data_dir: "data/v2"                  # Path to dataset root directory
-  data_split: "object_unseen"      # Which data split to use (e.g., seen, unseen)
   eval_base_dir: "data/val"         # Root directory for difficulty-based eval data
   eval_split_dir: "splits"          # Subdirectory containing difficulty splits
   eval_levels: ["easy", "medium", "hard"]  # Difficulty levels to merge for eval
+  train_base_dir: "data/val"        # Root directory for difficulty-based training data
+  train_split_dir: "splits"         # Subdirectory containing difficulty splits
+  train_levels: ["easy", "medium", "hard"]  # Difficulty levels to merge for training
+  train_val_ratio: 0.2              # Fraction of episodes reserved for validation
+  train_split_seed: 2025            # Seed for deterministic train/val split
 
 # Random seed for reproducibility
 seed: 2025

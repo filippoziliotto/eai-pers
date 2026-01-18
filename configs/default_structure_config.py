@@ -8,11 +8,14 @@ from omegaconf import OmegaConf, DictConfig
 
 @dataclass
 class DataConfig:
-    data_dir: str = "data"  # Root directory containing the dataset
-    data_split: str = "object_unseen"  # Dataset split (e.g., seen/unseen scenarios)
     eval_base_dir: str = "data/val"  # Root directory for difficulty-based eval data
     eval_split_dir: str = "splits"  # Subdirectory containing difficulty splits
     eval_levels: List[str] = field(default_factory=lambda: ["easy", "medium", "hard"])
+    train_base_dir: str = "data/val"  # Root directory for difficulty-based training data
+    train_split_dir: str = "splits"  # Subdirectory containing difficulty splits
+    train_levels: List[str] = field(default_factory=list)  # Empty keeps legacy training loader
+    train_val_ratio: float = 0.2  # Fraction of episodes reserved for validation
+    train_split_seed: int = 2025  # Seed for deterministic train/val split
 
 
 # -------------------------------------------------------------------
