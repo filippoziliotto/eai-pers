@@ -38,6 +38,9 @@ To install the **EAI-Pers** package, make sure you have Python 3.9 or higher.
     python setup.py install
     ```
 
+5. Download the data from [link: https://www.dropbox.com/scl/fi/17frggambpp9jts07jgop/data.zip?rlkey=9phx05i856ulfdsk93uor6gne&st=si9mjlf5&dl=0], extract it, and it will create a `data/val/` folder. 
+
+6. Make sure you have the LAVIS repository installed on macOS, or install it via conda on Linux. This allows loading the BLIP2 model also used to extract the feature map.
 ---
 
 ### Dataset Structure
