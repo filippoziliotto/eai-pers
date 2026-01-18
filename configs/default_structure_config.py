@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List
 from omegaconf import OmegaConf, DictConfig
 
@@ -10,6 +10,9 @@ from omegaconf import OmegaConf, DictConfig
 class DataConfig:
     data_dir: str = "data"  # Root directory containing the dataset
     data_split: str = "object_unseen"  # Dataset split (e.g., seen/unseen scenarios)
+    eval_base_dir: str = "data/val"  # Root directory for difficulty-based eval data
+    eval_split_dir: str = "splits"  # Subdirectory containing difficulty splits
+    eval_levels: List[str] = field(default_factory=lambda: ["easy", "medium", "hard"])
 
 
 # -------------------------------------------------------------------

@@ -28,7 +28,7 @@ class TrainedLoraModel(nn.Module):
         self.device = device
         self.tau = 0.1  # Temperature for soft-argmax
         
-        print("Model initialized.")
+        print("Trained Lora Model (Encoder finetuting) initialized.")
    
     def encode_descriptions(self, descriptions):
         """

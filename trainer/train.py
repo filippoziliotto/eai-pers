@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 # Other imports
 from utils.losses import compute_loss
-from utils.metrics import compute_accuracy
+from utils.metrics import compute_accuracy, calculate_metrics_distribution
 from utils.utils import log_lr_scheduler, log_epoch_metrics
 from utils.visualize import visualize, plot_value_map
 
@@ -150,7 +150,7 @@ def train_and_validate(
     start_epoch = 0
     best_val_loss = float('inf')
     first_epoch_loss = None
-        
+
     # Optionally load model weights from checkpoint
     if load_checkpoint_:
         start_epoch, best_val_loss = load_checkpoint(
@@ -215,6 +215,9 @@ def train_and_validate(
             for key in val_acc:
                 print(f"{key}: {val_acc.get(key, 0):.4f}")
             print('-' * 20)
+            
+            # Append validation metrics to the list
+            metrics.append(val_acc)
             
         else:
             # For epochs without validation, update scheduler if it doesn't depend on validation loss

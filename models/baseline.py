@@ -56,9 +56,8 @@ class BaselineModel(nn.Module):
         
         if self.baseline_type in ["random"]:
             # For random baseline, just return a random index
-            output["value_map"] = torch.rand((b, w, h, 1))
-            output["max_value"] = torch.rand((b, 1))
-            output["coords"] = torch.randint(0, w * h, (b,)).view(b, w, h)
+            output["value_map"] = torch.rand((b, w, h, 1))          # take random (h,W) coordinates
+            output["coords"] = torch.randint(0, h, (b, 2)).to(torch.float32).to(self.device)  # random (h,W) coordinates
             return output
             
         elif self.baseline_type in ["center"]:
@@ -102,11 +101,11 @@ class BaselineModel(nn.Module):
                 description_tensor=description_tensor,
                 top_k=4,
                 neighborhood=0,
-                nms_radius=2,
+                nms_radius=0,
             )
 
             output["max_value"] = max_val
-            output["coords"] = torch.stack([max_index // w, max_index % w], dim=-1) 
+            output["coords"] = torch.stack([max_index // w, max_index % w], dim=-1).to(torch.float32)
             return output
         
         else:
