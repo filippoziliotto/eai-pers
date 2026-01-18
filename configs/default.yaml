@@ -9,6 +9,9 @@
 data:
   data_dir: "data/v2"                  # Path to dataset root directory
   data_split: "object_unseen"      # Which data split to use (e.g., seen, unseen)
+  eval_base_dir: "data/val"         # Root directory for difficulty-based eval data
+  eval_split_dir: "splits"          # Subdirectory containing difficulty splits
+  eval_levels: ["easy", "medium", "hard"]  # Difficulty levels to merge for eval
 
 # Random seed for reproducibility
 seed: 2025

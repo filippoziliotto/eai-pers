@@ -15,7 +15,7 @@ from configs.config_utils import load_config, flatten_config
 from args import get_args
 
 # Dataloader
-from dataset.dataloader import get_dataloader
+from dataset.dataloader import get_dataloader, get_dataloader_new
 
 # Avoid LAVIS (useless) FutureWarnings ;)
 import warnings
@@ -57,14 +57,29 @@ def main(args):
         query_encoder = scene_encoder
         
     # Create the initial Dataset and DataLoader
-    train_loader, val_loader = get_dataloader(
-        data_dir=cfg.data.data_dir,
-        split_dir=cfg.data.data_split,
-        batch_size=cfg.training.batch_size,
-        num_workers=cfg.device.num_workers,
-        collate_fn=custom_collate,
-        augmentation=cfg.augmentations,
-    )
+    train_loader = None
+    val_loader = None
+    if cfg.training.mode in ["train"]:
+        train_loader, val_loader = get_dataloader(
+            data_dir=cfg.data.data_dir,
+            split_dir=cfg.data.data_split,
+            batch_size=cfg.training.batch_size,
+            num_workers=cfg.device.num_workers,
+            collate_fn=custom_collate,
+            augmentation=cfg.augmentations,
+        )
+    elif cfg.training.mode in ["eval"]:
+        eval_levels = list(cfg.data.eval_levels) if cfg.data.eval_levels else ["easy", "medium", "hard"]
+        val_loader = get_dataloader_new(
+            difficulty=eval_levels,
+            episodes_base_dir=cfg.data.eval_base_dir,
+            split_dir=cfg.data.eval_split_dir,
+            batch_size=cfg.training.batch_size,
+            num_workers=cfg.device.num_workers,
+            collate_fn=custom_collate,
+            augmentation=None,
+            shuffle=False,
+        )
 
     # Model Initialization & Baseline Initialization
     if cfg.baseline.use_baseline:

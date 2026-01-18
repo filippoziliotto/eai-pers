@@ -1,0 +1,43 @@
+# Debugging stuff
+debugger:
+  debug: false
+
+# Baseline
+baseline:
+    use_baseline: true
+    type: "zs_cosine"
+
+logging:
+  wandb:
+    use_wandb: false
+    run_name: "zs_cosine"
+
+data:
+  eval_base_dir: "data/val"
+  eval_split_dir: "splits"
+  eval_levels: ["easy", "medium", "hard"]
+
+training:
+  mode: "eval"
+  batch_size: 2     
+  loss:
+    choice: "L2"
+
+encoder:
+  freeze: true
+
+augmentations:
+  flip:
+    use_horizontal_flip: true
+    use_vertical_flip: true
+    prob: 0.5
+  crop:
+    use_crop: true
+    prob: 0.5
+  rotation:
+    use_rotation: true   
+    prob: 0.5
+
+device:
+  type: "mps"
+  num_workers: 4

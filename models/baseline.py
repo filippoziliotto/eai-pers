@@ -100,8 +100,8 @@ class BaselineModel(nn.Module):
                 query_tensor=query_tensor,
                 description_tensor=description_tensor,
                 top_k=4,
-                neighborhood=1,
-                nms_radius=1,
+                neighborhood=0,
+                nms_radius=0,
             )
 
             output["max_value"] = max_val

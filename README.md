@@ -61,58 +61,50 @@ All of our pre‐processed data lives under `data/v2/`.  Here’s a breakdown of
 
 #### 2. `splits/`
 
-We provide two evaluation protocols:
-
-1. **`object_unseen`**  
-   - **Train:** all *scenes* are “seen,” but only a subset of objects  
-   - **Val:** test on *other* objects (in the same scenes) that the model has never encountered  
-   - **Use case:** measure generalization to new objects in familiar environments
-
-2. **`scene_unseen`**  
-   - **Train:** only a subset of *scenes* (maps), but *all* objects appear  
-   - **Val:** test on *other* scenes that the model has never encountered  
-   - **Use case:** measure generalization to new environments with known objects
-
-Within each `train/` and `val/` folder is an **`episodes.json`** file.
-
-Before you begin, make sure you have a `data/` directory at the root of this repository:
+The zero-shot evaluation protocols:
 
 ```bash
-mkdir -p data
+mkdir -p data/val
 ```
 ---
 
-### Getting started  
-
-Run the following commands in the terminal:  
-```sh
-chmod +x scripts/train.sh  
-chmod +x scripts/test.sh  
-```
 ---
+### Evaluation-only dataset and zero-shot baseline
 
-Before running the scripts, make sure to add your **W&B API key** and **OpenAI API key** to `scripts/keys.sh` as follows:  
-    export WANDB_API_KEY="your-wandb-key"  
-    export OTHER_API_KEY="your-other-key"
+The evaluation protocol lives under `data/val/splits/{easy,medium,hard}` and is **only for evaluation**. It is not used for training.
 
-Then, run the following command to load the keys into your environment:  
-```sh
-source scripts/keys.sh
+#### How to write the evaluation code
+
+Evaluation is wired in `main.py` by switching the data loader based on `training.mode`. For a minimal eval-only setup, use `configs/experiments/zs_eval.yaml`, which contains only the required config keys:
+
+- Set `training.mode: "eval"` in your experiment config (see `configs/experiments/zs_eval.yaml`).
+- Use the eval dataset settings from the `data` config:
+  - `eval_base_dir: "data/val"`
+  - `eval_split_dir: "splits"`
+  - `eval_levels: ["easy", "medium", "hard"]` to merge all levels into a single eval dataset.
+
+Minimal evaluation wiring looks like this:
+
+```python
+if cfg.training.mode == "eval":
+    val_loader = get_dataloader_new(
+        difficulty=cfg.data.eval_levels,
+        episodes_base_dir=cfg.data.eval_base_dir,
+        split_dir=cfg.data.eval_split_dir,
+        batch_size=cfg.training.batch_size,
+        num_workers=cfg.device.num_workers,
+        collate_fn=custom_collate,
+        augmentation=None,
+        shuffle=False,
+    )
 ```
 
-----
-### Training and Evaluation
+#### zs_cosine baseline: what it does
 
-- **Training**: Run the following command to start training with the default settings configuration:  
-    ```sh
-    scripts/train.sh
-    ```
-  
-- **Evaluation**: To evaluate the model, run:  
-    ```sh
-    scripts/test.sh
-    ```
+`baseline.type: "zs_cosine"` runs a zero-shot cosine matcher:
 
-Experiments configuration parameters can be tuned in the ```configs``` folder. There is a default configuration and in the ```experiments``` subfolder you can overwrite the default variables.
-
-If you need to adjust other settings, just modify the .sh files for training and/or validation as well as the args file.
+- Encodes the **query** text into a single embedding.
+- Encodes **scene descriptions** into a sequence of embeddings.
+- Uses description embeddings to score each spatial location, keeps the top-k locations per description with NMS, and builds a spatial mask.
+- Computes cosine similarity between the **query** embedding and the masked **feature map**.
+- Returns the location with the maximum similarity as the prediction.

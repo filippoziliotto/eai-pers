@@ -10,7 +10,12 @@ baseline:
 logging:
   wandb:
     use_wandb: false
-    run_name: "baseline_random"
+    run_name: "baseline_rgb_mask"
+
+data:
+  eval_base_dir: "data/val"
+  eval_split_dir: "splits"
+  eval_levels: ["medium"]
 
 training:
   mode: "eval"
