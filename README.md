@@ -2,7 +2,7 @@
 
 ----
 
-# Personalized Retrievable Maps using offline memory
+# PersONAL: Towards a Comprehensive Benchmark for Personalized Embodied AI Agents
 
 This is the repo related to "Personalized user navigation through retrievable memory maps".
 
@@ -42,8 +42,7 @@ To install the **EAI-Pers** package, make sure you have Python 3.9 or higher.
 
 ### Dataset Structure
 
-All of our pre‐processed data lives under `data/v2/`.  Here’s a breakdown of the important subfolders and files:
-
+All of our pre‐processed data lives under `data/val/`. Here’s a breakdown of the important subfolders and files:
 
 #### 1. `maps/`
 
@@ -61,17 +60,12 @@ All of our pre‐processed data lives under `data/v2/`.  Here’s a breakdown of
 
 #### 2. `splits/`
 
-The zero-shot evaluation protocols:
-
-```bash
-mkdir -p data/val
-```
----
+Difficulty splits live under `data/val/splits/{easy,medium,hard}`. Each level contains a `content/` directory with the episode JSON files used to build the dataset.
 
 ---
-### Evaluation-only dataset and zero-shot baseline
+### Zero-shot baseline and evaluation flow
 
-The evaluation protocol lives under `data/val/splits/{easy,medium,hard}` and is **only for evaluation**. It is not used for training.
+Evaluation uses the difficulty splits from `data/val/splits/{easy,medium,hard}`. Training can use the same dataset by splitting episodes into train/val via the `data.train_*` settings.
 
 #### How to write the evaluation code
 

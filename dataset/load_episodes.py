@@ -5,11 +5,6 @@ import json
 import gzip
 from typing import Dict, List
 
-# Load episode_id to floor_id mapping (kept for compatibility with downstream code)
-with open("data/v2/maps/id_to_floor.json", "r") as f:
-    ID_TO_FLOOR = json.load(f)
-
-
 def convert_floor_ep(data, scene_name, floor_id):
     """
     Given the data, scene_name, and floor_id, return the corresponding episode_id.

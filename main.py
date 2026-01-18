@@ -15,7 +15,7 @@ from configs.config_utils import load_config, flatten_config
 from args import get_args
 
 # Dataloader
-from dataset.dataloader import get_dataloader, get_dataloader_new
+from dataset.dataloader import get_dataloader_new, get_dataloaders_new_split
 
 # Avoid LAVIS (useless) FutureWarnings ;)
 import warnings
@@ -60,16 +60,35 @@ def main(args):
     train_loader = None
     val_loader = None
     if cfg.training.mode in ["train"]:
-        train_loader, val_loader = get_dataloader(
-            data_dir=cfg.data.data_dir,
-            split_dir=cfg.data.data_split,
+        train_levels_cfg = cfg.data.train_levels
+        if train_levels_cfg:
+            if isinstance(train_levels_cfg, str):
+                train_levels = [train_levels_cfg]
+            else:
+                train_levels = list(train_levels_cfg)
+        else:
+            train_levels = ["easy", "medium", "hard"]
+
+        train_loader, val_loader = get_dataloaders_new_split(
+            levels=train_levels,
+            episodes_base_dir=cfg.data.train_base_dir,
+            split_dir=cfg.data.train_split_dir,
             batch_size=cfg.training.batch_size,
             num_workers=cfg.device.num_workers,
             collate_fn=custom_collate,
             augmentation=cfg.augmentations,
+            val_ratio=cfg.data.train_val_ratio,
+            seed=cfg.data.train_split_seed,
         )
     elif cfg.training.mode in ["eval"]:
-        eval_levels = list(cfg.data.eval_levels) if cfg.data.eval_levels else ["easy", "medium", "hard"]
+        eval_levels_cfg = cfg.data.eval_levels
+        if eval_levels_cfg:
+            if isinstance(eval_levels_cfg, str):
+                eval_levels = [eval_levels_cfg]
+            else:
+                eval_levels = list(eval_levels_cfg)
+        else:
+            eval_levels = ["easy", "medium", "hard"]
         val_loader = get_dataloader_new(
             difficulty=eval_levels,
             episodes_base_dir=cfg.data.eval_base_dir,

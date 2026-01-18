@@ -104,6 +104,7 @@ data
 TROUBLESHOOTING.md
 DATASETS.md
 DETAILS.md
+TODO.md
 
 # OpenAI / Wandb Keys
 scripts/keys.sh
